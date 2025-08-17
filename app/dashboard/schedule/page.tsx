@@ -190,7 +190,7 @@ export default function Schedule() {
             {/* Today's Sessions */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Today's Sessions</CardTitle>
+                <CardTitle className="text-lg">Today&apos;s Sessions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 {sessions.map((session) => (
