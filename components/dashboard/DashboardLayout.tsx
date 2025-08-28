@@ -29,7 +29,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const studentNavItems = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
     { name: 'My Courses', href: '/dashboard/courses', icon: BookOpen },
-    { name: 'Schedule', href: '/dashboard/schedule', icon: Calendar },
+    // Students can see module/courses but not create or manage schedules
     { name: 'Video Sessions', href: '/dashboard/sessions', icon: Video },
     { name: 'Payments', href: '/dashboard/payments', icon: CreditCard },
     { name: 'Profile', href: '/dashboard/profile', icon: User },
@@ -65,7 +65,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center">
               <BookOpen className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-gradient">TutorConnect</span>
+            <span className="text-xl font-bold text-gradient">TutorVerse</span>
           </Link>
         </div>
 
