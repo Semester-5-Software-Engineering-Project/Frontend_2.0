@@ -109,7 +109,7 @@ export default function AuthPage() {
                     </div>
                     
                     <div className="space-y-1">
-                      <Label className="text-sm">Account Type</Label>
+                      <Label className="text-sm align-center items-center justify-center">Login As</Label>
                       <div className="flex justify-center">
                         <div className="bg-gray-200 rounded-full p-0.5 h-7 flex items-center w-36">
                           <button
