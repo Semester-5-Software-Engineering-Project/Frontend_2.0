@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -18,16 +18,38 @@ import {
   Users,
   Play,
   ChevronRight,
-  Calendar
+  Calendar,
+  ChevronLeft,
 } from 'lucide-react'
 import Link from 'next/link'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
 
-
-
 export default function CoursePage() {
   const params = useParams()
-  const [activeModule, setActiveModule] = useState(1)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const materialRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
+
+  // Auto-collapse sidebar on mobile when clicking a material
+  const handleMaterialClick = (materialId: string) => {
+    scrollToMaterial(materialId)
+    if (window.innerWidth < 1024) {
+      setSidebarCollapsed(true)
+    }
+  }
+
+  // Handle window resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1024) {
+        setSidebarCollapsed(true)
+      }
+    }
+
+    window.addEventListener('resize', handleResize)
+    handleResize() // Initial check
+
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   // Mock course data
   const course = {
@@ -42,58 +64,31 @@ export default function CoursePage() {
     image: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=800&h=400&fit=crop'
   }
 
-  const modules = [
-    {
-      id: 1,
-      title: 'Introduction to Calculus',
-      duration: '2 hours',
-      materials: 5,
-      completed: true,
-      materials_list: [
-        { type: 'document', name: 'Calculus Basics.pdf', size: '2.3 MB' },
-        { type: 'video', name: 'Introduction Video', duration: '45 min' },
-        { type: 'link', name: 'Practice Problems', url: 'https://example.com' }
-      ]
-    },
-    {
-      id: 2,
-      title: 'Derivatives and Applications',
-      duration: '3 hours',
-      materials: 7,
-      completed: true,
-      materials_list: [
-        { type: 'document', name: 'Derivatives Guide.pdf', size: '3.1 MB' },
-        { type: 'document', name: 'Practice Worksheets.pdf', size: '1.8 MB' },
-        { type: 'video', name: 'Derivatives Explained', duration: '52 min' },
-        { type: 'link', name: 'Online Calculator', url: 'https://example.com' }
-      ]
-    },
-    {
-      id: 3,
-      title: 'Integration Techniques',
-      duration: '4 hours',
-      materials: 6,
-      completed: false,
-      materials_list: [
-        { type: 'document', name: 'Integration Methods.pdf', size: '2.7 MB' },
-        { type: 'video', name: 'Integration Tutorial', duration: '38 min' },
-        { type: 'link', name: 'Interactive Examples', url: 'https://example.com' }
-      ]
-    },
-    {
-      id: 4,
-      title: 'Differential Equations',
-      duration: '5 hours',
-      materials: 8,
-      completed: false,
-      materials_list: [
-        { type: 'document', name: 'Differential Equations.pdf', size: '4.2 MB' },
-        { type: 'video', name: 'Advanced Techniques', duration: '67 min' }
-      ]
-    }
+  // Source list of materials (flattened, no modules)
+  const lectureMaterials = [
+    { id: 'calc-basics', type: 'document', name: 'Calculus Basics.pdf', size: '2.3 MB' },
+    { id: 'intro-video', type: 'video', name: 'Introduction Video', duration: '45 min' },
+    { id: 'practice-problems', type: 'link', name: 'Practice Problems', url: 'https://example.com' },
+    { id: 'derivatives-guide', type: 'document', name: 'Derivatives Guide.pdf', size: '3.1 MB' },
+    { id: 'worksheets', type: 'document', name: 'Practice Worksheets.pdf', size: '1.8 MB' },
+    { id: 'derivatives-explained', type: 'video', name: 'Derivatives Explained', duration: '52 min' },
+    { id: 'online-calculator', type: 'link', name: 'Online Calculator', url: 'https://example.com' },
+    { id: 'integration-methods', type: 'document', name: 'Integration Methods.pdf', size: '2.7 MB' },
+    { id: 'integration-tutorial', type: 'video', name: 'Integration Tutorial', duration: '38 min' },
+    { id: 'interactive-examples', type: 'link', name: 'Interactive Examples', url: 'https://example.com' },
+    { id: 'diff-eq', type: 'document', name: 'Differential Equations.pdf', size: '4.2 MB' },
+    { id: 'advanced-techniques', type: 'video', name: 'Advanced Techniques', duration: '67 min' }
   ]
 
-  const activeModuleData = modules.find(m => m.id === activeModule)
+  const scrollToMaterial = (materialId: string) => {
+    const materialElement = materialRefs.current[materialId]
+    if (materialElement) {
+      materialElement.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      })
+    }
+  }
 
   const getIconForMaterial = (type: string) => {
     switch (type) {
@@ -111,8 +106,47 @@ export default function CoursePage() {
   return (
     <DashboardLayout>
       <div className="p-6 space-y-6">
-        {/* Course Header */}
-        <div className="relative">
+       
+
+        
+
+          {/* Backdrop Overlay for Mobile */}
+          {!sidebarCollapsed && (
+            <div 
+              className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+              onClick={() => setSidebarCollapsed(true)}
+            />
+          )}
+
+          {/* Toggle Button for Collapsed Sidebar */}
+          <div className={`fixed top-4 left-4 z-100 transition-all duration-300 ease-in-out ${
+            sidebarCollapsed ? 'translate-x-0' : '-translate-x-full'
+          }`}>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="rounded-full w-12 h-12 -pr-20 shadow-lg absolute top-12 -left-9 bg-green-500 opacity-50"
+            >
+              <ChevronRight className="w-6 h-6"/>
+            </Button>
+          </div>
+
+          {/* Top Actions */}
+          <div className={`flex justify-end ${sidebarCollapsed ? 'ml-0' : 'ml-0 lg:ml-80 md:ml-72 sm:ml-64'}`}>
+            <Button asChild>
+              <Link href="/meeting">Join Live Session</Link>
+            </Button>
+          </div>
+
+          {/* All Content */}
+          <div className={`space-y-6 transition-all duration-300 ease-in-out ${
+            sidebarCollapsed ? 'ml-0' : 'ml-0 lg:ml-80 md:ml-72 sm:ml-64'
+          }`}>
+
+
+         {/* Course Header */}
+         <div className="relative">
           <img 
             src={course.image} 
             alt={course.title}
@@ -140,6 +174,8 @@ export default function CoursePage() {
           </div>
         </div>
 
+
+
         {/* Progress Overview */}
         <Card>
           <CardHeader>
@@ -161,39 +197,42 @@ export default function CoursePage() {
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Module Sidebar */}
-          <div className="lg:col-span-1">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Course Modules</CardTitle>
+        <div className="space-y-6">
+          {/* Materials Sidebar */}
+          <div className={`fixed top-0 left-0 h-full z-50 transition-all duration-300 ease-in-out ${
+            sidebarCollapsed ? '-translate-x-full' : 'translate-x-0'
+          }`}>
+            <Card className="h-full w-80 lg:w-80 md:w-72 sm:w-64 rounded-none border-r border-b border-l-0 border-t-0 shadow-lg">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">Course Materials</CardTitle>
+                  <Button
+                    variant="ghost"
+                    size="lg"
+                    onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                    className="p-1 h-6 w-6"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="space-y-1">
-                  {modules.map((module) => (
+                <div className="space-y-1 max-h-[calc(100vh-120px)] overflow-y-auto">
+                  {lectureMaterials.map((material) => (
                     <button
-                      key={module.id}
-                      onClick={() => setActiveModule(module.id)}
-                      className={`
-                        w-full text-left p-4 hover:bg-gray-50 transition-colors flex items-center justify-between
-                        ${activeModule === module.id ? 'bg-green-50 border-r-4 border-green-600' : ''}
-                      `}
+                      key={material.id}
+                      onClick={() => handleMaterialClick(material.id)}
+                      className="w-full text-left p-4 hover:bg-gray-50 transition-colors flex items-center justify-between bg-gray-50"
                     >
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-3">
-                          <div className={`
-                            w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium
-                            ${module.completed 
-                              ? 'bg-green-100 text-green-700' 
-                              : 'bg-gray-100 text-gray-600'
-                            }
-                          `}>
-                            {module.completed ? '✓' : module.id}
-                          </div>
-                          <div>
-                            <h4 className="font-medium text-sm">{module.title}</h4>
-                            <p className="text-xs text-gray-500">{module.duration} • {module.materials} materials</p>
-                          </div>
+                      <div className="flex items-center space-x-3">
+                        {getIconForMaterial(material.type)}
+                        <div>
+                          <h4 className="font-medium text-sm">{material.name}</h4>
+                          <p className="text-xs text-gray-500">
+                            {material.type === 'document' && material.size}
+                            {material.type === 'video' && material.duration}
+                            {material.type === 'link' && 'External Resource'}
+                          </p>
                         </div>
                       </div>
                       <ChevronRight className="w-4 h-4 text-gray-400" />
@@ -204,89 +243,53 @@ export default function CoursePage() {
             </Card>
           </div>
 
-          {/* Module Content */}
-          <div className="lg:col-span-3">
+
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>{activeModuleData?.title}</CardTitle>
-                    <CardDescription>
-                      {activeModuleData?.duration} • {activeModuleData?.materials} materials
-                    </CardDescription>
-                  </div>
-                  <Badge 
-                    variant={activeModuleData?.completed ? 'default' : 'secondary'}
-                    className={activeModuleData?.completed ? 'bg-green-100 text-green-700' : ''}
-                  >
-                    {activeModuleData?.completed ? 'Completed' : 'In Progress'}
-                  </Badge>
-                </div>
+                <CardTitle>Lecture Materials</CardTitle>
+                <CardDescription>All resources for this course</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Module Materials */}
-                <div>
-                  <h3 className="font-semibold mb-4">Course Materials</h3>
-                  <div className="space-y-3">
-                    {activeModuleData?.materials_list.map((material, index) => (
-                      <div key={index} className="flex items-center space-x-4 p-3 border rounded-lg hover:bg-gray-50 transition-colors">
-                        {getIconForMaterial(material.type)}
-                        <div className="flex-1">
-                          <h4 className="font-medium text-sm">{material.name}</h4>
-                          <p className="text-xs text-gray-500">
-                            {material.type === 'document' && material.size}
-                            {material.type === 'video' && material.duration}
-                            {material.type === 'link' && 'External Resource'}
-                          </p>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          {material.type === 'video' && (
-                            <Button size="sm" variant="outline">
-                              <Play className="w-4 h-4 mr-1" />
-                              Watch
-                            </Button>
-                          )}
-                          {material.type === 'link' && (
-                            <Button size="sm" variant="outline" asChild>
-                              <a href={material.url} target="_blank" rel="noopener noreferrer">
-                                <LinkIcon className="w-4 h-4 mr-1" />
-                                Open
-                              </a>
-                            </Button>
-                          )}
-                          {material.type === 'document' && (
-                            <Button size="sm" variant="outline">
-                              <Download className="w-4 h-4 mr-1" />
-                              Download
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+              <CardContent className="space-y-3">
+                {lectureMaterials.map((material) => (
+                  <div
+                    key={material.id}
+                    ref={(el) => (materialRefs.current[material.id] = el)}
+                    id={`material-${material.id}`}
+                    className="flex items-center space-x-4 p-3 border rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    {getIconForMaterial(material.type)}
+                    <div className="flex-1">
+                      <h4 className="font-medium text-sm">{material.name}</h4>
+                      <p className="text-xs text-gray-500">
+                        {material.type === 'document' && material.size}
+                        {material.type === 'video' && material.duration}
+                        {material.type === 'link' && 'External Resource'}
+                      </p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      {material.type === 'video' && (
+                        <Button size="sm" variant="outline">
+                          <Play className="w-4 h-4 mr-1" />
+                          Watch
+                        </Button>
+                      )}
+                      {material.type === 'link' && (
+                        <Button size="sm" variant="outline" asChild>
+                          <a href={material.url} target="_blank" rel="noopener noreferrer">
+                            <LinkIcon className="w-4 h-4 mr-1" />
+                            Open
+                          </a>
+                        </Button>
+                      )}
+                      {material.type === 'document' && (
+                        <Button size="sm" variant="outline">
+                          <Download className="w-4 h-4 mr-1" />
+                          Download
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                </div>
-
-                <Separator />
-
-                {/* Quick Actions */}
-                <div className="flex flex-wrap gap-3">
-                  <Link href="/dashboard/sessions/new">
-                    <Button className="bg-green-600 hover:bg-green-700">
-                      <Video className="w-4 h-4 mr-2" />
-                      Start Video Session
-                    </Button>
-                  </Link>
-                  <Link href="/dashboard/schedule">
-                    <Button variant="outline">
-                      <Calendar className="w-4 h-4 mr-2" />
-                      Schedule Session
-                    </Button>
-                  </Link>
-                  <Button variant="outline">
-                    <Download className="w-4 h-4 mr-2" />
-                    Download All Materials
-                  </Button>
-                </div>
+                ))}
               </CardContent>
             </Card>
           </div>
