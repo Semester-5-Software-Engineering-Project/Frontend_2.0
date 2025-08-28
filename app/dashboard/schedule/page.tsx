@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Calendar as CalendarIcon, Clock, Users, Video, Plus, Filter } from 'lucide-react'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { ShieldAlert } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 
 export default function Schedule() {
@@ -61,6 +63,22 @@ export default function Schedule() {
       default:
         return 'bg-gray-100 text-gray-700'
     }
+  }
+
+  if (user?.role === 'student') {
+    return (
+      <DashboardLayout>
+        <div className="p-6">
+          <Alert variant="destructive" className="max-w-2xl">
+            <ShieldAlert className="h-4 w-4" />
+            <AlertTitle>Access restricted</AlertTitle>
+            <AlertDescription>
+              Scheduling is available to tutors only.
+            </AlertDescription>
+          </Alert>
+        </div>
+      </DashboardLayout>
+    )
   }
 
   return (

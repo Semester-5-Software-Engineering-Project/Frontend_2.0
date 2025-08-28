@@ -26,12 +26,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
+  const mapApiRoleToAppRole = (apiRole: any): 'student' | 'tutor' => {
+    const value = String(apiRole || '').toLowerCase()
+    if (value.includes('student')) return 'student'
+    if (value.includes('tutor')) return 'tutor'
+    // Fallback: default to student to avoid over-permissioning
+    return 'student'
+  }
+
   useEffect(() => {
     // Check for stored auth data
     const storedUser = localStorage.getItem('user')
     if (storedUser) {
-      setUser(JSON.parse(storedUser))
-      setIsLoading(false)
+      try {
+        const parsed = JSON.parse(storedUser)
+        const normalizedRole = mapApiRoleToAppRole(parsed.role)
+        const normalizedUser = { ...parsed, role: normalizedRole }
+        setUser(normalizedUser)
+        localStorage.setItem('user', JSON.stringify(normalizedUser))
+        document.cookie = `role=${normalizedRole}; path=/; SameSite=Lax`
+        setIsLoading(false)
+      } catch {
+        localStorage.removeItem('user')
+        checkAuthStatus()
+      }
     } else {
       // Check if user is authenticated via cookies (after OAuth redirect)
       checkAuthStatus()
@@ -41,14 +59,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const checkAuthStatus = async () => {
     try {
       const res = await axiosInstance.get("/api/getuser", { withCredentials: true });
-      const userData: User = res.data.user;
+      const userData: any = res.data.user;
+      console.log(userData)
+      const role = mapApiRoleToAppRole(userData.role)
       
       if (userData) {
         // Add avatar based on role
-        userData.avatar = `https://images.unsplash.com/photo-${userData.role === 'tutor' ? '1494790108755-2616c0479506' : '1507003211169-0a1dd7228f2d'}?w=150&h=150&fit=crop&crop=face`
+        userData.avatar = `https://images.unsplash.com/photo-${role === 'tutor' ? '1494790108755-2616c0479506' : '1507003211169-0a1dd7228f2d'}?w=150&h=150&fit=crop&crop=face`
+        userData.role = role
         
         setUser(userData)
         localStorage.setItem('user', JSON.stringify(userData))
+        // Reflect role in a cookie for middleware
+        document.cookie = `role=${role}; path=/; SameSite=Lax`
       }
     } catch (error) {
       console.log('No authenticated user found')
@@ -62,6 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try{
       // Redirect to OAuth endpoint with success redirect URL
       const redirectUrl = encodeURIComponent(`${window.location.origin}/dashboard`)
+      console.log(role)
       window.location.href = `http://localhost:8080/oauth2/login/${role}?redirect_uri=${redirectUrl}`
     } catch (error) {
       setIsLoading(false);
@@ -78,7 +102,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await axiosInstance.post("/api/auth/login", { email, password }, { withCredentials: true });
 
       const res = await axiosInstance.get("/api/getuser");
-      const userData:User = res.data.user;
+      const userData: any = res.data.user;
+      const normalizedRole = mapApiRoleToAppRole(userData.role)
       
       // const userData: User = {
       //   id: '1',
@@ -87,10 +112,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       //   role,
       //   avatar: `https://images.unsplash.com/photo-${role === 'tutor' ? '1494790108755-2616c0479506' : '1507003211169-0a1dd7228f2d'}?w=150&h=150&fit=crop&crop=face`
       // }
-      userData.avatar = `https://images.unsplash.com/photo-${role === 'tutor' ? '1494790108755-2616c0479506' : '1507003211169-0a1dd7228f2d'}?w=150&h=150&fit=crop&crop=face`
+      userData.avatar = `https://images.unsplash.com/photo-${normalizedRole === 'tutor' ? '1494790108755-2616c0479506' : '1507003211169-0a1dd7228f2d'}?w=150&h=150&fit=crop&crop=face`
+      userData.role = normalizedRole
       
       setUser(userData)
       localStorage.setItem('user', JSON.stringify(userData))
+      document.cookie = `role=${normalizedRole}; path=/; SameSite=Lax`
     } finally {
       setIsLoading(false)
     }
@@ -109,12 +136,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Only try to get user data if registration was successful
       if (response.status === 200 || response.status === 201) {
         const res = await axiosInstance.get("/api/getuser");
-        const userData: User = res.data.user;
+        const userData: any = res.data.user;
+        const normalizedRole = mapApiRoleToAppRole(userData.role)
         
-        userData.avatar = `https://images.unsplash.com/photo-${role === 'tutor' ? '1494790108755-2616c0479506' : '1507003211169-0a1dd7228f2d'}?w=150&h=150&fit=crop&crop=face`
+        userData.avatar = `https://images.unsplash.com/photo-${normalizedRole === 'tutor' ? '1494790108755-2616c0479506' : '1507003211169-0a1dd7228f2d'}?w=150&h=150&fit=crop&crop=face`
+        userData.role = normalizedRole
         
         setUser(userData)
         localStorage.setItem('user', JSON.stringify(userData))
+        document.cookie = `role=${normalizedRole}; path=/; SameSite=Lax`
       }
     } catch (error: any) {
       // Handle specific error cases
@@ -133,6 +163,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async() => {
     setUser(null)
     localStorage.removeItem('user')
+    // Clear role cookie
+    document.cookie = 'role=; path=/; Max-Age=0; SameSite=Lax'
     await axiosInstance.get("/api/logout");
   }
 

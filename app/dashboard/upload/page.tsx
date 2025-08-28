@@ -19,9 +19,13 @@ import {
   Save
 } from 'lucide-react'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
+import { useAuth } from '@/contexts/AuthContext'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { ShieldAlert } from 'lucide-react'
 import { toast } from 'sonner'
 
 export default function UploadMaterials() {
+  const { user } = useAuth()
   const [selectedCourse, setSelectedCourse] = useState('')
   const [materials, setMaterials] = useState<any[]>([])
   const [newMaterial, setNewMaterial] = useState({
@@ -84,6 +88,22 @@ export default function UploadMaterials() {
       default:
         return <FileText className="w-5 h-5 text-gray-500" />
     }
+  }
+
+  if (user?.role === 'student') {
+    return (
+      <DashboardLayout>
+        <div className="p-6">
+          <Alert variant="destructive" className="max-w-2xl">
+            <ShieldAlert className="h-4 w-4" />
+            <AlertTitle>Access restricted</AlertTitle>
+            <AlertDescription>
+              This page is only available to tutors.
+            </AlertDescription>
+          </Alert>
+        </div>
+      </DashboardLayout>
+    )
   }
 
   return (
