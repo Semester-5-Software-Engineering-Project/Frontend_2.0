@@ -105,29 +105,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const login = async (email: string, password: string, role: 'STUDENT' | 'TUTOR') => {
+    console.log('Login started with:', { email, role })
     setIsLoading(true)
     try {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
-      await axiosInstance.post("/api/auth/login", { email, password }, { withCredentials: true });
+      const loginResponse = await axiosInstance.post("/api/auth/login", { email, password }, { withCredentials: true });
+      console.log('Login API response:', loginResponse.status)
 
       const res = await axiosInstance.get("/api/getuser");
+      console.log('Get user API response:', res.data)
       const userData: any = res.data.user;
       const normalizedRole = mapApiRoleToAppRole(userData.role)
+      console.log('Normalized role:', normalizedRole)
       
-      // const userData: User = {
-      //   id: '1',
-      //   name: role === 'TUTOR' ? 'Dr. Sarah Johnson' : 'Alex Smith',
-      //   email,
-      //   role,
-      //   avatar: `https://images.unsplash.com/photo-${role === 'TUTOR' ? '1494790108755-2616c0479506' : '1507003211169-0a1dd7228f2d'}?w=150&h=150&fit=crop&crop=face`
-      // }
       userData.avatar = `https://images.unsplash.com/photo-${normalizedRole === 'TUTOR' ? '1494790108755-2616c0479506' : '1507003211169-0a1dd7228f2d'}?w=150&h=150&fit=crop&crop=face`
       userData.role = normalizedRole
       
+      console.log('Setting user data:', userData)
       setUser(userData)
       localStorage.setItem('user', JSON.stringify(userData))
       document.cookie = `role=${normalizedRole}; path=/; SameSite=Lax`
+      console.log('Login completed successfully')
+    } catch (error) {
+      console.error('Login error:', error)
+      throw error
     } finally {
       setIsLoading(false)
     }
@@ -171,11 +173,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const logout = async() => {
+    console.log('Logout started')
+    try {
+      // Call backend logout endpoint first
+      await axiosInstance.get("/api/logout", { withCredentials: true });
+      console.log('Backend logout successful')
+    } catch (error) {
+      console.error('Backend logout error:', error)
+    }
+    
+    // Clear client-side data
     setUser(null)
     localStorage.removeItem('user')
     // Clear role cookie
     document.cookie = 'role=; path=/; Max-Age=0; SameSite=Lax'
-    await axiosInstance.get("/api/logout");
+    console.log('Client-side logout completed')
+    
+    // Redirect to auth page
+    window.location.href = '/auth'
   }
 
   return (

@@ -22,18 +22,29 @@ export default function AuthPage() {
     role: 'STUDENT' as 'STUDENT' | 'TUTOR'
   })
 
-  const handleSubmit = async (type: 'login' | 'register') => {
+  const handleSubmit = async (action: 'login' | 'register') => {
+    if (!formData.email || !formData.password) {
+      toast.error("Please fill in all fields")
+      return
+    }
+
     try {
-      if (type === 'register') {
-        await register(formData.name, formData.email, formData.password, formData.role)
-        toast.success('Account created successfully!')
-      } else {
+      console.log('Auth form submit started:', { action, email: formData.email, role: formData.role })
+      
+      if (action === 'login') {
         await login(formData.email, formData.password, formData.role)
-        toast.success('Logged in successfully!')
+        console.log('Login successful, redirecting to dashboard')
+        router.push('/dashboard')
+      } else {
+        await register(formData.name, formData.email, formData.password, formData.role)
+        console.log('Register successful, redirecting to dashboard')
+        router.push('/dashboard')
       }
-    } catch (error: any) {
-      const errorMessage = error.message || 'Authentication failed. Please try again.'
-      toast.error(errorMessage)
+      
+      toast.success(`${action === 'login' ? 'Logged in' : 'Registered'} successfully`)
+    } catch (error) {
+      console.error('Auth error:', error)
+      toast.error(`Failed to ${action}`)
     }
   }
 
