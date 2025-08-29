@@ -32,7 +32,7 @@ export default function VideoSessions() {
     {
       id: 1,
       title: 'Advanced Mathematics Session',
-      participant: user?.role === 'student' ? 'Dr. Sarah Johnson' : 'Alex Smith',
+      participant: user?.role === 'STUDENT' ? 'Dr. Sarah Johnson' : 'Alex Smith',
       course: 'Advanced Mathematics',
       scheduledTime: '2024-01-15T10:00:00',
       duration: 60,
@@ -42,7 +42,7 @@ export default function VideoSessions() {
     {
       id: 2,
       title: 'Physics Problem Solving',
-      participant: user?.role === 'student' ? 'Prof. Michael Chen' : 'Emma Wilson',
+      participant: user?.role === 'STUDENT' ? 'Prof. Michael Chen' : 'Emma Wilson',
       course: 'Physics Fundamentals',
       scheduledTime: '2024-01-15T14:00:00',
       duration: 90,
@@ -52,7 +52,7 @@ export default function VideoSessions() {
     {
       id: 3,
       title: 'Chemistry Lab Review',
-      participant: user?.role === 'student' ? 'Dr. Emily Davis' : 'John Davis',
+      participant: user?.role === 'STUDENT' ? 'Dr. Emily Davis' : 'John Davis',
       course: 'Chemistry Lab Prep',
       scheduledTime: '2024-01-14T16:00:00',
       duration: 60,
@@ -92,9 +92,9 @@ export default function VideoSessions() {
           <div>
             <h1 className="text-3xl font-bold">Video Sessions</h1>
             <p className="text-gray-600">
-              {user?.role === 'student' 
+              {user?.role === 'STUDENT' 
                 ? 'Join your scheduled tutoring sessions' 
-                : 'Manage your tutoring sessions with students'
+                : 'Manage your tutoring sessions with STUDENTs'
               }
             </p>
           </div>
@@ -148,7 +148,7 @@ export default function VideoSessions() {
                       <div className="flex items-center space-x-2">
                         <Users className="w-4 h-4" />
                         <span>
-                          {user?.role === 'student' ? 'Tutor: ' : 'Student: '}
+                          {user?.role === 'STUDENT' ? 'Tutor: ' : 'STUDENT: '}
                           {session.participant}
                         </span>
                       </div>

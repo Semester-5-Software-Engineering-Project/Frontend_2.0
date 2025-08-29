@@ -19,7 +19,7 @@ export default function AuthPage() {
     name: '',
     email: 'admin@admin.com',
     password: '*****',
-    role: 'student' as 'student' | 'tutor'
+    role: 'STUDENT' as 'STUDENT' | 'TUTOR'
   })
 
   const handleSubmit = async (type: 'login' | 'register') => {
@@ -48,7 +48,7 @@ export default function AuthPage() {
         <div className="absolute inset-0 bg-gradient-to-br from-green-600/20 to-blue-600/20"></div>
         <Image
           src="/hero.jpeg"
-          alt="Students learning together"
+          alt="STUDENTs learning together"
           fill
           className="object-cover"
         />
@@ -64,7 +64,7 @@ export default function AuthPage() {
               <div className="w-6 h-6 bg-green-600 rounded-lg flex items-center justify-center">
                 <BookOpen className="w-4 h-4 text-white" />
               </div>
-              <span className="text-xl font-bold text-gray-900">TutorConnect</span>
+              <span className="text-xl font-bold text-gray-900">TUTORConnect</span>
             </div>
           </div>
 
@@ -114,25 +114,25 @@ export default function AuthPage() {
                         <div className="bg-gray-200 rounded-full p-0.5 h-7 flex items-center w-36">
                           <button
                             type="button"
-                            onClick={() => setFormData({...formData, role: 'student'})}
+                            onClick={() => setFormData({...formData, role: 'STUDENT'})}
                             className={`flex-1 h-6 rounded-full flex items-center justify-center font-medium transition-all duration-300 ease-in-out text-xs ${
-                              formData.role === 'student' 
+                              formData.role === 'STUDENT' 
                                 ? 'bg-green-600 text-white shadow-lg transform scale-105' 
                                 : 'text-gray-600 hover:text-gray-800'
                             }`}
                           >
-                            Student
+                            STUDENT
                           </button>
                           <button
                             type="button"
-                            onClick={() => setFormData({...formData, role: 'tutor'})}
+                            onClick={() => setFormData({...formData, role: 'TUTOR'})}
                             className={`flex-1 h-6 rounded-full flex items-center justify-center font-medium transition-all duration-300 ease-in-out text-xs ${
-                              formData.role === 'tutor' 
+                              formData.role === 'TUTOR' 
                                 ? 'bg-green-600 text-white shadow-lg transform scale-105' 
                                 : 'text-gray-600 hover:text-gray-800'
                             }`}
                           >
-                            Tutor
+                            TUTOR
                           </button>
                         </div>
                       </div>
@@ -231,9 +231,9 @@ export default function AuthPage() {
                         <div className="bg-gray-200 rounded-full p-0.5 h-9 flex items-center w-36">
                           <button
                             type="button"
-                            onClick={() => setFormData({...formData, role: 'student'})}
+                            onClick={() => setFormData({...formData, role: 'STUDENT'})}
                             className={`flex-1 h-8 rounded-full flex items-center justify-center font-medium transition-all duration-300 ease-in-out text-xs ${
-                              formData.role === 'student' 
+                              formData.role === 'STUDENT' 
                                 ? 'bg-green-600 text-white shadow-lg transform scale-105' 
                                 : 'text-gray-600 hover:text-gray-800'
                             }`}
@@ -242,9 +242,9 @@ export default function AuthPage() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => setFormData({...formData, role: 'tutor'})}
+                            onClick={() => setFormData({...formData, role: 'TUTOR'})}
                             className={`flex-1 h-8 rounded-full flex items-center justify-center font-medium transition-all duration-300 ease-in-out text-xs ${
-                              formData.role === 'tutor' 
+                              formData.role === 'TUTOR' 
                                 ? 'bg-green-600 text-white shadow-lg transform scale-105' 
                                 : 'text-gray-600 hover:text-gray-800'
                             }`}

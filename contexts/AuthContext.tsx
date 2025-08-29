@@ -7,17 +7,17 @@ interface User {
   id: string
   name: string
   email: string
-  role: 'student' | 'tutor'
+  role: 'STUDENT' | 'TUTOR'
   avatar?: string
 }
 
 interface AuthContextType {
   user: User | null
-  login: (email: string, password: string, role: 'student' | 'tutor') => Promise<void>
-  register: (name: string, email: string, password: string, role: 'student' | 'tutor') => Promise<void>
+  login: (email: string, password: string, role: 'STUDENT' | 'TUTOR') => Promise<void>
+  register: (name: string, email: string, password: string, role: 'STUDENT' | 'TUTOR') => Promise<void>
   logout: () => void
   isLoading: boolean
-  googleLogin : (role:'student' | 'tutor') => Promise<void>
+  googleLogin : (role:'STUDENT' | 'TUTOR') => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -26,12 +26,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  const mapApiRoleToAppRole = (apiRole: any): 'student' | 'tutor' => {
-    const value = String(apiRole || '').toLowerCase()
-    if (value.includes('student')) return 'student'
-    if (value.includes('tutor')) return 'tutor'
-    // Fallback: default to student to avoid over-permissioning
-    return 'student'
+  const mapApiRoleToAppRole = (apiRole: any): 'STUDENT' | 'TUTOR' => {
+    const value = String(apiRole || '').toUpperCase().trim()
+    console.log('Raw API Role:', apiRole, 'Processed Value:', value)
+    
+    if (value === 'STUDENT') return 'STUDENT'
+    if (value === 'TUTOR') return 'TUTOR'
+    
+    // Also check for variants
+    if (value.includes('STUDENT')) return 'STUDENT'
+    if (value.includes('TUTOR') || value.includes('TEACHER')) return 'TUTOR'
+    
+    // Fallback: default to STUDENT to avoid over-permissioning
+    console.warn('Unknown role received from API:', apiRole, 'defaulting to STUDENT')
+    return 'STUDENT'
   }
 
   useEffect(() => {
@@ -60,14 +68,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const res = await axiosInstance.get("/api/getuser", { withCredentials: true });
       const userData: any = res.data.user;
-      console.log(userData)
+      console.log('Raw user data from API:', userData)
       const role = mapApiRoleToAppRole(userData.role)
+      console.log('Mapped role:', role)
       
       if (userData) {
         // Add avatar based on role
-        userData.avatar = `https://images.unsplash.com/photo-${role === 'tutor' ? '1494790108755-2616c0479506' : '1507003211169-0a1dd7228f2d'}?w=150&h=150&fit=crop&crop=face`
+        userData.avatar = `https://images.unsplash.com/photo-${role === 'TUTOR' ? '1494790108755-2616c0479506' : '1507003211169-0a1dd7228f2d'}?w=150&h=150&fit=crop&crop=face`
         userData.role = role
         
+        console.log('Final user data being set:', userData)
         setUser(userData)
         localStorage.setItem('user', JSON.stringify(userData))
         // Reflect role in a cookie for middleware
@@ -80,7 +90,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const googleLogin = async (role:"student" | "tutor") =>{
+  const googleLogin = async (role:"STUDENT" | "TUTOR") =>{
     setIsLoading(true);
     try{
       // Redirect to OAuth endpoint with success redirect URL
@@ -94,7 +104,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Note: setIsLoading(false) is not needed here because the page will redirect
   }
 
-  const login = async (email: string, password: string, role: 'student' | 'tutor') => {
+  const login = async (email: string, password: string, role: 'STUDENT' | 'TUTOR') => {
     setIsLoading(true)
     try {
       // Simulate API call
@@ -107,12 +117,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // const userData: User = {
       //   id: '1',
-      //   name: role === 'tutor' ? 'Dr. Sarah Johnson' : 'Alex Smith',
+      //   name: role === 'TUTOR' ? 'Dr. Sarah Johnson' : 'Alex Smith',
       //   email,
       //   role,
-      //   avatar: `https://images.unsplash.com/photo-${role === 'tutor' ? '1494790108755-2616c0479506' : '1507003211169-0a1dd7228f2d'}?w=150&h=150&fit=crop&crop=face`
+      //   avatar: `https://images.unsplash.com/photo-${role === 'TUTOR' ? '1494790108755-2616c0479506' : '1507003211169-0a1dd7228f2d'}?w=150&h=150&fit=crop&crop=face`
       // }
-      userData.avatar = `https://images.unsplash.com/photo-${normalizedRole === 'tutor' ? '1494790108755-2616c0479506' : '1507003211169-0a1dd7228f2d'}?w=150&h=150&fit=crop&crop=face`
+      userData.avatar = `https://images.unsplash.com/photo-${normalizedRole === 'TUTOR' ? '1494790108755-2616c0479506' : '1507003211169-0a1dd7228f2d'}?w=150&h=150&fit=crop&crop=face`
       userData.role = normalizedRole
       
       setUser(userData)
@@ -123,7 +133,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const register = async (name: string, email: string, password: string, role: 'student' | 'tutor') => {
+  const register = async (name: string, email: string, password: string, role: 'STUDENT' | 'TUTOR') => {
     setIsLoading(true)
     try {
       const response = await axiosInstance.post('/api/register', {
@@ -139,7 +149,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const userData: any = res.data.user;
         const normalizedRole = mapApiRoleToAppRole(userData.role)
         
-        userData.avatar = `https://images.unsplash.com/photo-${normalizedRole === 'tutor' ? '1494790108755-2616c0479506' : '1507003211169-0a1dd7228f2d'}?w=150&h=150&fit=crop&crop=face`
+        userData.avatar = `https://images.unsplash.com/photo-${normalizedRole === 'TUTOR' ? '1494790108755-2616c0479506' : '1507003211169-0a1dd7228f2d'}?w=150&h=150&fit=crop&crop=face`
         userData.role = normalizedRole
         
         setUser(userData)
