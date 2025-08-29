@@ -96,9 +96,9 @@ export default function TutorDashboard() {
   return (
     <div className="p-6 space-y-6">
       {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-green-600 to-green-700 rounded-xl p-6 text-white">
+      <div className="bg-gradient-to-r from-primary to-primary/90 rounded-xl p-6 text-primary-foreground">
         <h1 className="text-3xl font-bold mb-2">Tutor Dashboard</h1>
-        <p className="text-green-100">Manage your courses, students, and teaching schedule.</p>
+        <p className="text-primary-foreground/70">Manage your courses, students, and teaching schedule.</p>
       </div>
 
       {/* Stats Overview */}
@@ -111,7 +111,7 @@ export default function TutorDashboard() {
               </div>
               <div>
                 <p className="text-2xl font-bold">3</p>
-                <p className="text-sm text-gray-500">Active Courses</p>
+                <p className="text-sm text-muted-foreground">Active Courses</p>
               </div>
             </div>
           </CardContent>
@@ -120,12 +120,12 @@ export default function TutorDashboard() {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <Users className="w-6 h-6 text-green-600" />
+              <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+                <Users className="w-6 h-6 text-primary" />
               </div>
               <div>
                 <p className="text-2xl font-bold">54</p>
-                <p className="text-sm text-gray-500">Total Students</p>
+                <p className="text-sm text-muted-foreground">Total Students</p>
               </div>
             </div>
           </CardContent>
@@ -139,7 +139,7 @@ export default function TutorDashboard() {
               </div>
               <div>
                 <p className="text-2xl font-bold">$2,700</p>
-                <p className="text-sm text-gray-500">Monthly Revenue</p>
+                <p className="text-sm text-muted-foreground">Monthly Revenue</p>
               </div>
             </div>
           </CardContent>
@@ -153,7 +153,7 @@ export default function TutorDashboard() {
               </div>
               <div>
                 <p className="text-2xl font-bold">4.8</p>
-                <p className="text-sm text-gray-500">Avg. Rating</p>
+                <p className="text-sm text-muted-foreground">Avg. Rating</p>
               </div>
             </div>
           </CardContent>
@@ -170,7 +170,7 @@ export default function TutorDashboard() {
                 <CardDescription>Manage your teaching content and materials</CardDescription>
               </div>
               <Link href="/dashboard/upload">
-                <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                <Button size="sm" className="bg-primary hover:bg-primary/90">
                   <Upload className="w-4 h-4 mr-2" />
                   Upload Materials
                 </Button>
@@ -188,27 +188,27 @@ export default function TutorDashboard() {
                     <div className="flex-1">
                       <div className="flex items-start justify-between">
                         <div>
-                          <h3 className="font-semibold text-gray-900">{course.title}</h3>
+                          <h3 className="font-semibold text-foreground">{course.title}</h3>
                           <div className="flex items-center space-x-4 mt-1">
                             <div className="flex items-center space-x-1">
                               <Users className="w-4 h-4 text-gray-400" />
-                              <span className="text-sm text-gray-600">{course.students} students</span>
+                              <span className="text-sm text-muted-foreground">{course.students} students</span>
                             </div>
                             <div className="flex items-center space-x-1">
                               <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                              <span className="text-sm text-gray-600">{course.rating}</span>
+                              <span className="text-sm text-muted-foreground">{course.rating}</span>
                             </div>
                           </div>
                         </div>
                         <Badge 
                           variant={course.status === 'active' ? 'default' : 'secondary'}
-                          className={course.status === 'active' ? 'bg-green-100 text-green-700' : ''}
+                          className={course.status === 'active' ? 'bg-primary/10 text-primary' : ''}
                         >
                           {course.status}
                         </Badge>
                       </div>
                       <div className="flex items-center justify-between mt-3">
-                        <span className="text-sm font-semibold text-green-600">
+                        <span className="text-sm font-semibold text-primary">
                           ${course.revenue} revenue
                         </span>
                         <Link href={`/dashboard/courses/${course.id}`}>
@@ -234,7 +234,7 @@ export default function TutorDashboard() {
             </CardHeader>
             <CardContent className="space-y-3">
               {upcomingSessions.map((session) => (
-                <div key={session.id} className="border-l-4 border-green-500 pl-4 py-2">
+                <div key={session.id} className="border-l-4 border-primary pl-4 py-2">
                   <h4 className="font-medium text-sm">{session.student}</h4>
                   <p className="text-xs text-gray-500">{session.course}</p>
                   <div className="flex items-center justify-between mt-2">
@@ -248,7 +248,7 @@ export default function TutorDashboard() {
                       {session.duration}min
                     </Badge>
                   </div>
-                  <Button size="sm" className="w-full mt-2 bg-green-600 hover:bg-green-700">
+                  <Button size="sm" className="w-full mt-2 bg-primary hover:bg-primary/90">
                     <Video className="w-4 h-4 mr-2" />
                     Start Session
                   </Button>
