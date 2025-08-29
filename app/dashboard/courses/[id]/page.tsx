@@ -126,18 +126,13 @@ export default function CoursePage() {
               variant="default"
               size="sm"
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="rounded-full w-12 h-12 -pr-20 shadow-lg absolute top-12 -left-9 bg-green-500 opacity-50"
+              className="rounded-full w-12 h-12 -pr-20 shadow-lg absolute top-12 -left-9 bg-primary/70"
             >
               <ChevronRight className="w-6 h-6"/>
             </Button>
           </div>
 
-          {/* Top Actions */}
-          <div className={`flex justify-end ${sidebarCollapsed ? 'ml-0' : 'ml-0 lg:ml-80 md:ml-72 sm:ml-64'}`}>
-            <Button asChild>
-              <Link href="/meeting">Join Live Session</Link>
-            </Button>
-          </div>
+          
 
           {/* All Content */}
           <div className={`space-y-6 transition-all duration-300 ease-in-out ${
@@ -174,6 +169,13 @@ export default function CoursePage() {
           </div>
         </div>
 
+        {/* Top Actions */}
+        <div className={`flex justify-end ${sidebarCollapsed ? 'ml-0' : 'ml-0 lg:ml-80 md:ml-72 sm:ml-64'}`}>
+            <Button asChild>
+              <Link href="/meeting">Join Live Session</Link>
+            </Button>
+          </div>
+
 
 
         {/* Progress Overview */}
@@ -202,7 +204,7 @@ export default function CoursePage() {
           <div className={`fixed top-0 left-0 h-full z-50 transition-all duration-300 ease-in-out ${
             sidebarCollapsed ? '-translate-x-full' : 'translate-x-0'
           }`}>
-            <Card className="h-full w-80 lg:w-80 md:w-72 sm:w-64 rounded-none border-r border-b border-l-0 border-t-0 shadow-lg">
+            <Card className="h-full w-80 lg:w-80 md:w-72 sm:w-64 rounded-none border-r border-b border-l-0 border-t-0 shadow-lg bg-card border-border">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg">Course Materials</CardTitle>
@@ -222,20 +224,20 @@ export default function CoursePage() {
                     <button
                       key={material.id}
                       onClick={() => handleMaterialClick(material.id)}
-                      className="w-full text-left p-4 hover:bg-gray-50 transition-colors flex items-center justify-between bg-gray-50"
+                      className="w-full text-left p-4 hover:bg-muted transition-colors flex items-center justify-between bg-muted"
                     >
                       <div className="flex items-center space-x-3">
                         {getIconForMaterial(material.type)}
                         <div>
                           <h4 className="font-medium text-sm">{material.name}</h4>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-muted-foreground">
                             {material.type === 'document' && material.size}
                             {material.type === 'video' && material.duration}
                             {material.type === 'link' && 'External Resource'}
                           </p>
                         </div>
                       </div>
-                      <ChevronRight className="w-4 h-4 text-gray-400" />
+                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
                     </button>
                   ))}
                 </div>
@@ -255,12 +257,12 @@ export default function CoursePage() {
                     key={material.id}
                     ref={(el) => (materialRefs.current[material.id] = el)}
                     id={`material-${material.id}`}
-                    className="flex items-center space-x-4 p-3 border rounded-lg hover:bg-gray-50 transition-colors"
+                    className="flex items-center space-x-4 p-3 border rounded-lg hover:bg-muted transition-colors border-border"
                   >
                     {getIconForMaterial(material.type)}
                     <div className="flex-1">
                       <h4 className="font-medium text-sm">{material.name}</h4>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-muted-foreground">
                         {material.type === 'document' && material.size}
                         {material.type === 'video' && material.duration}
                         {material.type === 'link' && 'External Resource'}

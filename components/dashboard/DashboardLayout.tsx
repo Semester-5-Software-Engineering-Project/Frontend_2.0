@@ -45,24 +45,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { name: 'Profile', href: '/dashboard/profile', icon: User },
   ]
 
-  const navItems = user?.role === 'student' ? studentNavItems : tutorNavItems
+  const navItems = user?.role === 'STUDENT' ? studentNavItems : tutorNavItems
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* Top Header */}
-      <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+      <header className="bg-card border-b border-border px-4 py-3 flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="hover:bg-gray-100"
+            className="hover:bg-muted"
           >
             {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </Button>
           
           <Link href="/dashboard" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
               <BookOpen className="w-5 h-5 text-white" />
             </div>
             <span className="text-xl font-bold text-gradient">TutorVerse</span>
@@ -77,7 +77,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </Avatar>
             <div className="hidden md:block">
               <p className="text-sm font-medium">{user?.name}</p>
-              <p className="text-xs text-gray-500 capitalize">{user?.role}</p>
+              <p className="text-xs text-muted-foreground capitalize">{user?.role}</p>
             </div>
           </div>
           
@@ -91,7 +91,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Sidebar */}
         <aside className={`
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} 
-          fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 
+          fixed inset-y-0 left-0 z-50 w-64 bg-card border-r border-border 
           transition-transform duration-300 ease-in-out
         `}>
           <div className="p-6">
@@ -105,8 +105,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     className={`
                       flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors
                       ${isActive 
-                        ? 'bg-green-100 text-green-700' 
-                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                        ? 'bg-primary/15 text-primary' 
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                       }
                     `}
                     onClick={() => setSidebarOpen(false)}
