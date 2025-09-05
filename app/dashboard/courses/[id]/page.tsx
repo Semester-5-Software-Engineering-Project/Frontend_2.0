@@ -64,21 +64,38 @@ export default function CoursePage() {
     image: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=800&h=400&fit=crop'
   }
 
-  // Source list of materials (flattened, no modules)
-  const lectureMaterials = [
-    { id: 'calc-basics', type: 'document', name: 'Calculus Basics.pdf', size: '2.3 MB' },
-    { id: 'intro-video', type: 'video', name: 'Introduction Video', duration: '45 min' },
-    { id: 'practice-problems', type: 'link', name: 'Practice Problems', url: 'https://example.com' },
-    { id: 'derivatives-guide', type: 'document', name: 'Derivatives Guide.pdf', size: '3.1 MB' },
-    { id: 'worksheets', type: 'document', name: 'Practice Worksheets.pdf', size: '1.8 MB' },
-    { id: 'derivatives-explained', type: 'video', name: 'Derivatives Explained', duration: '52 min' },
-    { id: 'online-calculator', type: 'link', name: 'Online Calculator', url: 'https://example.com' },
-    { id: 'integration-methods', type: 'document', name: 'Integration Methods.pdf', size: '2.7 MB' },
-    { id: 'integration-tutorial', type: 'video', name: 'Integration Tutorial', duration: '38 min' },
-    { id: 'interactive-examples', type: 'link', name: 'Interactive Examples', url: 'https://example.com' },
-    { id: 'diff-eq', type: 'document', name: 'Differential Equations.pdf', size: '4.2 MB' },
-    { id: 'advanced-techniques', type: 'video', name: 'Advanced Techniques', duration: '67 min' }
-  ]
+
+async function fetchMaterials(module_id: string) {
+  const response = await fetch(`http://localhost:8080/api/materials/fetchAll?module_id=${module_id}`, {
+  
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json'
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch materials: ${response.status} ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  console.log(data);
+  return data;
+}
+
+
+
+  // State for fetched materials
+  const [lectureMaterials, setLectureMaterials] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchMaterials("16afc951-af56-4e56-95c8-d54e4fb07779")
+      .then((materials) => setLectureMaterials(materials))
+      .catch((err) => {
+        // Optionally handle error
+        setLectureMaterials([]);
+      });
+  }, []);
 
   const scrollToMaterial = (materialId: string) => {
     const materialElement = materialRefs.current[materialId]
@@ -100,6 +117,40 @@ export default function CoursePage() {
         return <LinkIcon className="w-4 h-4 text-green-500" />
       default:
         return <FileText className="w-4 h-4 text-gray-500" />
+    }
+  }
+
+  async function handleDownload(materialId: string) {
+    try {
+      // Find the material by id
+      const material = lectureMaterials.find(
+        (m) => (m.id || m.material_id) === materialId
+      );
+      if (!material || !material.url) {
+        alert('Download link not available.');
+        return;
+      }
+
+      // Start download
+      const response = await fetch(material.url);
+      if (!response.ok) {
+        alert('Failed to download file.');
+        return;
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      // Create a temporary link to trigger download
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = material.title || 'document';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      alert('An error occurred while downloading.');
     }
   }
 
@@ -126,13 +177,18 @@ export default function CoursePage() {
               variant="default"
               size="sm"
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="rounded-full w-12 h-12 -pr-20 shadow-lg absolute top-12 -left-9 bg-primary/70"
+              className="rounded-full w-12 h-12 -pr-20 shadow-lg absolute top-12 -left-9 bg-green-500 opacity-50"
             >
               <ChevronRight className="w-6 h-6"/>
             </Button>
           </div>
 
-          
+          {/* Top Actions */}
+          <div className={`flex justify-end ${sidebarCollapsed ? 'ml-0' : 'ml-0 lg:ml-80 md:ml-72 sm:ml-64'}`}>
+            <Button asChild>
+              <Link href="/meeting">Join Live Session</Link>
+            </Button>
+          </div>
 
           {/* All Content */}
           <div className={`space-y-6 transition-all duration-300 ease-in-out ${
@@ -169,13 +225,6 @@ export default function CoursePage() {
           </div>
         </div>
 
-        {/* Top Actions */}
-        <div className={`flex justify-end ${sidebarCollapsed ? 'ml-0' : 'ml-0 lg:ml-80 md:ml-72 sm:ml-64'}`}>
-            <Button asChild>
-              <Link href="/meeting">Join Live Session</Link>
-            </Button>
-          </div>
-
 
 
         {/* Progress Overview */}
@@ -204,98 +253,103 @@ export default function CoursePage() {
           <div className={`fixed top-0 left-0 h-full z-50 transition-all duration-300 ease-in-out ${
             sidebarCollapsed ? '-translate-x-full' : 'translate-x-0'
           }`}>
-            <Card className="h-full w-80 lg:w-80 md:w-72 sm:w-64 rounded-none border-r border-b border-l-0 border-t-0 shadow-lg bg-card border-border">
+            <Card className="h-full w-80 lg:w-80 md:w-72 sm:w-64 rounded-none border-r border-b border-l-0 border-t-0 shadow-lg">
               <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">Course Materials</CardTitle>
-                  <Button
-                    variant="ghost"
-                    size="lg"
-                    onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                    className="p-1 h-6 w-6"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </Button>
-                </div>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg">Course Materials</CardTitle>
+                <Button
+                variant="ghost"
+                size="lg"
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="p-1 h-6 w-6"
+                >
+                <ChevronLeft className="w-4 h-4" />
+                </Button>
+              </div>
               </CardHeader>
-              <CardContent className="p-0">
-                <div className="space-y-1 max-h-[calc(100vh-120px)] overflow-y-auto">
-                  {lectureMaterials.map((material) => (
-                    <button
-                      key={material.id}
-                      onClick={() => handleMaterialClick(material.id)}
-                      className="w-full text-left p-4 hover:bg-muted transition-colors flex items-center justify-between bg-muted"
-                    >
-                      <div className="flex items-center space-x-3">
-                        {getIconForMaterial(material.type)}
-                        <div>
-                          <h4 className="font-medium text-sm">{material.name}</h4>
-                          <p className="text-xs text-muted-foreground">
-                            {material.type === 'document' && material.size}
-                            {material.type === 'video' && material.duration}
-                            {material.type === 'link' && 'External Resource'}
-                          </p>
-                        </div>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                    </button>
-                  ))}
+              <CardContent className="overflow-y-auto h-[calc(100vh-80px)] p-0">
+              {lectureMaterials.map((material) => (
+                <button
+                key={material.id || material.material_id}
+                onClick={() => handleMaterialClick(material.id || material.material_id)}
+                className="w-full text-left p-4 hover:bg-gray-50 transition-colors flex items-center justify-between"
+                >
+                <div className="flex items-center space-x-3">
+                  {material.type === 'Document' && (
+                  <FileText className="w-4 h-4 text-red-500" />
+                  )}
+                  {material.type === 'Link' && (
+                  <LinkIcon className="w-4 h-4 text-green-500" />
+                  )}
+                  {material.type === 'Video' && (
+                  <Video className="w-4 h-4 text-blue-500" />
+                  )}
+                  {material.type !== 'Document' && material.type !== 'Link' && material.type !== 'Video' && (
+                  <FileText className="w-4 h-4 text-gray-500" />
+                  )}
+                  <div>
+                  <h4 className="font-medium text-sm">{material.title}</h4>
+                  <p className="text-xs text-gray-500">
+                    {material.type === 'Document' && 'PDF'}
+                    {material.type === 'Link' && 'External Resource'}
+                  </p>
+                  </div>
                 </div>
+                <ChevronRight className="w-4 h-4 text-gray-400" />
+                </button>
+              ))}
               </CardContent>
             </Card>
           </div>
 
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Lecture Materials</CardTitle>
-                <CardDescription>All resources for this course</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {lectureMaterials.map((material) => (
-                  <div
-                    key={material.id}
-                    ref={(el) => (materialRefs.current[material.id] = el)}
-                    id={`material-${material.id}`}
-                    className="flex items-center space-x-4 p-3 border rounded-lg hover:bg-muted transition-colors border-border"
-                  >
-                    {getIconForMaterial(material.type)}
-                    <div className="flex-1">
-                      <h4 className="font-medium text-sm">{material.name}</h4>
-                      <p className="text-xs text-muted-foreground">
-                        {material.type === 'document' && material.size}
-                        {material.type === 'video' && material.duration}
-                        {material.type === 'link' && 'External Resource'}
-                      </p>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      {material.type === 'video' && (
-                        <Button size="sm" variant="outline">
-                          <Play className="w-4 h-4 mr-1" />
-                          Watch
-                        </Button>
-                      )}
-                      {material.type === 'link' && (
-                        <Button size="sm" variant="outline" asChild>
-                          <a href={material.url} target="_blank" rel="noopener noreferrer">
-                            <LinkIcon className="w-4 h-4 mr-1" />
-                            Open
-                          </a>
-                        </Button>
-                      )}
-                      {material.type === 'document' && (
-                        <Button size="sm" variant="outline">
-                          <Download className="w-4 h-4 mr-1" />
-                          Download
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
+          {/* Main Content Area for Materials */}
+          <div className="space-y-4">
+            {lectureMaterials.map((material) => (
+              <div
+                key={material.id || material.material_id}
+                ref={(el) => (materialRefs.current[material.id || material.material_id] = el)}
+                id={`material-${material.id || material.material_id}`}
+                className="flex items-center space-x-4 p-3 border rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                {material.type === 'Document' && getIconForMaterial('document')}
+                {material.type === 'Link' && getIconForMaterial('link')}
+                {material.type === 'Video' && getIconForMaterial('video')}
+                <div className="flex-1">
+                  <h4 className="font-medium text-sm">{material.title}</h4>
+                  <p className="text-xs text-gray-500">
+                    {material.type === 'Document' && 'PDF'}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {material.type === 'Link' && 'External Resource'}
+                  </p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  {material.type === 'Video' && (
+                    <Button size="sm" variant="outline">
+                      <Play className="w-4 h-4 mr-1" />
+                      Watch
+                    </Button>
+                  )}
+                  {material.type === 'Link' && (
+                    <Button size="sm" variant="outline" asChild>
+                      <a href={material.url} target="_blank" rel="noopener noreferrer">
+                        <LinkIcon className="w-4 h-4 mr-1" />
+                        Open
+                      </a>
+                    </Button>
+                  )}
+                  {material.type === 'Document' && (
+                    <Button size="sm" variant="outline" onClick={() => handleDownload(material.id || material.material_id)}>
+                      <Download className="w-4 h-4 mr-1" />
+                      Download
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
+      </div>
       </div>
     </DashboardLayout>
   )
