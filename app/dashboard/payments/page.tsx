@@ -110,8 +110,8 @@ export default function Payments() {
               }
             </p>
           </div>
-          {user?.role === 'student' && (
-            <Button className="bg-green-600 hover:bg-green-700">
+          {user?.role === 'STUDENT' && (
+            <Button className="bg-primary hover:bg-primary/90">
               <CreditCard className="w-4 h-4 mr-2" />
               Add Payment Method
             </Button>
@@ -123,13 +123,13 @@ export default function Payments() {
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                  <DollarSign className="w-6 h-6 text-green-600" />
+                <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+                  <DollarSign className="w-6 h-6 text-primary" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">${totalSpent}</p>
-                  <p className="text-sm text-gray-500">
-                    {user?.role === 'student' ? 'Total Spent' : 'Total Earned'}
+                  <p className="text-sm text-muted-foreground">
+                    {user?.role === 'STUDENT' ? 'Total Spent' : 'Total Earned'}
                   </p>
                 </div>
               </div>
@@ -144,7 +144,7 @@ export default function Payments() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">${user?.role === 'student' ? '180' : '450'}</p>
-                  <p className="text-sm text-gray-500">This Month</p>
+                  <p className="text-sm text-muted-foreground">This Month</p>
                 </div>
               </div>
             </CardContent>
@@ -158,7 +158,7 @@ export default function Payments() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{transactions.filter(t => t.status === 'completed').length}</p>
-                  <p className="text-sm text-gray-500">Completed</p>
+                  <p className="text-sm text-muted-foreground">Completed</p>
                 </div>
               </div>
             </CardContent>
@@ -172,7 +172,7 @@ export default function Payments() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{transactions.filter(t => t.status === 'pending').length}</p>
-                  <p className="text-sm text-gray-500">Pending</p>
+                  <p className="text-sm text-muted-foreground">Pending</p>
                 </div>
               </div>
             </CardContent>
@@ -205,7 +205,7 @@ export default function Payments() {
                 {/* Transactions */}
                 <div className="space-y-4">
                   {transactions.map((transaction) => (
-                    <div key={transaction.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                    <div key={transaction.id} className="border rounded-lg p-4 hover:bg-muted transition-colors">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center space-x-3 mb-2">
@@ -215,11 +215,11 @@ export default function Payments() {
                               {transaction.status}
                             </Badge>
                           </div>
-                          <p className="text-sm text-gray-600 mb-1">
-                            {user?.role === 'student' ? 'Tutor: ' : 'Student: '}
+                          <p className="text-sm text-muted-foreground mb-1">
+                            {user?.role === 'STUDENT' ? 'Tutor: ' : 'Student: '}
                             {transaction.tutor}
                           </p>
-                          <div className="flex items-center space-x-4 text-xs text-gray-500">
+                          <div className="flex items-center space-x-4 text-xs text-muted-foreground">
                             <span>Transaction ID: {transaction.id}</span>
                             <span>{new Date(transaction.date).toLocaleDateString()}</span>
                           </div>
@@ -248,8 +248,8 @@ export default function Payments() {
                 <CardContent className="space-y-3">
                   {paymentMethods.map((method) => (
                     <div key={method.id} className="flex items-center space-x-3 p-3 border rounded-lg">
-                      <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                        <CreditCard className="w-5 h-5 text-gray-600" />
+                      <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center">
+                        <CreditCard className="w-5 h-5 text-muted-foreground" />
                       </div>
                       <div className="flex-1">
                         <p className="font-medium text-sm">
@@ -297,7 +297,7 @@ export default function Payments() {
               <CardContent className="space-y-3">
                 <div className="flex items-center justify-between text-sm">
                   <span>Completed Payments</span>
-                  <span className="font-semibold text-green-600">
+                  <span className="font-semibold text-primary">
                     ${transactions.filter(t => t.status === 'completed').reduce((sum, t) => sum + t.amount, 0)}
                   </span>
                 </div>

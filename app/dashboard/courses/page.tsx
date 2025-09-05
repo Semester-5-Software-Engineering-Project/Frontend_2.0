@@ -164,7 +164,7 @@ export default function CoursesPage() {
     }
   ]
 
-  const courses = user?.role === 'student' ? enrolledCourses : teachingCourses
+  const courses = user?.role === 'STUDENT' ? enrolledCourses : teachingCourses
 
   // Type guard functions
   const isEnrolledCourse = (course: Course): course is EnrolledCourse => {
@@ -185,9 +185,9 @@ export default function CoursesPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active':
-        return 'bg-green-100 text-green-700'
+        return 'bg-primary/10 text-primary'
       case 'completed':
-        return 'bg-blue-100 text-blue-700'
+        return 'bg-muted text-foreground'
       case 'draft':
         return 'bg-yellow-100 text-yellow-700'
       default:
@@ -202,17 +202,17 @@ export default function CoursesPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">
-              {user?.role === 'student' ? 'My Courses' : 'Teaching Courses'}
+              {user?.role === 'STUDENT' ? 'My Courses' : 'Teaching Courses'}
             </h1>
-            <p className="text-gray-600">
-              {user?.role === 'student' 
+            <p className="text-muted-foreground">
+              {user?.role === 'STUDENT' 
                 ? 'Track your learning progress and manage your enrollments'
                 : 'Manage your courses, materials, and student progress'
               }
             </p>
           </div>
-          {user?.role === 'tutor' && (
-            <Button className="bg-green-600 hover:bg-green-700">
+          {user?.role === 'TUTOR' && (
+            <Button className="bg-primary hover:bg-primary/90">
               <Plus className="w-4 h-4 mr-2" />
               Create New Course
             </Button>
@@ -229,8 +229,8 @@ export default function CoursesPage() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{courses.length}</p>
-                  <p className="text-sm text-gray-500">
-                    {user?.role === 'student' ? 'Enrolled Courses' : 'Active Courses'}
+                  <p className="text-sm text-muted-foreground">
+                    {user?.role === 'STUDENT' ? 'Enrolled Courses' : 'Active Courses'}
                   </p>
                 </div>
               </div>
@@ -240,15 +240,15 @@ export default function CoursesPage() {
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                  <Clock className="w-6 h-6 text-green-600" />
+                <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+                  <Clock className="w-6 h-6 text-primary" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">
                     {user?.role === 'student' ? '24' : '156'}
                   </p>
-                  <p className="text-sm text-gray-500">
-                    {user?.role === 'student' ? 'Hours Completed' : 'Total Students'}
+                  <p className="text-sm text-muted-foreground">
+                    {user?.role === 'STUDENT' ? 'Hours Completed' : 'Total Students'}
                   </p>
                 </div>
               </div>
@@ -263,7 +263,7 @@ export default function CoursesPage() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">4.8</p>
-                  <p className="text-sm text-gray-500">Average Rating</p>
+                  <p className="text-sm text-muted-foreground">Average Rating</p>
                 </div>
               </div>
             </CardContent>
@@ -279,8 +279,8 @@ export default function CoursesPage() {
                   <p className="text-2xl font-bold">
                     {user?.role === 'student' ? '3' : '12'}
                   </p>
-                  <p className="text-sm text-gray-500">
-                    {user?.role === 'student' ? 'Upcoming Sessions' : 'This Week'}
+                  <p className="text-sm text-muted-foreground">
+                    {user?.role === 'STUDENT' ? 'Upcoming Sessions' : 'This Week'}
                   </p>
                 </div>
               </div>
@@ -316,7 +316,7 @@ export default function CoursesPage() {
                 >
                   Active
                 </Button>
-                {user?.role === 'student' && (
+                {user?.role === 'STUDENT' && (
                   <Button
                     variant={filterStatus === 'completed' ? 'default' : 'outline'}
                     onClick={() => setFilterStatus('completed')}
@@ -325,7 +325,7 @@ export default function CoursesPage() {
                     Completed
                   </Button>
                 )}
-                {user?.role === 'tutor' && (
+                {user?.role === 'TUTOR' && (
                   <Button
                     variant={filterStatus === 'draft' ? 'default' : 'outline'}
                     onClick={() => setFilterStatus('draft')}

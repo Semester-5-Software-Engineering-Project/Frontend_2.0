@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
 import { useAuth } from '@/contexts/AuthContext'
+import { Label } from 'recharts'
 
 export default function Reviews() {
   const { user } = useAuth()
@@ -26,7 +27,7 @@ export default function Reviews() {
   const reviews = [
     {
       id: 1,
-      student: 'Alex Smith',
+      STUDENT: 'Alex Smith',
       course: 'Advanced Mathematics',
       rating: 5,
       comment: 'Excellent explanation of complex topics. Dr. Johnson makes calculus easy to understand and provides great practice problems.',
@@ -36,17 +37,17 @@ export default function Reviews() {
     },
     {
       id: 2,
-      student: 'Emma Wilson',
+      STUDENT: 'Emma Wilson',
       course: 'Calculus Fundamentals',
       rating: 5,
-      comment: 'Amazing tutor! Very patient and knowledgeable. The course materials are comprehensive and well-organized.',
+      comment: 'Amazing TUTOR! Very patient and knowledgeable. The course materials are comprehensive and well-organized.',
       date: '2024-01-08',
       helpful: 8,
       avatar: 'https://images.unsplash.com/photo-1494790108755-2616c0479506?w=150&h=150&fit=crop&crop=face'
     },
     {
       id: 3,
-      student: 'John Davis',
+      STUDENT: 'John Davis',
       course: 'Advanced Mathematics',
       rating: 4,
       comment: 'Great course overall. Could use more interactive examples, but the content is solid.',
@@ -56,7 +57,7 @@ export default function Reviews() {
     },
     {
       id: 4,
-      student: 'Sarah Lee',
+      STUDENT: 'Sarah Lee',
       course: 'Statistics & Probability',
       rating: 5,
       comment: 'Perfect for exam preparation! The step-by-step approach really helped me understand difficult concepts.',
@@ -88,9 +89,9 @@ export default function Reviews() {
           <div>
             <h1 className="text-3xl font-bold">Reviews & Ratings</h1>
             <p className="text-gray-600">
-              {user?.role === 'student' 
-                ? 'Rate your tutors and read course reviews'
-                : 'Manage your reviews and student feedback'
+              {user?.role === 'STUDENT' 
+                ? 'Rate your TUTORs and read course reviews'
+                : 'Manage your reviews and STUDENT feedback'
               }
             </p>
           </div>
@@ -100,8 +101,8 @@ export default function Reviews() {
           </Button>
         </div>
 
-        {user?.role === 'tutor' && (
-          /* Tutor Stats */
+        {user?.role === 'TUTOR' && (
+          /* TUTOR Stats */
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <Card>
               <CardContent className="p-6">
@@ -167,12 +168,12 @@ export default function Reviews() {
             <Card>
               <CardHeader>
                 <CardTitle>
-                  {user?.role === 'student' ? 'Course Reviews' : 'Student Reviews'}
+                  {user?.role === 'STUDENT' ? 'Course Reviews' : 'STUDENT Reviews'}
                 </CardTitle>
                 <CardDescription>
-                  {user?.role === 'student' 
-                    ? 'See what other students say about courses'
-                    : 'Feedback from your students'
+                  {user?.role === 'STUDENT' 
+                    ? 'See what other STUDENTs say about courses'
+                    : 'Feedback from your STUDENTs'
                   }
                 </CardDescription>
               </CardHeader>
@@ -182,12 +183,12 @@ export default function Reviews() {
                     <div className="flex items-start space-x-4">
                       <Avatar>
                         <AvatarImage src={review.avatar} />
-                        <AvatarFallback>{review.student.charAt(0)}</AvatarFallback>
+                        <AvatarFallback>{review.STUDENT.charAt(0)}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
                         <div className="flex items-center justify-between mb-2">
                           <div>
-                            <h4 className="font-medium">{review.student}</h4>
+                            <h4 className="font-medium">{review.STUDENT}</h4>
                             <p className="text-sm text-gray-500">{review.course}</p>
                           </div>
                           <div className="text-right">
@@ -214,7 +215,7 @@ export default function Reviews() {
                             <ThumbsUp className="w-4 h-4 mr-1" />
                             Helpful ({review.helpful})
                           </Button>
-                          {user?.role === 'tutor' && (
+                          {user?.role === 'TUTOR' && (
                             <Button size="sm" variant="ghost" className="text-green-600">
                               <MessageCircle className="w-4 h-4 mr-1" />
                               Reply
@@ -231,12 +232,12 @@ export default function Reviews() {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {user?.role === 'student' && (
+            {user?.role === 'STUDENT' && (
               /* Leave a Review */
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Leave a Review</CardTitle>
-                  <CardDescription>Share your experience with other students</CardDescription>
+                  <CardDescription>Share your experience with other STUDENTs</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
@@ -261,7 +262,7 @@ export default function Reviews() {
                   </div>
                   
                   <div>
-                    <Label htmlFor="review" className="text-sm font-medium">Your Review</Label>
+                    <label htmlFor="review" className="text-sm font-medium">Your Review</label>
                     <Textarea 
                       id="review"
                       placeholder="Share your experience..."
@@ -282,8 +283,8 @@ export default function Reviews() {
               </Card>
             )}
 
-            {/* Rating Distribution (for tutors) */}
-            {user?.role === 'tutor' && (
+            {/* Rating Distribution (for TUTORs) */}
+            {user?.role === 'TUTOR' && (
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Rating Distribution</CardTitle>

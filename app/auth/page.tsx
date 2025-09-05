@@ -19,21 +19,32 @@ export default function AuthPage() {
     name: '',
     email: 'admin@admin.com',
     password: '*****',
-    role: 'student' as 'student' | 'tutor'
+    role: 'STUDENT' as 'STUDENT' | 'TUTOR'
   })
 
-  const handleSubmit = async (type: 'login' | 'register') => {
+  const handleSubmit = async (action: 'login' | 'register') => {
+    if (!formData.email || !formData.password) {
+      toast.error("Please fill in all fields")
+      return
+    }
+
     try {
-      if (type === 'register') {
-        await register(formData.name, formData.email, formData.password, formData.role)
-        toast.success('Account created successfully!')
-      } else {
+      console.log('Auth form submit started:', { action, email: formData.email, role: formData.role })
+      
+      if (action === 'login') {
         await login(formData.email, formData.password, formData.role)
-        toast.success('Logged in successfully!')
+        console.log('Login successful, redirecting to dashboard')
+        router.push('/dashboard')
+      } else {
+        await register(formData.name, formData.email, formData.password, formData.role)
+        console.log('Register successful, redirecting to dashboard')
+        router.push('/dashboard')
       }
-    } catch (error: any) {
-      const errorMessage = error.message || 'Authentication failed. Please try again.'
-      toast.error(errorMessage)
+      
+      toast.success(`${action === 'login' ? 'Logged in' : 'Registered'} successfully`)
+    } catch (error) {
+      console.error('Auth error:', error)
+      toast.error(`Failed to ${action}`)
     }
   }
 
@@ -45,10 +56,10 @@ export default function AuthPage() {
     <div className="min-h-screen flex">
       {/* Left Side - Compact Content */}
       <div className="hidden lg:flex lg:w-1/2 relative">
-        <div className="absolute inset-0 bg-gradient-to-br from-green-600/20 to-blue-600/20"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-blue-600/20"></div>
         <Image
           src="/hero.jpeg"
-          alt="Students learning together"
+          alt="STUDENTs learning together"
           fill
           className="object-cover"
         />
@@ -56,15 +67,15 @@ export default function AuthPage() {
       </div>
 
       {/* Right Side - Compact Auth Forms */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 bg-white">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 bg-card">
         <div className="w-full max-w-sm">
           {/* Logo */}
           <div className="text-center mb-6">
             <div className="flex items-center justify-center space-x-2 mb-2">
-              <div className="w-6 h-6 bg-green-600 rounded-lg flex items-center justify-center">
+              <div className="w-6 h-6 bg-primary rounded-lg flex items-center justify-center">
                 <BookOpen className="w-4 h-4 text-white" />
               </div>
-              <span className="text-xl font-bold text-gray-900">TutorConnect</span>
+              <span className="text-xl font-bold text-foreground">TutorVerse</span>
             </div>
           </div>
 
@@ -78,7 +89,7 @@ export default function AuthPage() {
             <TabsContent value="login">
               <Card className="border-0 shadow-none">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-lg font-bold text-gray-900 text-center">Log In</CardTitle>
+                  <CardTitle className="text-lg font-bold text-foreground text-center">Log In</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="space-y-2">
@@ -94,7 +105,7 @@ export default function AuthPage() {
                         type="email"
                         value={formData.email}
                         onChange={(e) => setFormData({...formData, email: e.target.value})}
-                        className="border-gray-300 focus:border-green-500 h-8 text-sm"
+                        className="border-input focus:border-primary h-8 text-sm"
                       />
                     </div>
                     <div className="space-y-1">
@@ -104,35 +115,35 @@ export default function AuthPage() {
                         type="password"
                         value={formData.password}
                         onChange={(e) => setFormData({...formData, password: e.target.value})}
-                        className="border-gray-300 focus:border-green-500 h-8 text-sm"
+                        className="border-input focus:border-primary h-8 text-sm"
                       />
                     </div>
                     
                     <div className="space-y-1">
                       <Label className="text-sm align-center items-center justify-center">Login As</Label>
                       <div className="flex justify-center">
-                        <div className="bg-gray-200 rounded-full p-0.5 h-7 flex items-center w-36">
+                        <div className="bg-muted rounded-full p-0.5 h-7 flex items-center w-36">
                           <button
                             type="button"
-                            onClick={() => setFormData({...formData, role: 'student'})}
+                            onClick={() => setFormData({...formData, role: 'STUDENT'})}
                             className={`flex-1 h-6 rounded-full flex items-center justify-center font-medium transition-all duration-300 ease-in-out text-xs ${
-                              formData.role === 'student' 
-                                ? 'bg-green-600 text-white shadow-lg transform scale-105' 
+                              formData.role === 'STUDENT' 
+                                ? 'bg-primary text-primary-foreground shadow-lg transform scale-105' 
                                 : 'text-gray-600 hover:text-gray-800'
                             }`}
                           >
-                            Student
+                            STUDENT
                           </button>
                           <button
                             type="button"
-                            onClick={() => setFormData({...formData, role: 'tutor'})}
+                            onClick={() => setFormData({...formData, role: 'TUTOR'})}
                             className={`flex-1 h-6 rounded-full flex items-center justify-center font-medium transition-all duration-300 ease-in-out text-xs ${
-                              formData.role === 'tutor' 
-                                ? 'bg-green-600 text-white shadow-lg transform scale-105' 
+                              formData.role === 'TUTOR' 
+                                ? 'bg-primary text-primary-foreground shadow-lg transform scale-105' 
                                 : 'text-gray-600 hover:text-gray-800'
                             }`}
                           >
-                            Tutor
+                            TUTOR
                           </button>
                         </div>
                       </div>
@@ -141,7 +152,7 @@ export default function AuthPage() {
 
                     <Button 
                       onClick={() => handleSubmit('login')} 
-                      className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 h-9 text-sm"
+                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-2 h-9 text-sm"
                       disabled={isLoading}
                     >
                       {isLoading ? 'Signing in...' : 'Log in'}
@@ -154,7 +165,7 @@ export default function AuthPage() {
                       <span className="w-full border-t" />
                     </div>
                     <div className="relative flex justify-center text-xs">
-                      <span className="bg-white px-2 text-gray-500">Or</span>
+                      <span className="bg-card px-2 text-muted-foreground">Or</span>
                     </div>
                   </div>
 
@@ -185,7 +196,7 @@ export default function AuthPage() {
             <TabsContent value="register">
               <Card className="border-0 shadow-none">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-lg font-bold text-gray-900 text-center">Create Account</CardTitle>
+                  <CardTitle className="text-lg font-bold text-foreground text-center">Create Account</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   
@@ -200,7 +211,7 @@ export default function AuthPage() {
                         placeholder="Enter your full name"
                         value={formData.name}
                         onChange={(e) => setFormData({...formData, name: e.target.value})}
-                        className="border-gray-300 focus:border-green-500 h-8 text-sm"
+                        className="border-input focus:border-primary h-8 text-sm"
                       />
                     </div>
                     <div className="space-y-1">
@@ -211,7 +222,7 @@ export default function AuthPage() {
                         placeholder="Enter your email"
                         value={formData.email}
                         onChange={(e) => setFormData({...formData, email: e.target.value})}
-                        className="border-gray-300 focus:border-green-500 h-8 text-sm"
+                        className="border-input focus:border-primary h-8 text-sm"
                       />
                     </div>
                     <div className="space-y-1">
@@ -222,19 +233,19 @@ export default function AuthPage() {
                         placeholder="Create a password"
                         value={formData.password}
                         onChange={(e) => setFormData({...formData, password: e.target.value})}
-                        className="border-gray-300 focus:border-green-500 h-8 text-sm"
+                        className="border-input focus:border-primary h-8 text-sm"
                       />
                     </div>
                     <div className="space-y-1">
                       <Label className="text-sm">I want to</Label>
                       <div className="flex justify-center">
-                        <div className="bg-gray-200 rounded-full p-0.5 h-9 flex items-center w-36">
+                        <div className="bg-muted rounded-full p-0.5 h-9 flex items-center w-36">
                           <button
                             type="button"
-                            onClick={() => setFormData({...formData, role: 'student'})}
+                            onClick={() => setFormData({...formData, role: 'STUDENT'})}
                             className={`flex-1 h-8 rounded-full flex items-center justify-center font-medium transition-all duration-300 ease-in-out text-xs ${
-                              formData.role === 'student' 
-                                ? 'bg-green-600 text-white shadow-lg transform scale-105' 
+                              formData.role === 'STUDENT' 
+                                ? 'bg-primary text-primary-foreground shadow-lg transform scale-105' 
                                 : 'text-gray-600 hover:text-gray-800'
                             }`}
                           >
@@ -242,10 +253,10 @@ export default function AuthPage() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => setFormData({...formData, role: 'tutor'})}
+                            onClick={() => setFormData({...formData, role: 'TUTOR'})}
                             className={`flex-1 h-8 rounded-full flex items-center justify-center font-medium transition-all duration-300 ease-in-out text-xs ${
-                              formData.role === 'tutor' 
-                                ? 'bg-green-600 text-white shadow-lg transform scale-105' 
+                              formData.role === 'TUTOR' 
+                                ? 'bg-primary text-primary-foreground shadow-lg transform scale-105' 
                                 : 'text-gray-600 hover:text-gray-800'
                             }`}
                           >
@@ -256,7 +267,7 @@ export default function AuthPage() {
                     </div>
                     <Button 
                       onClick={() => handleSubmit('register')} 
-                      className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 h-9 text-sm"
+                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-2 h-9 text-sm"
                       disabled={isLoading}
                     >
                       {isLoading ? 'Creating account...' : 'Create Account'}
@@ -268,7 +279,7 @@ export default function AuthPage() {
                       <span className="w-full border-t" />
                     </div>
                     <div className="relative flex justify-center text-xs ">
-                      <span className="bg-white px-2 text-gray-500">Or</span>
+                      <span className="bg-card px-2 text-muted-foreground">Or</span>
                     </div>
                   </div>
 
