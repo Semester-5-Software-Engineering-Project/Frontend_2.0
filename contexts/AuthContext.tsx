@@ -18,6 +18,7 @@ interface AuthContextType {
   logout: () => void
   isLoading: boolean
   googleLogin : (role:'STUDENT' | 'TUTOR') => Promise<void>
+  checkAuthStatus: () => Promise<boolean>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -45,8 +46,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Check for stored auth data
     const storedUser = localStorage.getItem('user')
-    if (storedUser) {
+    const getCookie = (name: string) => {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop()?.split(';').shift();
+      return null;
+    };
+    const jwtToken = getCookie('jwt_token');
+
+    if (storedUser && jwtToken) {
       try {
+        checkAuthStatus() // Verify with backend
         const parsed = JSON.parse(storedUser)
         const normalizedRole = mapApiRoleToAppRole(parsed.role)
         const normalizedUser = { ...parsed, role: normalizedRole }
@@ -59,12 +69,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         checkAuthStatus()
       }
     } else {
-      // Check if user is authenticated via cookies (after OAuth redirect)
       checkAuthStatus()
     }
   }, [])
 
-  const checkAuthStatus = async () => {
+  const checkAuthStatus = async (): Promise<boolean> => {
     try {
       const res = await axiosInstance.get("/api/getuser", { withCredentials: true });
       const userData: any = res.data.user;
@@ -82,11 +91,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('user', JSON.stringify(userData))
         // Reflect role in a cookie for middleware
         document.cookie = `role=${role}; path=/; SameSite=Lax`
+        setIsLoading(false)
+        return true;
       }
+      setIsLoading(false)
+      return false;
     } catch (error) {
       console.log('No authenticated user found')
-    } finally {
       setIsLoading(false)
+      return false;
     }
   }
 
@@ -194,7 +207,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, isLoading ,googleLogin}}>
+    <AuthContext.Provider value={{ user, login, register, logout, isLoading ,googleLogin,checkAuthStatus}}>
       {children}
     </AuthContext.Provider>
   )
