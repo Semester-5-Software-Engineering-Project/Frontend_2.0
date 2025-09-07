@@ -1,6 +1,6 @@
 'use client'
-
-import { useState } from 'react'
+import Cookies from "js-cookie";
+import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,42 +9,72 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { 
-  Upload, 
-  FileText, 
-  Video, 
-  Link as LinkIcon, 
-  Trash2,
-  Plus,
-  Save
-} from 'lucide-react'
+import { Upload, FileText, Video, Link as LinkIcon, Trash2, Plus, Save } from 'lucide-react'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
 import { useAuth } from '@/contexts/AuthContext'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { ShieldAlert } from 'lucide-react'
 import { toast } from 'sonner'
+import axios from 'axios'
 
 export default function UploadMaterials() {
-  const { user } = useAuth()
+  const { user } = useAuth() // make sure your AuthContext provides JWT token
+  const [modules, setModules] = useState<any[]>([])
   const [selectedCourse, setSelectedCourse] = useState('')
+  console.log('Selected Course:', selectedCourse)
   const [materials, setMaterials] = useState<any[]>([])
   const [newMaterial, setNewMaterial] = useState({
-    type: 'document',
+    type: 'Document',
     title: '',
     description: '',
     url: '',
     file: null as File | null
   })
 
-  const courses = [
-    { id: '1', title: 'Advanced Mathematics' },
-    { id: '2', title: 'Calculus Fundamentals' },
-    { id: '3', title: 'Statistics & Probability' }
-  ]
+  const token = Cookies.get('jwt_token');
+
+  useEffect(() => {
+    const fetchModules = async () => {
+      if (!user || user.role !== 'tutor') return;
+
+      try {
+        const res = await fetch("http://localhost:8080/api/modules/tutor", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const data = await res.json();
+        console.log("Fetched modules:", data);
+     
+        if (Array.isArray(data)) {
+          setModules(data);
+        } else if (Array.isArray(data.modules)) {
+          setModules(data.modules);
+        } else if (Array.isArray(data.data)) {
+          setModules(data.data);
+        } else {
+          setModules([]);
+        }
+      } catch (err) {
+        console.error(err);
+        setModules([]);
+        toast.error("Failed to load modules");
+      }
+    };
+
+    fetchModules();
+  }, [user, token]);
+
+
 
   const handleAddMaterial = () => {
     if (!newMaterial.title.trim()) {
       toast.error('Please enter a title for the material')
+      return
+    }
+    if (!selectedCourse) {
+      toast.error('Please select a course')
       return
     }
 
@@ -56,7 +86,7 @@ export default function UploadMaterials() {
 
     setMaterials([...materials, material])
     setNewMaterial({
-      type: 'document',
+      type: 'Document',
       title: '',
       description: '',
       url: '',
@@ -77,20 +107,62 @@ export default function UploadMaterials() {
     }
   }
 
-  const getIconForType = (type: string) => {
-    switch (type) {
-      case 'document':
-        return <FileText className="w-5 h-5 text-red-500" />
-      case 'video':
-        return <Video className="w-5 h-5 text-blue-500" />
-      case 'link':
-        return <LinkIcon className="w-5 h-5 text-green-500" />
-      default:
-        return <FileText className="w-5 h-5 text-gray-500" />
+  const handleSaveAll = async () => {
+  try {
+    for (const material of materials) {
+      const formData = new FormData()
+      formData.append('module_id', selectedCourse)
+      formData.append('title', material.title)
+      formData.append('description', material.description || '')
+      formData.append('type', material.type)
+
+      if (material.type === 'Link') {
+        formData.append('link', material.url || '')
+      } else if (material.file) {
+        formData.append('file', material.file)
+      }
+
+      console.log(
+        'Uploading material:',
+        formData.get('title'),
+        formData.get('type'),
+        formData.get('module_id'),
+        formData.get('link') 
+      )
+
+      await axios.post("http://localhost:8080/api/materials/upload", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${token}`,
+        },
+        withCredentials: true,
+      })
     }
+
+    toast.success('All materials uploaded successfully!')
+    setMaterials([])
+  } catch (err) {
+    console.error(err)
+    toast.error('Failed to upload materials')
   }
 
-  if (user?.role === 'student') {
+ 
+}
+
+const getIconForType = (type: string) => {
+  switch (type) {
+    case 'Document':
+      return <FileText className="w-5 h-5 text-red-500" />
+    case 'Video':
+      return <Video className="w-5 h-5 text-blue-500" />
+    case 'Link':
+      return <LinkIcon className="w-5 h-5 text-green-500" />
+    default:
+      return <FileText className="w-5 h-5 text-gray-500" />
+  }
+}
+
+  if (user?.role !== 'tutor') {
     return (
       <DashboardLayout>
         <div className="p-6">
@@ -109,12 +181,7 @@ export default function UploadMaterials() {
   return (
     <DashboardLayout>
       <div className="p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Upload Course Materials</h1>
-            <p className="text-gray-600">Add documents, videos, and links to enhance your courses</p>
-          </div>
-        </div>
+        <h1 className="text-3xl font-bold">Upload Course Materials</h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Upload Form */}
@@ -122,9 +189,7 @@ export default function UploadMaterials() {
             <Card>
               <CardHeader>
                 <CardTitle>Add New Material</CardTitle>
-                <CardDescription>
-                  Upload documents, videos, or add external links for your students
-                </CardDescription>
+                <CardDescription>Upload documents, videos, or add links</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Course Selection */}
@@ -135,11 +200,15 @@ export default function UploadMaterials() {
                       <SelectValue placeholder="Choose a course" />
                     </SelectTrigger>
                     <SelectContent>
-                      {courses.map((course) => (
-                        <SelectItem key={course.id} value={course.id}>
-                          {course.title}
-                        </SelectItem>
-                      ))}
+                      {Array.isArray(modules) && modules.length > 0 ? (
+                        modules.map((mod) => (
+                          <SelectItem key={mod.moduleId} value={mod.moduleId}>
+                            {mod.name}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <div className="p-2 text-gray-400">No modules found</div>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -152,126 +221,81 @@ export default function UploadMaterials() {
                     onValueChange={(value) => setNewMaterial({...newMaterial, type: value})}
                   >
                     <TabsList className="grid w-full grid-cols-3">
-                      <TabsTrigger value="document">Document</TabsTrigger>
-                      <TabsTrigger value="video">Video</TabsTrigger>
-                      <TabsTrigger value="link">Link</TabsTrigger>
+                      <TabsTrigger value="Document">Document</TabsTrigger>
+                      <TabsTrigger value="Video">Video</TabsTrigger>
+                      <TabsTrigger value="Link">Link</TabsTrigger>
                     </TabsList>
-                    
-                    <TabsContent value="document" className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="file">Upload Document</Label>
-                        <Input 
-                          id="file" 
-                          type="file" 
-                          accept=".pdf,.doc,.docx,.ppt,.pptx"
-                          onChange={handleFileChange}
-                        />
-                        <p className="text-xs text-gray-500">
-                          Supported formats: PDF, DOC, DOCX, PPT, PPTX (Max 10MB)
-                        </p>
-                      </div>
+
+                    <TabsContent value="Document">
+                      <Label>Upload Document</Label>
+                      <Input type="file" accept=".pdf,.doc,.docx,.ppt,.pptx" onChange={handleFileChange} />
                     </TabsContent>
-                    
-                    <TabsContent value="video" className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="video-file">Upload Video</Label>
-                        <Input 
-                          id="video-file" 
-                          type="file" 
-                          accept=".mp4,.mov,.avi,.wmv"
-                          onChange={handleFileChange}
-                        />
-                        <p className="text-xs text-gray-500">
-                          Supported formats: MP4, MOV, AVI, WMV (Max 100MB)
-                        </p>
-                      </div>
+
+                    <TabsContent value="Video">
+                      <Label>Upload Video</Label>
+                      <Input type="file" accept=".mp4,.mov,.avi,.wmv" onChange={handleFileChange} />
                     </TabsContent>
-                    
-                    <TabsContent value="link" className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="url">External Link</Label>
-                        <Input 
-                          id="url" 
-                          type="url" 
-                          placeholder="https://example.com"
-                          value={newMaterial.url}
-                          onChange={(e) => setNewMaterial({...newMaterial, url: e.target.value})}
-                        />
-                        <p className="text-xs text-gray-500">
-                          Add links to external resources, websites, or tools
-                        </p>
-                      </div>
+
+                    <TabsContent value="Link">
+                      <Label>External Link</Label>
+                      <Input 
+                        type="url" 
+                        placeholder="https://example.com"
+                        value={newMaterial.url}
+                        onChange={(e) => setNewMaterial({...newMaterial, url: e.target.value})}
+                      />
                     </TabsContent>
                   </Tabs>
                 </div>
 
                 {/* Material Details */}
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="title">Material Title</Label>
-                    <Input 
-                      id="title" 
-                      placeholder="Enter material title"
-                      value={newMaterial.title}
-                      onChange={(e) => setNewMaterial({...newMaterial, title: e.target.value})}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="description">Description (Optional)</Label>
-                    <Textarea 
-                      id="description" 
-                      placeholder="Add a description for this material"
-                      value={newMaterial.description}
-                      onChange={(e) => setNewMaterial({...newMaterial, description: e.target.value})}
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="title">Material Title</Label>
+                  <Input 
+                    id="title"
+                    value={newMaterial.title}
+                    onChange={(e) => setNewMaterial({...newMaterial, title: e.target.value})}
+                  />
+                  <Label>Description</Label>
+                  <Textarea 
+                    value={newMaterial.description}
+                    onChange={(e) => setNewMaterial({...newMaterial, description: e.target.value})}
+                  />
                 </div>
 
-                <Button 
-                  onClick={handleAddMaterial} 
-                  className="w-full bg-green-600 hover:bg-green-700"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Material
+                <Button onClick={handleAddMaterial} className="w-full bg-green-600 hover:bg-green-700">
+                  <Plus className="w-4 h-4 mr-2" /> Add Material
                 </Button>
               </CardContent>
             </Card>
           </div>
 
-          {/* Preview & Materials List */}
+          {/* Preview */}
           <div className="space-y-6">
-            {/* Upload Progress */}
             <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Upload Summary</CardTitle>
-              </CardHeader>
+              <CardHeader><CardTitle>Upload Summary</CardTitle></CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Materials Added</span>
-                  <Badge variant="secondary">{materials.length}</Badge>
+                <div className="flex justify-between">
+                  <span>Materials Added</span>
+                  <Badge>{materials.length}</Badge>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Selected Course</span>
-                  <span className="text-sm text-gray-600">
-                    {selectedCourse ? courses.find(c => c.id === selectedCourse)?.title : 'None'}
-                  </span>
+                <div className="flex justify-between">
+                  <span>Selected Course</span>
+                  <span>{selectedCourse ? modules.find(m => m.moduleId === selectedCourse)?.name : 'None'}</span>
                 </div>
                 <Button 
-                  className="w-full bg-green-600 hover:bg-green-700" 
+                  onClick={handleSaveAll}
                   disabled={!selectedCourse || materials.length === 0}
+                  className="w-full bg-green-600 hover:bg-green-700"
                 >
-                  <Save className="w-4 h-4 mr-2" />
-                  Save Materials
+                  <Save className="w-4 h-4 mr-2" /> Save Materials
                 </Button>
               </CardContent>
             </Card>
 
             {/* Recent Materials */}
             <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Added Materials</CardTitle>
-              </CardHeader>
+              <CardHeader><CardTitle>Added Materials</CardTitle></CardHeader>
               <CardContent>
                 {materials.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
@@ -280,18 +304,14 @@ export default function UploadMaterials() {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {materials.map((material) => (
-                      <div key={material.id} className="flex items-center space-x-3 p-3 border rounded-lg">
-                        {getIconForType(material.type)}
+                    {materials.map((m) => (
+                      <div key={m.id} className="flex items-center space-x-3 p-3 border rounded-lg">
+                        {getIconForType(m.type)}
                         <div className="flex-1">
-                          <h4 className="font-medium text-sm">{material.title}</h4>
-                          <p className="text-xs text-gray-500 capitalize">{material.type}</p>
+                          <h4 className="font-medium text-sm">{m.title}</h4>
+                          <p className="text-xs text-gray-500 capitalize">{m.type}</p>
                         </div>
-                        <Button 
-                          size="sm" 
-                          variant="ghost" 
-                          onClick={() => handleRemoveMaterial(material.id)}
-                        >
+                        <Button size="sm" variant="ghost" onClick={() => handleRemoveMaterial(m.id)}>
                           <Trash2 className="w-4 h-4 text-red-500" />
                         </Button>
                       </div>
