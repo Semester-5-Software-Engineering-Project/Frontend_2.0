@@ -17,9 +17,8 @@ export default function MeetingPage() {
   const [showMeetingRoom, setShowMeetingRoom] = useState(false)
   const [meetingData, setMeetingData] = useState<{roomId: string, token: string, moduleId: string} | null>(null)
 
-  // Check for stored meeting data from module join or query/hash room
   useEffect(() => {
-    // First check for stored meeting data from module join
+    
     const storedMeetingData = localStorage.getItem('meetingData')
     if (storedMeetingData) {
       try {
@@ -61,9 +60,7 @@ export default function MeetingPage() {
     setShowMeetingRoom(false)
     setActiveRoom(null)
     
-    // If we have a moduleId, redirect back to the module page
     if (meetingData?.moduleId) {
-      // Clear stored data before redirecting
       localStorage.removeItem('meetingData')
       setMeetingData(null)
       
