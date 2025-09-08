@@ -18,59 +18,59 @@
 
 @layer base {
   :root {
-    /* Light theme: slate surfaces, violet primary */
-    --background: 210 20% 98%;
-    --foreground: 222 47% 11%;
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    /* Building Demo WooCommerce light mode - optimized */
+    --background: 0 0% 100%; /* Pure white background */
+    --foreground: 0 0% 32%; /* #515151 - WC Secondary text */
+    --card: 0 0% 100%; /* White cards */
+    --card-foreground: 0 0% 32%; /* Dark text on cards */
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-    --primary: 262 83% 58%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 215 16% 92%;
-    --secondary-foreground: 222 47% 11%;
-    --muted: 215 16% 92%;
-    --muted-foreground: 215 20% 35%;
-    --accent: 262 83% 96%;
-    --accent-foreground: 262 83% 30%;
-    --destructive: 0 84% 60%;
+    --popover-foreground: 0 0% 32%;
+    --primary: 45 93% 51%; /* #f0ae16 - Updated golden highlight (main CTA color) */
+    --primary-foreground: 0 0% 100%; /* White text on golden */
+    --secondary: 260 23% 91%; /* #e9e6ed - Light grey sections */
+    --secondary-foreground: 0 0% 32%; /* Dark text on light grey */
+    --muted: 260 23% 91%; /* Light grey for muted elements */
+    --muted-foreground: 0 0% 50%; /* Medium grey for muted text */
+    --accent: 270 88% 49%; /* #720eec - WC Primary purple for accents */
+    --accent-foreground: 260 89% 98%; /* #fcfbfe - Light text on purple */
+    --destructive: 0 100% 33%; /* #a00 - WC Red for errors */
     --destructive-foreground: 0 0% 100%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 262 83% 58%;
-    --chart-1: 262 83% 58%;
-    --chart-2: 200 89% 48%;
-    --chart-3: 142 76% 36%;
-    --chart-4: 43 74% 56%;
-    --chart-5: 340 82% 52%;
-    --radius: 0.75rem;
+    --border: 260 23% 85%; /* Slightly darker border for definition */
+    --input: 260 23% 91%; /* Light grey input backgrounds */
+    --ring: 45 93% 51%; /* Updated golden focus ring */
+    --chart-1: 45 93% 51%; /* Updated Golden */
+    --chart-2: 44 100% 50%; /* Orange #ffba00 */
+    --chart-3: 95 64% 52%; /* Green #7ad03a */
+    --chart-4: 0 100% 33%; /* Red #a00 */
+    --chart-5: 190 81% 47%; /* Blue #2ea2cc */
+    --radius: 0.5rem; /* Slightly smaller radius for cleaner look */
   }
   .dark {
-    /* Dark theme: near-black slate surfaces, violet primary */
-    --background: 222 47% 6%;
-    --foreground: 210 40% 98%;
-    --card: 222 47% 7%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222 47% 7%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 262 83% 66%;
-    --primary-foreground: 240 5% 10%;
-    --secondary: 217 33% 14%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217 33% 14%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 262 83% 20%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
-    --ring: 262 83% 66%;
-    --chart-1: 262 83% 66%;
-    --chart-2: 200 89% 58%;
-    --chart-3: 142 76% 46%;
-    --chart-4: 43 84% 56%;
-    --chart-5: 340 85% 60%;
+    /* Dark theme: Building Demo adapted for dark mode */
+    --background: 0 0% 8%; /* Very dark background */
+    --foreground: 260 89% 98%; /* Light text */
+    --card: 0 0% 10%;
+    --card-foreground: 260 89% 98%;
+    --popover: 0 0% 10%;
+    --popover-foreground: 260 89% 98%;
+    --primary: 45 93% 55%; /* Brighter version of #f0ae16 for dark mode */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 15%; /* Dark grey sections */
+    --secondary-foreground: 260 89% 98%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 65%;
+    --accent: 270 88% 60%; /* Lighter purple for dark mode */
+    --accent-foreground: 260 89% 98%;
+    --destructive: 0 85% 45%;
+    --destructive-foreground: 260 89% 98%;
+    --border: 0 0% 18%;
+    --input: 0 0% 18%;
+    --ring: 45 93% 55%;
+    --chart-1: 45 93% 55%;
+    --chart-2: 44 100% 60%;
+    --chart-3: 95 64% 62%;
+    --chart-4: 0 85% 45%;
+    --chart-5: 190 81% 57%;
   }
 }
 
@@ -84,13 +84,55 @@
 }
 
 .gradient-green {
-  /* Renamed palette: use brand violet gradient */
-  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+  /* Building Demo golden gradient */
+  background: linear-gradient(135deg, #f0ae16 0%, #f0ae16 100%);
 }
 
 .text-gradient {
-  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+  background: linear-gradient(135deg, #f0ae16 0%, #f0ae16 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+/* Building Demo utilities - keeping content, just enhancing colors */
+.header-dark {
+  background: linear-gradient(135deg, #1a1a1a 0%, #0f0f0f 100%);
+}
+
+/* Additional Building Demo light mode utilities */
+.section-white {
+  background-color: #ffffff;
+}
+
+.section-grey {
+  background-color: #e9e6ed;
+}
+
+.text-building-gold {
+  color: #f0ae16;
+}
+
+.text-building-purple {
+  color: #f0ae16;
+}
+
+.text-building-dark {
+  color: #515151;
+}
+
+.border-building-light {
+  border-color: #e9e6ed;
+}
+
+.shadow-building {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+}
+
+.hover-shadow-building {
+  transition: box-shadow 0.2s ease;
+}
+
+.hover-shadow-building:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
 }

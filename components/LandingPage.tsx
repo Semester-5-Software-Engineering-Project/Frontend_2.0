@@ -9,27 +9,27 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
+      <header className="header-dark border-b border-gray-800 sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center space-x-2">
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
               <BookOpen className="w-5 h-5 text-white" />
             </div>
-            <span className="text-2xl font-bold text-foreground">TutorConnect</span>
+            <span className="text-2xl font-bold text-white">TutorConnect</span>
           </div>
           <nav className="hidden md:flex space-x-8">
-            <a href="#features" className="text-muted-foreground hover:text-primary transition-colors">Features</a>
-            <a href="#how-it-works" className="text-muted-foreground hover:text-primary transition-colors">How it Works</a>
-            <a href="#pricing" className="text-muted-foreground hover:text-primary transition-colors">Pricing</a>
+            <a href="#features" className="text-gray-300 hover:text-primary transition-colors">Features</a>
+            <a href="#how-it-works" className="text-gray-300 hover:text-primary transition-colors">How it Works</a>
+            <a href="#pricing" className="text-gray-300 hover:text-primary transition-colors">Pricing</a>
           </nav>
           <div className="flex items-center space-x-4">
             <Link href="/auth">
-              <Button variant="outline" className="text-primary border-primary hover:bg-primary/10">
+              <Button variant="outline" className="text-primary border-primary hover:bg-primary/10 bg-transparent">
                 Log In
               </Button>
             </Link>
             <Link href="/auth">
-              <Button className="bg-primary hover:bg-primary/90">
+              <Button className="bg-primary hover:bg-primary/90 text-white">
                 Sign Up
               </Button>
             </Link>
@@ -66,7 +66,7 @@ export default function LandingPage() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 bg-card">
+      <section id="features" className="py-20 bg-secondary">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-foreground mb-4">Everything You Need to Learn</h2>
@@ -74,7 +74,7 @@ export default function LandingPage() {
           </div>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+            <Card className="bg-card border border-border shadow-building hover-shadow-building">
               <CardHeader>
                 <Video className="w-12 h-12 text-primary mb-4" />
                 <CardTitle>HD Video Sessions</CardTitle>
@@ -84,7 +84,7 @@ export default function LandingPage() {
               </CardHeader>
             </Card>
             
-            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+            <Card className="bg-card border border-border shadow-building hover-shadow-building">
               <CardHeader>
                 <Users className="w-12 h-12 text-primary mb-4" />
                 <CardTitle>Expert Tutors</CardTitle>
@@ -94,7 +94,7 @@ export default function LandingPage() {
               </CardHeader>
             </Card>
             
-            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+            <Card className="bg-card border border-border shadow-building hover-shadow-building">
               <CardHeader>
                 <Clock className="w-12 h-12 text-primary mb-4" />
                 <CardTitle>Flexible Scheduling</CardTitle>
@@ -104,7 +104,7 @@ export default function LandingPage() {
               </CardHeader>
             </Card>
             
-            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+            <Card className="bg-card border border-border shadow-building hover-shadow-building">
               <CardHeader>
                 <BookOpen className="w-12 h-12 text-primary mb-4" />
                 <CardTitle>Course Materials</CardTitle>
@@ -114,7 +114,7 @@ export default function LandingPage() {
               </CardHeader>
             </Card>
             
-            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+            <Card className="bg-card border border-border shadow-building hover-shadow-building">
               <CardHeader>
                 <Shield className="w-12 h-12 text-primary mb-4" />
                 <CardTitle>Secure Payments</CardTitle>
@@ -124,7 +124,7 @@ export default function LandingPage() {
               </CardHeader>
             </Card>
             
-            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+            <Card className="bg-card border border-border shadow-building hover-shadow-building">
               <CardHeader>
                 <Star className="w-12 h-12 text-primary mb-4" />
                 <CardTitle>Reviews & Ratings</CardTitle>
@@ -138,7 +138,7 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-card text-card-foreground py-12">
+      <footer className="header-dark text-white py-12">
         <div className="container mx-auto px-4 text-center">
           <div className="flex items-center justify-center space-x-2 mb-6">
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
@@ -146,11 +146,11 @@ export default function LandingPage() {
             </div>
             <span className="text-2xl font-bold">TutorConnect</span>
           </div>
-          <p className="text-muted-foreground mb-6">Connecting learners with expert tutors worldwide</p>
-          <div className="flex justify-center space-x-8 text-sm text-muted-foreground">
-            <a href="#" className="hover:text-foreground transition-colors">Privacy Policy</a>
-            <a href="#" className="hover:text-foreground transition-colors">Terms of Service</a>
-            <a href="#" className="hover:text-foreground transition-colors">Contact Us</a>
+          <p className="text-gray-300 mb-6">Connecting learners with expert tutors worldwide</p>
+          <div className="flex justify-center space-x-8 text-sm text-gray-400">
+            <a href="#" className="hover:text-primary transition-colors">Privacy Policy</a>
+            <a href="#" className="hover:text-primary transition-colors">Terms of Service</a>
+            <a href="#" className="hover:text-primary transition-colors">Contact Us</a>
           </div>
         </div>
       </footer>
