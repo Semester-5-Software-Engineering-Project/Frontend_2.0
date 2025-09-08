@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Search, Clock, DollarSign, BookOpen, Star, Eye } from 'lucide-react'
+import { Search, Clock, DollarSign, BookOpen, Star, Eye, ArrowLeft } from 'lucide-react'
 import { ModuleApi, ModuleDto } from '@/apis/ModuleApi'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
@@ -99,6 +99,18 @@ export default function FindNewModulesPage() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
+      {/* Back Button */}
+      <div className="mb-6">
+        <Button
+          variant="ghost"
+          onClick={() => router.push('/dashboard')}
+          className="text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Dashboard
+        </Button>
+      </div>
+
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-foreground mb-2">Find New Modules</h1>
         <p className="text-muted-foreground">
