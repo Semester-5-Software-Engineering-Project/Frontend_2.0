@@ -262,28 +262,32 @@ export default function Profile() {
                           toast.error('Image must be under 3MB')
                           return
                         }
+                        
                         try {
-                          // Request a presigned URL from backend
-                          const res = await fetch('/api/upload', {
+                          // Create FormData to send the file
+                          const formData = new FormData()
+                          formData.append('file', file)
+                          
+                          // Upload to backend
+                          const response = await fetch('http://localhost:8080/api/materials/upload/image', {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ fileName: file.name, fileType: file.type })
+                            body: formData,
+                            credentials: 'include'
                           })
-                          const data = await res.json()
-                          if (!res.ok) throw new Error(data.error || 'Failed to get upload URL')
-
-                          // PUT the file directly to S3
-                          const putRes = await fetch(data.uploadUrl, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': file.type },
-                            body: file
-                          })
-                          if (!putRes.ok) throw new Error('Upload failed')
-
-                          setProfileData(p => ({ ...p, imageUrl: data.publicUrl }))
-                          toast.success('Image uploaded')
-                        } catch (err: any) {
-                          toast.error(err.message || 'Upload failed')
+                          
+                          if (!response.ok) {
+                            const errorText = await response.text()
+                            console.error('Upload failed:', response.status, response.statusText, errorText)
+                            throw new Error(`Upload failed: ${response.status} - ${errorText || response.statusText}`)
+                          }
+                          
+                          const imageUrl = await response.text()
+                          console.log('Upload successful, URL:', imageUrl)
+                          setProfileData(p => ({ ...p, imageUrl: imageUrl }))
+                          toast.success('Image uploaded successfully')
+                        } catch (error: any) {
+                          console.error('Upload error:', error)
+                          toast.error(error.message || 'Failed to upload image')
                         } finally {
                           e.target.value = '' // reset input so same file can be re-selected
                         }
@@ -354,10 +358,7 @@ export default function Profile() {
                   </div>
                 </>
               )}
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="imageUrl">Avatar URL</Label>
-                <Input id="imageUrl" value={profileData.imageUrl} placeholder="https://..." disabled={!isEditing && hasProfile} onChange={e => setProfileData(p => ({...p, imageUrl: e.target.value}))} />
-              </div>
+
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="bio">Bio</Label>
                 <Textarea id="bio" rows={4} value={profileData.bio} disabled={!isEditing && hasProfile} onChange={e => setProfileData(p => ({...p, bio: e.target.value}))} placeholder="Tell us about yourself..." />
