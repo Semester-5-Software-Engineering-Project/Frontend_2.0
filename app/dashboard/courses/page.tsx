@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Input } from '@/components/ui/input'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { 
   BookOpen, 
   Users, 
@@ -25,6 +26,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
+import ModuleCreation from '@/components/ui/modulecreation'
 
 // TypeScript interfaces for course types
 interface EnrolledCourse {
@@ -59,6 +61,7 @@ export default function CoursesPage() {
   const { user } = useAuth()
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
+  const [isModuleCreationOpen, setIsModuleCreationOpen] = useState(false)
 
   // Mock data for enrolled courses (students)
   const enrolledCourses = [
@@ -195,6 +198,17 @@ export default function CoursesPage() {
     }
   }
 
+  const handleModuleCreationSuccess = (module: any) => {
+    console.log('Module created successfully:', module)
+    // Don't close the dialog immediately - let the user choose via the success popup
+    // setIsModuleCreationOpen(false)
+    // You can add logic here to refresh the courses list or show a success message
+  }
+
+  const handleModuleCreationCancel = () => {
+    setIsModuleCreationOpen(false)
+  }
+
   return (
     <DashboardLayout>
       <div className="p-6 space-y-6">
@@ -212,10 +226,23 @@ export default function CoursesPage() {
             </p>
           </div>
           {user?.role === 'TUTOR' && (
-            <Button className="bg-primary hover:bg-primary/90">
-              <Plus className="w-4 h-4 mr-2" />
-              Create New Course
-            </Button>
+            <Dialog open={isModuleCreationOpen} onOpenChange={setIsModuleCreationOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-primary hover:bg-primary/90">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create New Course
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Create New Course Module</DialogTitle>
+                </DialogHeader>
+                <ModuleCreation 
+                  onSuccess={handleModuleCreationSuccess}
+                  onCancel={handleModuleCreationCancel}
+                />
+              </DialogContent>
+            </Dialog>
           )}
         </div>
 
@@ -245,7 +272,7 @@ export default function CoursesPage() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">
-                    {user?.role === 'student' ? '24' : '156'}
+                    {user?.role === 'STUDENT' ? '24' : '156'}
                   </p>
                   <p className="text-sm text-muted-foreground">
                     {user?.role === 'STUDENT' ? 'Hours Completed' : 'Total Students'}
@@ -277,7 +304,7 @@ export default function CoursesPage() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">
-                    {user?.role === 'student' ? '3' : '12'}
+                    {user?.role === 'STUDENT' ? '3' : '12'}
                   </p>
                   <p className="text-sm text-muted-foreground">
                     {user?.role === 'STUDENT' ? 'Upcoming Sessions' : 'This Week'}
@@ -354,7 +381,7 @@ export default function CoursesPage() {
                 >
                   {course.status}
                 </Badge>
-                                 {user?.role === 'student' && isEnrolledCourse(course) && course.progress && (
+                                 {user?.role === 'STUDENT' && isEnrolledCourse(course) && course.progress && (
                    <div className="absolute bottom-4 left-4 right-4">
                      <Progress value={course.progress} className="h-2" />
                      <p className="text-xs text-white mt-1">{course.progress}% Complete</p>
@@ -387,7 +414,7 @@ export default function CoursesPage() {
                     </div>
                   </div>
 
-                                     {user?.role === 'tutor' && isTeachingCourse(course) && (
+                                     {user?.role === 'TUTOR' && isTeachingCourse(course) && (
                      <div className="text-sm font-semibold text-green-600">
                        ${course.revenue} revenue
                      </div>
@@ -396,17 +423,17 @@ export default function CoursesPage() {
                   <div className="flex gap-2">
                     <Link href={`/dashboard/courses/${course.id}`} className="flex-1">
                       <Button className="w-full bg-green-600 hover:bg-green-700">
-                        {user?.role === 'student' ? 'Continue Learning' : 'Manage Course'}
+                        {user?.role === 'STUDENT' ? 'Continue Learning' : 'Manage Course'}
                       </Button>
                     </Link>
-                    {user?.role === 'tutor' && (
+                    {user?.role === 'TUTOR' && (
                       <Button variant="outline" size="sm">
                         <MoreHorizontal className="w-4 h-4" />
                       </Button>
                     )}
                   </div>
 
-                                     {user?.role === 'student' && isEnrolledCourse(course) && course.nextSession && (
+                                     {user?.role === 'STUDENT' && isEnrolledCourse(course) && course.nextSession && (
                      <div className="text-xs text-gray-500 text-center">
                        Next session: {new Date(course.nextSession).toLocaleDateString()}
                      </div>
@@ -425,13 +452,16 @@ export default function CoursesPage() {
               <p className="text-gray-600 mb-4">
                 {searchTerm || filterStatus !== 'all' 
                   ? 'Try adjusting your search or filter criteria'
-                  : user?.role === 'student'
+                  : user?.role === 'STUDENT'
                     ? 'You haven\'t enrolled in any courses yet'
                     : 'You haven\'t created any courses yet'
                 }
               </p>
-              {user?.role === 'tutor' && (
-                <Button className="bg-green-600 hover:bg-green-700">
+              {user?.role === 'TUTOR' && (
+                <Button 
+                  className="bg-green-600 hover:bg-green-700"
+                  onClick={() => setIsModuleCreationOpen(true)}
+                >
                   <Plus className="w-4 h-4 mr-2" />
                   Create Your First Course
                 </Button>
