@@ -13,7 +13,7 @@ import { useTutorProfile } from '@/contexts/TutorProfileContex'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
-import { Save, Edit, Star, BookOpen, Award, Key } from 'lucide-react'
+import { Save, Edit, Star, BookOpen, Award, Key, Upload } from 'lucide-react'
 
 export default function Profile() {
   const { user } = useAuth()
@@ -22,6 +22,7 @@ export default function Profile() {
   const isTutor = user?.role === 'TUTOR'
   const profile = isTutor ? tutorCtx.profile as any : studentCtx.profile as any
   const profileLoading = isTutor ? tutorCtx.isLoading : studentCtx.isLoading
+  const hasProfile = !!profile
 
   const [isEditing, setIsEditing] = useState(false)
   const [passwordData, setPasswordData] = useState({
@@ -81,8 +82,12 @@ export default function Profile() {
           isActive: !!profile.isActive,
         }))
       }
+  // When a profile exists ensure we are NOT stuck in editing unless user chose it
+  setIsEditing(false)
     } else if (user) {
       setProfileData(prev => ({ ...prev, name: user.name || '', email: user.email || '' }))
+  // Auto-enable editing mode if no profile so user can create immediately
+  if (!profile) setIsEditing(true)
     }
   }, [profile, user, isTutor])
 
@@ -180,79 +185,57 @@ export default function Profile() {
           <div className="flex gap-2">
             <Dialog>
               <DialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  disabled={profileLoading}
-                >
-                  <Key className="w-4 h-4 mr-2" />
-                  Change Password
+                <Button variant="outline" disabled={profileLoading}>
+                  <Key className="w-4 h-4 mr-2" />Change Password
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
                   <DialogTitle>Change Password</DialogTitle>
-                  <DialogDescription>
-                    Update your account password. Make sure your new password is secure.
-                  </DialogDescription>
+                  <DialogDescription>Update your account password. Make sure your new password is secure.</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
                     <Label htmlFor="currentPassword">Current Password</Label>
-                    <Input
-                      id="currentPassword"
-                      type="password"
-                      value={passwordData.currentPassword}
-                      onChange={e => setPasswordData(p => ({...p, currentPassword: e.target.value}))}
-                      placeholder="Enter your current password"
-                    />
+                    <Input id="currentPassword" type="password" value={passwordData.currentPassword} onChange={e => setPasswordData(p => ({...p, currentPassword: e.target.value}))} placeholder="Enter your current password" />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="newPassword">New Password</Label>
-                    <Input
-                      id="newPassword"
-                      type="password"
-                      value={passwordData.newPassword}
-                      onChange={e => setPasswordData(p => ({...p, newPassword: e.target.value}))}
-                      placeholder="Enter your new password"
-                    />
+                    <Input id="newPassword" type="password" value={passwordData.newPassword} onChange={e => setPasswordData(p => ({...p, newPassword: e.target.value}))} placeholder="Enter your new password" />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                    <Input
-                      id="confirmPassword"
-                      type="password"
-                      value={passwordData.confirmPassword}
-                      onChange={e => setPasswordData(p => ({...p, confirmPassword: e.target.value}))}
-                      placeholder="Confirm your new password"
-                    />
+                    <Input id="confirmPassword" type="password" value={passwordData.confirmPassword} onChange={e => setPasswordData(p => ({...p, confirmPassword: e.target.value}))} placeholder="Confirm your new password" />
                   </div>
                   <div className="flex gap-2 pt-4">
-                    <Button onClick={handleChangePassword} className="bg-blue-600 hover:bg-blue-700">
-                      <Key className="w-4 h-4 mr-2" />
-                      Update Password
-                    </Button>
-                    <Button 
-                      onClick={() => {
-                        setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' })
-                      }} 
-                      variant="outline"
-                    >
-                      Cancel
-                    </Button>
+                    <Button onClick={handleChangePassword} className="bg-blue-600 hover:bg-blue-700"><Key className="w-4 h-4 mr-2" />Update Password</Button>
+                    <Button onClick={() => { setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' }) }} variant="outline">Cancel</Button>
                   </div>
                 </div>
               </DialogContent>
             </Dialog>
-            <Button
-              onClick={() => isEditing ? handleSave() : setIsEditing(true)}
-              className={isEditing ? 'bg-green-600 hover:bg-green-700' : ''}
-              variant={isEditing ? 'default' : 'outline'}
-              disabled={profileLoading}
-            >
-              {isEditing ? (<><Save className="w-4 h-4 mr-2" />Save</>) : (<><Edit className="w-4 h-4 mr-2" />Edit</>)}
-            </Button>
+            {hasProfile ? (
+              <Button
+                onClick={() => isEditing ? handleSave() : setIsEditing(true)}
+                className={isEditing ? 'bg-green-600 hover:bg-green-700' : ''}
+                variant={isEditing ? 'default' : 'outline'}
+                disabled={profileLoading}
+              >
+                {isEditing ? (<><Save className="w-4 h-4 mr-2" />Save</>) : (<><Edit className="w-4 h-4 mr-2" />Edit</>)}
+              </Button>
+            ) : (
+              <Button onClick={handleSave} disabled={profileLoading} className="bg-green-600 hover:bg-green-700">
+                <Save className="w-4 h-4 mr-2" />Create Profile
+              </Button>
+            )}
           </div>
         </div>
+
+        {!profileLoading && !hasProfile && (
+          <div className="p-4 border border-dashed rounded bg-muted/40 text-sm">
+            No profile found yet. Fill in the form below and click <span className="font-semibold">Create Profile</span> to save your information.
+          </div>
+        )}
 
         <Card>
           <CardHeader>
@@ -261,9 +244,53 @@ export default function Profile() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex items-center gap-6">
-              <Avatar className="w-24 h-24">
+              <Avatar className="w-24 h-24 relative group">
                 <AvatarImage src={profileData.imageUrl || undefined} />
                 <AvatarFallback>{profileData.name?.charAt(0) || user?.name?.charAt(0) || '?'}</AvatarFallback>
+                {isEditing && (
+                  <label className="absolute inset-0 rounded-full bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-white text-[10px] font-medium cursor-pointer transition-opacity">
+                    <Upload className="w-5 h-5 mb-1" />
+                    Change
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0]
+                        if (!file) return
+                        if (file.size > 3 * 1024 * 1024) { // 3MB limit
+                          toast.error('Image must be under 3MB')
+                          return
+                        }
+                        try {
+                          // Request a presigned URL from backend
+                          const res = await fetch('/api/upload', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ fileName: file.name, fileType: file.type })
+                          })
+                          const data = await res.json()
+                          if (!res.ok) throw new Error(data.error || 'Failed to get upload URL')
+
+                          // PUT the file directly to S3
+                          const putRes = await fetch(data.uploadUrl, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': file.type },
+                            body: file
+                          })
+                          if (!putRes.ok) throw new Error('Upload failed')
+
+                          setProfileData(p => ({ ...p, imageUrl: data.publicUrl }))
+                          toast.success('Image uploaded')
+                        } catch (err: any) {
+                          toast.error(err.message || 'Upload failed')
+                        } finally {
+                          e.target.value = '' // reset input so same file can be re-selected
+                        }
+                      }}
+                    />
+                  </label>
+                )}
               </Avatar>
               <div>
                 <p className="font-semibold text-xl">{profileData.name || 'Unnamed'}</p>
@@ -279,17 +306,17 @@ export default function Profile() {
                 <>
                   <div className="space-y-2">
                     <Label htmlFor="firstName">First Name</Label>
-                    <Input id="firstName" value={profileData.firstName} disabled={!isEditing} onChange={e => setProfileData(p => ({...p, firstName: e.target.value, name: `${e.target.value} ${p.lastName}`.trim()}))} />
+                    <Input id="firstName" value={profileData.firstName} disabled={!isEditing && hasProfile} onChange={e => setProfileData(p => ({...p, firstName: e.target.value, name: `${e.target.value} ${p.lastName}`.trim()}))} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="lastName">Last Name</Label>
-                    <Input id="lastName" value={profileData.lastName} disabled={!isEditing} onChange={e => setProfileData(p => ({...p, lastName: e.target.value, name: `${p.firstName} ${e.target.value}`.trim()}))} />
+                    <Input id="lastName" value={profileData.lastName} disabled={!isEditing && hasProfile} onChange={e => setProfileData(p => ({...p, lastName: e.target.value, name: `${p.firstName} ${e.target.value}`.trim()}))} />
                   </div>
                 </>
               ) : (
                 <div className="space-y-2">
                   <Label htmlFor="name">Full Name</Label>
-                  <Input id="name" value={profileData.name} disabled={!isEditing} onChange={e => setProfileData(p => ({...p, name: e.target.value}))} />
+                  <Input id="name" value={profileData.name} disabled={!isEditing && hasProfile} onChange={e => setProfileData(p => ({...p, name: e.target.value}))} />
                 </div>
               )}
               <div className="space-y-2">
@@ -300,40 +327,40 @@ export default function Profile() {
                 <>
                   <div className="space-y-2">
                     <Label htmlFor="phoneNo">Phone</Label>
-                    <Input id="phoneNo" value={profileData.phoneNo} disabled={!isEditing} onChange={e => setProfileData(p => ({...p, phoneNo: e.target.value}))} />
+                    <Input id="phoneNo" value={profileData.phoneNo} disabled={!isEditing && hasProfile} onChange={e => setProfileData(p => ({...p, phoneNo: e.target.value}))} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="dob">Date of Birth</Label>
-                    <Input id="dob" type="date" value={profileData.dob} disabled={!isEditing} onChange={e => setProfileData(p => ({...p, dob: e.target.value}))} />
+                    <Input id="dob" type="date" value={profileData.dob} disabled={!isEditing && hasProfile} onChange={e => setProfileData(p => ({...p, dob: e.target.value}))} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="gender">Gender</Label>
-                    <Input id="gender" value={profileData.gender} disabled={!isEditing} onChange={e => setProfileData(p => ({...p, gender: e.target.value}))} />
+                    <Input id="gender" value={profileData.gender} disabled={!isEditing && hasProfile} onChange={e => setProfileData(p => ({...p, gender: e.target.value}))} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="portfolio">Portfolio URL</Label>
-                    <Input id="portfolio" value={profileData.portfolio} disabled={!isEditing} onChange={e => setProfileData(p => ({...p, portfolio: e.target.value}))} />
+                    <Input id="portfolio" value={profileData.portfolio} disabled={!isEditing && hasProfile} onChange={e => setProfileData(p => ({...p, portfolio: e.target.value}))} />
                   </div>
                 </>
               ) : (
                 <>
                   <div className="space-y-2">
                     <Label htmlFor="phone">Phone</Label>
-                    <Input id="phone" value={profileData.phone} disabled={!isEditing} onChange={e => setProfileData(p => ({...p, phone: e.target.value}))} />
+                    <Input id="phone" value={profileData.phone} disabled={!isEditing && hasProfile} onChange={e => setProfileData(p => ({...p, phone: e.target.value}))} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="birthday">Birthday</Label>
-                    <Input id="birthday" type="date" value={profileData.birthday} disabled={!isEditing} onChange={e => setProfileData(p => ({...p, birthday: e.target.value}))} />
+                    <Input id="birthday" type="date" value={profileData.birthday} disabled={!isEditing && hasProfile} onChange={e => setProfileData(p => ({...p, birthday: e.target.value}))} />
                   </div>
                 </>
               )}
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="imageUrl">Avatar URL</Label>
-                <Input id="imageUrl" value={profileData.imageUrl} placeholder="https://..." disabled={!isEditing} onChange={e => setProfileData(p => ({...p, imageUrl: e.target.value}))} />
+                <Input id="imageUrl" value={profileData.imageUrl} placeholder="https://..." disabled={!isEditing && hasProfile} onChange={e => setProfileData(p => ({...p, imageUrl: e.target.value}))} />
               </div>
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="bio">Bio</Label>
-                <Textarea id="bio" rows={4} value={profileData.bio} disabled={!isEditing} onChange={e => setProfileData(p => ({...p, bio: e.target.value}))} placeholder="Tell us about yourself..." />
+                <Textarea id="bio" rows={4} value={profileData.bio} disabled={!isEditing && hasProfile} onChange={e => setProfileData(p => ({...p, bio: e.target.value}))} placeholder="Tell us about yourself..." />
               </div>
               {/* {isTutor && (
                 <>

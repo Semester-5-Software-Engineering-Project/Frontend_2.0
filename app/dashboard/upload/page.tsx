@@ -35,7 +35,7 @@ export default function UploadMaterials() {
 
   useEffect(() => {
     const fetchModules = async () => {
-      if (!user || user.role !== 'tutor') return;
+      if (!user || user.role !== 'TUTOR') return;
 
       try {
         const res = await fetch("http://localhost:8080/api/modules/tutor", {
@@ -162,7 +162,7 @@ const getIconForType = (type: string) => {
   }
 }
 
-  if (user?.role !== 'tutor') {
+  if (user?.role !== 'TUTOR') {
     return (
       <DashboardLayout>
         <div className="p-6">
