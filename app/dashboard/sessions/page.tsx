@@ -32,7 +32,7 @@ export default function VideoSessions() {
     {
       id: 1,
       title: 'Advanced Mathematics Session',
-      participant: user?.role === 'student' ? 'Dr. Sarah Johnson' : 'Alex Smith',
+      participant: user?.role === 'STUDENT' ? 'Dr. Sarah Johnson' : 'Alex Smith',
       course: 'Advanced Mathematics',
       scheduledTime: '2024-01-15T10:00:00',
       duration: 60,
@@ -42,7 +42,7 @@ export default function VideoSessions() {
     {
       id: 2,
       title: 'Physics Problem Solving',
-      participant: user?.role === 'student' ? 'Prof. Michael Chen' : 'Emma Wilson',
+      participant: user?.role === 'STUDENT' ? 'Prof. Michael Chen' : 'Emma Wilson',
       course: 'Physics Fundamentals',
       scheduledTime: '2024-01-15T14:00:00',
       duration: 90,
@@ -52,7 +52,7 @@ export default function VideoSessions() {
     {
       id: 3,
       title: 'Chemistry Lab Review',
-      participant: user?.role === 'student' ? 'Dr. Emily Davis' : 'John Davis',
+      participant: user?.role === 'STUDENT' ? 'Dr. Emily Davis' : 'John Davis',
       course: 'Chemistry Lab Prep',
       scheduledTime: '2024-01-14T16:00:00',
       duration: 60,
@@ -70,11 +70,11 @@ export default function VideoSessions() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'live':
-        return 'bg-red-100 text-red-700'
+        return 'bg-destructive/15 text-destructive-foreground'
       case 'scheduled':
-        return 'bg-blue-100 text-blue-700'
+        return 'bg-primary/15 text-primary'
       case 'completed':
-        return 'bg-green-100 text-green-700'
+        return 'bg-muted text-foreground'
       default:
         return 'bg-gray-100 text-gray-700'
     }
@@ -91,14 +91,14 @@ export default function VideoSessions() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Video Sessions</h1>
-            <p className="text-gray-600">
-              {user?.role === 'student' 
+            <p className="text-muted-foreground">
+              {user?.role === 'STUDENT' 
                 ? 'Join your scheduled tutoring sessions' 
-                : 'Manage your tutoring sessions with students'
+                : 'Manage your tutoring sessions with STUDENTs'
               }
             </p>
           </div>
-          <Button className="bg-green-600 hover:bg-green-700">
+          <Button className="bg-primary hover:bg-primary/90">
             <Video className="w-4 h-4 mr-2" />
             Start New Session
           </Button>
@@ -148,7 +148,7 @@ export default function VideoSessions() {
                       <div className="flex items-center space-x-2">
                         <Users className="w-4 h-4" />
                         <span>
-                          {user?.role === 'student' ? 'Tutor: ' : 'Student: '}
+                          {user?.role === 'STUDENT' ? 'Tutor: ' : 'STUDENT: '}
                           {session.participant}
                         </span>
                       </div>
@@ -165,14 +165,14 @@ export default function VideoSessions() {
                       </div>
                     </div>
                     
-                    <p className="text-sm text-gray-600 mt-2">Course: {session.course}</p>
+                    <p className="text-sm text-muted-foreground mt-2">Course: {session.course}</p>
                   </div>
 
                   <div className="flex items-center space-x-3">
                     {session.status === 'live' && (
                       <Button 
                         onClick={() => handleJoinSession(session.id)}
-                        className="bg-red-600 hover:bg-red-700"
+                        className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
                       >
                         <Video className="w-4 h-4 mr-2" />
                         Join Live
@@ -182,7 +182,7 @@ export default function VideoSessions() {
                     {session.status === 'scheduled' && (
                       <Button 
                         onClick={() => handleJoinSession(session.id)}
-                        className="bg-green-600 hover:bg-green-700"
+                        className="bg-primary hover:bg-primary/90"
                       >
                         <Play className="w-4 h-4 mr-2" />
                         Start Session
@@ -243,14 +243,14 @@ export default function VideoSessions() {
           <Card>
             <CardContent className="p-12 text-center">
               <Video className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No sessions found</h3>
-              <p className="text-gray-600 mb-4">
+              <h3 className="text-lg font-semibold text-foreground mb-2">No sessions found</h3>
+              <p className="text-muted-foreground mb-4">
                 {searchTerm 
                   ? 'Try adjusting your search terms'
                   : 'Schedule your first tutoring session to get started'
                 }
               </p>
-              <Button className="bg-green-600 hover:bg-green-700">
+              <Button className="bg-primary hover:bg-primary/90">
                 <Calendar className="w-4 h-4 mr-2" />
                 Schedule Session
               </Button>

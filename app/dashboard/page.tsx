@@ -32,7 +32,7 @@ export default function Dashboard() {
 
   return (
     <DashboardLayout>
-      {user.role === 'student' ? <StudentDashboard /> : <TutorDashboard />}
+      {user.role === 'STUDENT' ? <StudentDashboard /> : <TutorDashboard />}
     </DashboardLayout>
   )
 }

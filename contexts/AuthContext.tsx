@@ -7,17 +7,18 @@ interface User {
   id: string
   name: string
   email: string
-  role: 'student' | 'tutor'
+  role: 'STUDENT' | 'TUTOR'
   avatar?: string
 }
 
 interface AuthContextType {
   user: User | null
-  login: (email: string, password: string, role: 'student' | 'tutor') => Promise<void>
-  register: (name: string, email: string, password: string, role: 'student' | 'tutor') => Promise<void>
+  login: (email: string, password: string, role: 'STUDENT' | 'TUTOR') => Promise<void>
+  register: (name: string, email: string, password: string, role: 'STUDENT' | 'TUTOR') => Promise<void>
   logout: () => void
   isLoading: boolean
-  googleLogin : (role:'student' | 'tutor') => Promise<void>
+  googleLogin : (role:'STUDENT' | 'TUTOR') => Promise<void>
+  checkAuthStatus: () => Promise<boolean>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -26,19 +27,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  const mapApiRoleToAppRole = (apiRole: any): 'student' | 'tutor' => {
-    const value = String(apiRole || '').toLowerCase()
-    if (value.includes('student')) return 'student'
-    if (value.includes('tutor')) return 'tutor'
-    // Fallback: default to student to avoid over-permissioning
-    return 'student'
+  const mapApiRoleToAppRole = (apiRole: any): 'STUDENT' | 'TUTOR' => {
+    const value = String(apiRole || '').toUpperCase().trim()
+    console.log('Raw API Role:', apiRole, 'Processed Value:', value)
+    
+    if (value === 'STUDENT') return 'STUDENT'
+    if (value === 'TUTOR') return 'TUTOR'
+    
+    // Also check for variants
+    if (value.includes('STUDENT')) return 'STUDENT'
+    if (value.includes('TUTOR') || value.includes('TEACHER')) return 'TUTOR'
+    
+    // Fallback: default to STUDENT to avoid over-permissioning
+    console.warn('Unknown role received from API:', apiRole, 'defaulting to STUDENT')
+    return 'STUDENT'
   }
 
   useEffect(() => {
     // Check for stored auth data
     const storedUser = localStorage.getItem('user')
-    if (storedUser) {
+    const getCookie = (name: string) => {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop()?.split(';').shift();
+      return null;
+    };
+    const jwtToken = getCookie('jwt_token');
+
+    if (storedUser && jwtToken) {
       try {
+        checkAuthStatus() // Verify with backend
         const parsed = JSON.parse(storedUser)
         const normalizedRole = mapApiRoleToAppRole(parsed.role)
         const normalizedUser = { ...parsed, role: normalizedRole }
@@ -51,36 +69,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         checkAuthStatus()
       }
     } else {
-      // Check if user is authenticated via cookies (after OAuth redirect)
       checkAuthStatus()
     }
   }, [])
 
-  const checkAuthStatus = async () => {
+  const checkAuthStatus = async (): Promise<boolean> => {
     try {
       const res = await axiosInstance.get("/api/getuser", { withCredentials: true });
       const userData: any = res.data.user;
-      console.log(userData)
+      console.log('Raw user data from API:', userData)
       const role = mapApiRoleToAppRole(userData.role)
+      console.log('Mapped role:', role)
       
       if (userData) {
         // Add avatar based on role
-        userData.avatar = `https://images.unsplash.com/photo-${role === 'tutor' ? '1494790108755-2616c0479506' : '1507003211169-0a1dd7228f2d'}?w=150&h=150&fit=crop&crop=face`
+        userData.avatar = `https://images.unsplash.com/photo-${role === 'TUTOR' ? '1494790108755-2616c0479506' : '1507003211169-0a1dd7228f2d'}?w=150&h=150&fit=crop&crop=face`
         userData.role = role
         
+        console.log('Final user data being set:', userData)
         setUser(userData)
         localStorage.setItem('user', JSON.stringify(userData))
         // Reflect role in a cookie for middleware
         document.cookie = `role=${role}; path=/; SameSite=Lax`
+        setIsLoading(false)
+        return true;
       }
+      setIsLoading(false)
+      return false;
     } catch (error) {
       console.log('No authenticated user found')
-    } finally {
       setIsLoading(false)
+      return false;
     }
   }
 
-  const googleLogin = async (role:"student" | "tutor") =>{
+  const googleLogin = async (role:"STUDENT" | "TUTOR") =>{
     setIsLoading(true);
     try{
       // Redirect to OAuth endpoint with success redirect URL
@@ -94,36 +117,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Note: setIsLoading(false) is not needed here because the page will redirect
   }
 
-  const login = async (email: string, password: string, role: 'student' | 'tutor') => {
+  const login = async (email: string, password: string, role: 'STUDENT' | 'TUTOR') => {
+    console.log('Login started with:', { email, role })
     setIsLoading(true)
     try {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
-      await axiosInstance.post("/api/auth/login", { email, password }, { withCredentials: true });
+      const loginResponse = await axiosInstance.post("/api/auth/login", { email, password }, { withCredentials: true });
+      console.log('Login API response:', loginResponse.status)
 
       const res = await axiosInstance.get("/api/getuser");
+      console.log('Get user API response:', res.data)
       const userData: any = res.data.user;
       const normalizedRole = mapApiRoleToAppRole(userData.role)
+      console.log('Normalized role:', normalizedRole)
       
-      // const userData: User = {
-      //   id: '1',
-      //   name: role === 'tutor' ? 'Dr. Sarah Johnson' : 'Alex Smith',
-      //   email,
-      //   role,
-      //   avatar: `https://images.unsplash.com/photo-${role === 'tutor' ? '1494790108755-2616c0479506' : '1507003211169-0a1dd7228f2d'}?w=150&h=150&fit=crop&crop=face`
-      // }
-      userData.avatar = `https://images.unsplash.com/photo-${normalizedRole === 'tutor' ? '1494790108755-2616c0479506' : '1507003211169-0a1dd7228f2d'}?w=150&h=150&fit=crop&crop=face`
+      userData.avatar = `https://images.unsplash.com/photo-${normalizedRole === 'TUTOR' ? '1494790108755-2616c0479506' : '1507003211169-0a1dd7228f2d'}?w=150&h=150&fit=crop&crop=face`
       userData.role = normalizedRole
       
+      console.log('Setting user data:', userData)
       setUser(userData)
       localStorage.setItem('user', JSON.stringify(userData))
       document.cookie = `role=${normalizedRole}; path=/; SameSite=Lax`
+      console.log('Login completed successfully')
+    } catch (error) {
+      console.error('Login error:', error)
+      throw error
     } finally {
       setIsLoading(false)
     }
   }
 
-  const register = async (name: string, email: string, password: string, role: 'student' | 'tutor') => {
+  const register = async (name: string, email: string, password: string, role: 'STUDENT' | 'TUTOR') => {
     setIsLoading(true)
     try {
       const response = await axiosInstance.post('/api/register', {
@@ -139,7 +164,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const userData: any = res.data.user;
         const normalizedRole = mapApiRoleToAppRole(userData.role)
         
-        userData.avatar = `https://images.unsplash.com/photo-${normalizedRole === 'tutor' ? '1494790108755-2616c0479506' : '1507003211169-0a1dd7228f2d'}?w=150&h=150&fit=crop&crop=face`
+        userData.avatar = `https://images.unsplash.com/photo-${normalizedRole === 'TUTOR' ? '1494790108755-2616c0479506' : '1507003211169-0a1dd7228f2d'}?w=150&h=150&fit=crop&crop=face`
         userData.role = normalizedRole
         
         setUser(userData)
@@ -161,15 +186,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const logout = async() => {
+    console.log('Logout started')
+    try {
+      // Call backend logout endpoint first
+      await axiosInstance.get("/api/logout", { withCredentials: true });
+      console.log('Backend logout successful')
+    } catch (error) {
+      console.error('Backend logout error:', error)
+    }
+    
+    // Clear client-side data
     setUser(null)
     localStorage.removeItem('user')
     // Clear role cookie
     document.cookie = 'role=; path=/; Max-Age=0; SameSite=Lax'
-    await axiosInstance.get("/api/logout");
+    console.log('Client-side logout completed')
+    
+    // Redirect to auth page
+    window.location.href = '/auth'
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, isLoading ,googleLogin}}>
+    <AuthContext.Provider value={{ user, login, register, logout, isLoading ,googleLogin,checkAuthStatus}}>
       {children}
     </AuthContext.Provider>
   )
