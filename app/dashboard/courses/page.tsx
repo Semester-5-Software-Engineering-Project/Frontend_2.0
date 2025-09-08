@@ -39,7 +39,7 @@ interface ApiModule {
   domain: string
   averageRatings: number
   fee: number
-  duration: string // ISO 8601 duration format like "PT2H30M"
+  duration: number // Duration in minutes
   status: string
 }
 
@@ -51,7 +51,7 @@ interface EnrolledCourse {
   domain: string
   rating: number
   fee: number
-  duration: string
+  duration: number // Duration in minutes
   status: string
   image: string
 }
@@ -62,7 +62,7 @@ interface TeachingCourse {
   domain: string
   rating: number
   fee: number
-  duration: string
+  duration: number // Duration in minutes
   status: string
   image: string
 }
@@ -79,24 +79,19 @@ export default function CoursesPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Helper function to convert ISO 8601 duration to readable format
-  const formatDuration = (isoDuration: string): string => {
-    // Parse PT2H30M format
-    const regex = /PT(?:(\d+)H)?(?:(\d+)M)?/
-    const match = isoDuration.match(regex)
-    if (!match) return isoDuration
-
-    const hours = parseInt(match[1] || '0')
-    const minutes = parseInt(match[2] || '0')
-    
-    if (hours && minutes) {
-      return `${hours}h ${minutes}m`
-    } else if (hours) {
-      return `${hours}h`
-    } else if (minutes) {
+  // Helper function to format duration from minutes to readable format
+  const formatDuration = (minutes: number): string => {
+    if (minutes < 60) {
       return `${minutes}m`
     }
-    return isoDuration
+    
+    const hours = Math.floor(minutes / 60)
+    const remainingMinutes = minutes % 60
+    
+    if (remainingMinutes === 0) {
+      return `${hours}h`
+    }
+    return `${hours}h ${remainingMinutes}m`
   }
 
   // Helper function to get domain-based image
@@ -119,7 +114,7 @@ export default function CoursesPage() {
       domain: apiModule.domain,
       rating: apiModule.averageRatings || 0,
       fee: apiModule.fee,
-      duration: formatDuration(apiModule.duration),
+      duration: apiModule.duration, // Keep as integer (minutes)
       status: apiModule.status.toLowerCase(),
       image: getDomainImage(apiModule.domain),
     }
