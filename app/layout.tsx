@@ -2,6 +2,8 @@ import './globals.css'
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import { AuthProvider } from '@/contexts/AuthContext'
+import { StudentProfileProvider } from '@/contexts/StudentProfileContex'
+import { TutorProfileProvider } from '@/contexts/TutorProfileContex'
 import { Toaster } from 'sonner'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -20,8 +22,12 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body className={inter.className}>
         <AuthProvider>
-          {children}
-          <Toaster position="top-right" />
+          <StudentProfileProvider>
+            <TutorProfileProvider>
+              {children}
+              <Toaster position="top-right" />
+            </TutorProfileProvider>
+          </StudentProfileProvider>
         </AuthProvider>
       </body>
     </html>
