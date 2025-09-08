@@ -5,18 +5,23 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Search, Clock, DollarSign, BookOpen, Star, Eye, ArrowLeft } from 'lucide-react'
+import { Search, Clock, DollarSign, BookOpen, Star, Eye, ArrowLeft, UserPlus, Loader2 } from 'lucide-react'
 import { ModuleApi, ModuleDto } from '@/apis/ModuleApi'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
+import { useToast } from '@/hooks/use-toast'
+import axiosInstance from '@/app/utils/axiosInstance'
+import DashboardLayout from '@/components/dashboard/DashboardLayout'
 
 export default function FindNewModulesPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [modules, setModules] = useState<ModuleDto[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [enrollingModules, setEnrollingModules] = useState<Set<string>>(new Set())
   const { user } = useAuth()
   const router = useRouter()
+  const { toast } = useToast()
 
   // Function to search modules
   const handleSearch = async (query: string) => {
@@ -68,6 +73,71 @@ export default function FindNewModulesPage() {
     router.push(`/dashboard/courses/${moduleId}`)
   }
 
+  // Handle enrollment
+  const handleEnrollment = async (moduleId: string) => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to enroll in modules",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setEnrollingModules(prev => new Set(prev).add(moduleId))
+
+    try {
+      // Make enrollment request using cookies for authentication
+      const response = await axiosInstance.post(
+        '/api/enrollment/enroll',
+        { moduleId },
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          withCredentials: true
+        }
+      )
+
+      toast({
+        title: "Enrollment Successful!",
+        description: `You have successfully enrolled in the module.`,
+      })
+
+      // Remove the module from the search results since the student is now enrolled
+      setModules(prev => prev.filter(module => getModuleId(module) !== moduleId))
+      
+    } catch (error: any) {
+      console.error('Enrollment error:', error)
+      
+      let errorMessage = 'Failed to enroll in the module. Please try again.'
+      
+      if (error.response) {
+        if (error.response.status === 400) {
+          errorMessage = error.response.data?.message || 'You may already be enrolled in this module.'
+        } else if (error.response.status === 401) {
+          errorMessage = 'Authentication failed. Please log in again.'
+        } else if (error.response.status === 403) {
+          errorMessage = 'You do not have permission to enroll in this module.'
+        } else if (error.response.data?.message) {
+          errorMessage = error.response.data.message
+        }
+      }
+      
+      toast({
+        title: "Enrollment Failed",
+        description: errorMessage,
+        variant: "destructive",
+      })
+    } finally {
+      setEnrollingModules(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(moduleId)
+        return newSet
+      })
+    }
+  }
+
   // Get module ID (handle both moduleId and id fields)
   const getModuleId = (module: ModuleDto) => {
     return module.moduleId || module.id || ''
@@ -98,7 +168,8 @@ export default function FindNewModulesPage() {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <DashboardLayout>
+      <div className="p-6 max-w-7xl mx-auto">
       {/* Back Button */}
       <div className="mb-6">
         <Button
@@ -202,6 +273,13 @@ export default function FindNewModulesPage() {
 
                 <CardContent className="pt-0">
                   <div className="space-y-4">
+                    {/* Module Description */}
+                    {module.description && (
+                      <p className="text-sm text-muted-foreground line-clamp-3">
+                        {module.description}
+                      </p>
+                    )}
+                    
                     <div className="flex items-center justify-between">
                       <div className="flex items-center">
                         <DollarSign className="h-5 w-5 mr-2 text-primary" />
@@ -217,14 +295,34 @@ export default function FindNewModulesPage() {
                 </CardContent>
 
                 <CardFooter className="pt-4">
-                  <Button 
-                    className="w-full font-medium py-2 px-4 rounded-lg transition-colors duration-200"
-                    disabled={module.status !== 'Active'}
-                    onClick={() => handleViewCourse(getModuleId(module))}
-                  >
-                    <Eye className="h-4 w-4 mr-2" />
-                    {module.status === 'Active' ? 'View Course' : 'Coming Soon'}
-                  </Button>
+                  {user?.role === 'STUDENT' ? (
+                    <Button 
+                      className="w-full font-medium py-2 px-4 rounded-lg transition-colors duration-200"
+                      disabled={module.status !== 'Active' || enrollingModules.has(getModuleId(module))}
+                      onClick={() => handleEnrollment(getModuleId(module))}
+                    >
+                      {enrollingModules.has(getModuleId(module)) ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Enrolling...
+                        </>
+                      ) : (
+                        <>
+                          <UserPlus className="h-4 w-4 mr-2" />
+                          {module.status === 'Active' ? 'Enroll Now' : 'Coming Soon'}
+                        </>
+                      )}
+                    </Button>
+                  ) : (
+                    <Button 
+                      className="w-full font-medium py-2 px-4 rounded-lg transition-colors duration-200"
+                      disabled={module.status !== 'Active'}
+                      onClick={() => handleViewCourse(getModuleId(module))}
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      {module.status === 'Active' ? 'View Course' : 'Coming Soon'}
+                    </Button>
+                  )}
                 </CardFooter>
               </Card>
             ))}
@@ -244,6 +342,7 @@ export default function FindNewModulesPage() {
           </p>
         </div>
       )}
-    </div>
+      </div>
+    </DashboardLayout>
   )
 }
