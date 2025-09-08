@@ -71,24 +71,24 @@ export default function CoursePage() {
   const materialRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
 
   // Helper function to convert ISO 8601 duration to readable format
-  const formatDuration = (isoDuration: string): string => {
-    // Parse PT2H30M format
-    const regex = /PT(?:(\d+)H)?(?:(\d+)M)?/
-    const match = isoDuration.match(regex)
-    if (!match) return isoDuration
+  // const formatDuration = (isoDuration: string): string => {
+  //   // Parse PT2H30M format
+  //   const regex = /PT(?:(\d+)H)?(?:(\d+)M)?/
+  //   const match = isoDuration.match(regex)
+  //   if (!match) return isoDuration
 
-    const hours = parseInt(match[1] || '0')
-    const minutes = parseInt(match[2] || '0')
+  //   const hours = parseInt(match[1] || '0')
+  //   const minutes = parseInt(match[2] || '0')
     
-    if (hours && minutes) {
-      return `${hours}h ${minutes}m`
-    } else if (hours) {
-      return `${hours}h`
-    } else if (minutes) {
-      return `${minutes}m`
-    }
-    return isoDuration
-  }
+  //   if (hours && minutes) {
+  //     return `${hours}h ${minutes}m`
+  //   } else if (hours) {
+  //     return `${hours}h`
+  //   } else if (minutes) {
+  //     return `${minutes}m`
+  //   }
+  //   return isoDuration
+  // }
 
   // Helper function to get domain-based image
   const getDomainImage = (domain: string): string => {
@@ -287,7 +287,7 @@ export default function CoursePage() {
     description: moduleDetails.description || `Learn ${moduleDetails.name} in the ${moduleDetails.domain} domain.`,
     rating: moduleDetails.averageRatings || 0,
     students: 0, // We don't have this data yet
-    duration: formatDuration(moduleDetails.duration),
+    // duration: formatDuration(moduleDetails.duration),
     progress: 0, // We don't have progress data yet
     image: getDomainImage(moduleDetails.domain),
     domain: moduleDetails.domain,

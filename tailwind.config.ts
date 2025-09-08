@@ -60,6 +60,17 @@ const config: Config = {
           '4': 'hsl(var(--chart-4))',
           '5': 'hsl(var(--chart-5))',
         },
+        // WooCommerce Building Demo Color Palette
+        'wc-primary': '#720eec',
+        'wc-primary-text': '#fcfbfe',
+        'wc-secondary': '#e9e6ed',
+        'wc-secondary-text': '#515151',
+        'wc-highlight': '#f0ae16',
+        'wc-highlight-text': '#ffffff',
+        'wc-orange': '#ffba00',
+        'wc-green': '#7ad03a',
+        'wc-red': '#a00',
+        'wc-blue': '#2ea2cc',
       },
       keyframes: {
         'accordion-down': {

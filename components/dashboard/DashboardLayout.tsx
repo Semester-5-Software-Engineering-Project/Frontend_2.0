@@ -16,7 +16,8 @@ import {
   Home,
   Upload,
   CreditCard,
-  Star
+  Star,
+  Search
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -29,6 +30,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const studentNavItems = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
     { name: 'My Courses', href: '/dashboard/courses', icon: BookOpen },
+    { name: 'Find New', href: '/dashboard/findnew', icon: Search },
     // Students can see module/courses but not create or manage schedules
     { name: 'Video Sessions', href: '/dashboard/sessions', icon: Video },
     { name: 'Payments', href: '/dashboard/payments', icon: CreditCard },

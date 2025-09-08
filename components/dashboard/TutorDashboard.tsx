@@ -96,8 +96,8 @@ export default function TutorDashboard() {
   return (
     <div className="p-6 space-y-6">
       {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-primary to-primary/90 rounded-xl p-6 text-primary-foreground">
-        <h1 className="text-3xl font-bold mb-2">Tutor Dashboard</h1>
+      <div className="bg-[#3b372f] rounded-xl p-6 text-primary-foreground">
+        <h1 className="text-3xl font-bold ">Tutor Dashboard</h1>
         <p className="text-primary-foreground/70">Manage your courses, students, and teaching schedule.</p>
       </div>
 
