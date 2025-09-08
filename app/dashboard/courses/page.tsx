@@ -141,6 +141,7 @@ export default function CoursesPage() {
     try {
       const response = await axiosInstance.get('/api/modules/get-modulesfortutor')
       const apiModules: ApiModule[] = response.data
+      // console.log('Tutor modules API response:', apiModules)
       return apiModules.map(convertApiModuleToCourse)
     } catch (error: any) {
       console.error('Error fetching tutor modules:', error)
