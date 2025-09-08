@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Progress } from '@/components/ui/progress'
+import Cookies from "js-cookie";
 import { 
   BookOpen, 
   Video, 
@@ -71,24 +72,24 @@ export default function CoursePage() {
   const materialRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
 
   // Helper function to convert ISO 8601 duration to readable format
-  // const formatDuration = (isoDuration: string): string => {
-  //   // Parse PT2H30M format
-  //   const regex = /PT(?:(\d+)H)?(?:(\d+)M)?/
-  //   const match = isoDuration.match(regex)
-  //   if (!match) return isoDuration
+  const formatDuration = (isoDuration: string): string => {
+    // Parse PT2H30M format
+    const regex = /PT(?:(\d+)H)?(?:(\d+)M)?/
+    const match = isoDuration.match(regex)
+    if (!match) return isoDuration
 
-  //   const hours = parseInt(match[1] || '0')
-  //   const minutes = parseInt(match[2] || '0')
+    const hours = parseInt(match[1] || '0')
+    const minutes = parseInt(match[2] || '0')
     
-  //   if (hours && minutes) {
-  //     return `${hours}h ${minutes}m`
-  //   } else if (hours) {
-  //     return `${hours}h`
-  //   } else if (minutes) {
-  //     return `${minutes}m`
-  //   }
-  //   return isoDuration
-  // }
+    if (hours && minutes) {
+      return `${hours}h ${minutes}m`
+    } else if (hours) {
+      return `${hours}h`
+    } else if (minutes) {
+      return `${minutes}m`
+    }
+    return isoDuration
+  }
 
   // Helper function to get domain-based image
   const getDomainImage = (domain: string): string => {
@@ -287,7 +288,7 @@ export default function CoursePage() {
     description: moduleDetails.description || `Learn ${moduleDetails.name} in the ${moduleDetails.domain} domain.`,
     rating: moduleDetails.averageRatings || 0,
     students: 0, // We don't have this data yet
-    // duration: formatDuration(moduleDetails.duration),
+    duration: formatDuration(moduleDetails.duration),
     progress: 0, // We don't have progress data yet
     image: getDomainImage(moduleDetails.domain),
     domain: moduleDetails.domain,
@@ -423,59 +424,44 @@ export default function CoursePage() {
 
     try {
       const now = new Date();
-      const requestedDate = now.toISOString().slice(0, 10);
-      const requestedTime = now.toTimeString().slice(0, 8);
+      
+      // Use local date instead of UTC date to avoid timezone issues
+      const year = now.getFullYear();
+      const month = (now.getMonth() + 1).toString().padStart(2, '0'); // getMonth() is 0-indexed
+      const day = now.getDate().toString().padStart(2, '0');
+      const requestedDate = `${year}-${month}-${day}`; // YYYY-MM-DD format in local timezone
+      
+      // Use time format exactly like the schedule page (HH:MM)
+      const hours = now.getHours().toString().padStart(2, '0');
+      const minutes = now.getMinutes().toString().padStart(2, '0');
+      const requestedTime = `${hours}:${minutes}`; // HH:MM format (no seconds)
 
-      console.log('Joining meeting with fixed date/time:', { requestedDate, requestedTime, moduleId: params.id })
+      console.log('Joining meeting with LOCAL date/time (no timezone conversion):', { 
+        requestedDate, 
+        requestedTime, 
+        moduleId: params.id,
+        localDate: now.toString(),
+        utcDate: now.toISOString(),
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+      })
 
       const payload = {
         moduleId: params.id,
         requestedDate,
         requestedTime,
       }
+
       
-      console.log('Request payload:', payload)
-      console.log('Request payload JSON:', JSON.stringify(payload))
-      console.log('Current cookies:', document.cookie)
-      console.log('Axios baseURL:', axiosInstance.defaults.baseURL)
-      console.log('User Agent:', navigator.userAgent)
+      console.log('Request payload================:', payload)
+      console.log('Request payload JSON:=========================', JSON.stringify(payload))
 
-      // Extract JWT token from cookies for Bearer authentication
-      const extractJWTFromCookies = () => {
-        const cookies = document.cookie.split(';')
-        for (let cookie of cookies) {
-          const [name, value] = cookie.trim().split('=')
-          if (name === 'jwt_token') {
-            return value
-          }
-        }
-        return null
-      }
-
-      const jwtToken = extractJWTFromCookies()
-      console.log('Extracted JWT token:', jwtToken ? `${jwtToken.substring(0, 50)}...` : 'No JWT token found')
-
-      // Prepare headers - include Bearer token if JWT is available
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json, text/plain, */*',
-        'Accept-Language': 'en-US,en;q=0.5',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
-      }
-
-    
-      if (jwtToken) {
-        headers['Authorization'] = `Bearer ${jwtToken}`
-        console.log('Added Authorization header with Bearer token')
-      } else {
-        console.log('No JWT token found in cookies - relying on withCredentials only')
-      }
-
-    
+      // Use the same authentication approach as the schedule page
+      const token = Cookies.get('jwt_token');
       const response = await axiosInstance.post('/api/meeting/join', payload, {
-        headers,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         withCredentials: true,
         timeout: 10000,
       })
