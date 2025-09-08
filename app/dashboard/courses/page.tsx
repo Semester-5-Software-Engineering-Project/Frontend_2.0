@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Input } from '@/components/ui/input'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { 
   BookOpen, 
   Users, 
@@ -26,6 +27,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
+import ModuleCreation from '@/components/ui/modulecreation'
 import axiosInstance from '@/app/utils/axiosInstance'
 import { useToast } from '@/hooks/use-toast'
 
@@ -37,7 +39,7 @@ interface ApiModule {
   domain: string
   averageRatings: number
   fee: number
-  duration: string // ISO 8601 duration format like "PT2H30M"
+  duration: number // Duration in minutes
   status: string
 }
 
@@ -49,7 +51,7 @@ interface EnrolledCourse {
   domain: string
   rating: number
   fee: number
-  duration: string
+  duration: number // Duration in minutes
   status: string
   image: string
 }
@@ -60,7 +62,7 @@ interface TeachingCourse {
   domain: string
   rating: number
   fee: number
-  duration: string
+  duration: number // Duration in minutes
   status: string
   image: string
 }
@@ -72,28 +74,24 @@ export default function CoursesPage() {
   const { toast } = useToast()
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
+  const [isModuleCreationOpen, setIsModuleCreationOpen] = useState(false)
   const [courses, setCourses] = useState<Course[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Helper function to convert ISO 8601 duration to readable format
-  const formatDuration = (isoDuration: string): string => {
-    // Parse PT2H30M format
-    const regex = /PT(?:(\d+)H)?(?:(\d+)M)?/
-    const match = isoDuration.match(regex)
-    if (!match) return isoDuration
-
-    const hours = parseInt(match[1] || '0')
-    const minutes = parseInt(match[2] || '0')
-    
-    if (hours && minutes) {
-      return `${hours}h ${minutes}m`
-    } else if (hours) {
-      return `${hours}h`
-    } else if (minutes) {
+  // Helper function to format duration from minutes to readable format
+  const formatDuration = (minutes: number): string => {
+    if (minutes < 60) {
       return `${minutes}m`
     }
-    return isoDuration
+    
+    const hours = Math.floor(minutes / 60)
+    const remainingMinutes = minutes % 60
+    
+    if (remainingMinutes === 0) {
+      return `${hours}h`
+    }
+    return `${hours}h ${remainingMinutes}m`
   }
 
   // Helper function to get domain-based image
@@ -116,7 +114,7 @@ export default function CoursesPage() {
       domain: apiModule.domain,
       rating: apiModule.averageRatings || 0,
       fee: apiModule.fee,
-      duration: formatDuration(apiModule.duration),
+      duration: apiModule.duration, // Keep as integer (minutes)
       status: apiModule.status.toLowerCase(),
       image: getDomainImage(apiModule.domain),
     }
@@ -284,6 +282,17 @@ export default function CoursesPage() {
     }
   }
 
+  const handleModuleCreationSuccess = (module: any) => {
+    console.log('Module created successfully:', module)
+    // Don't close the dialog immediately - let the user choose via the success popup
+    // setIsModuleCreationOpen(false)
+    // You can add logic here to refresh the courses list or show a success message
+  }
+
+  const handleModuleCreationCancel = () => {
+    setIsModuleCreationOpen(false)
+  }
+
   return (
     <DashboardLayout>
       <div className="p-6 space-y-6">
@@ -300,24 +309,25 @@ export default function CoursesPage() {
               }
             </p>
           </div>
-          <div className="flex space-x-2">
-            {user?.role === 'STUDENT' && (
-              <Button 
-                onClick={debugEnrollmentAPI}
-                variant="outline"
-                size="sm"
-                className="text-xs"
-              >
-                🐛 Debug API
-              </Button>
-            )}
-            {user?.role === 'TUTOR' && (
-              <Button className="bg-primary hover:bg-primary/90">
-                <Plus className="w-4 h-4 mr-2" />
-                Create New Module
-              </Button>
-            )}
-          </div>
+          {user?.role === 'TUTOR' && (
+            <Dialog open={isModuleCreationOpen} onOpenChange={setIsModuleCreationOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-primary hover:bg-primary/90">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create New Course
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Create New Course Module</DialogTitle>
+                </DialogHeader>
+                <ModuleCreation 
+                  onSuccess={handleModuleCreationSuccess}
+                  onCancel={handleModuleCreationCancel}
+                />
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
 
         {/* Stats Overview */}
@@ -346,6 +356,7 @@ export default function CoursesPage() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">
+                    {user?.role === 'STUDENT' ? '24' : '156'}
                     {loading ? '...' : courses.filter(c => c.status === 'active').length}
                   </p>
                   <p className="text-sm text-muted-foreground">
@@ -383,6 +394,7 @@ export default function CoursesPage() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">
+                    {user?.role === 'STUDENT' ? '3' : '12'}
                     {loading ? '...' : user?.role === 'TUTOR' 
                       ? `$${courses.reduce((sum, c) => sum + c.fee, 0).toFixed(0)}`
                       : courses.length
@@ -546,12 +558,15 @@ export default function CoursesPage() {
                 {searchTerm || filterStatus !== 'all' 
                   ? 'Try adjusting your search or filter criteria'
                   : user?.role === 'STUDENT'
-                    ? 'You haven\'t enrolled in any modules yet'
-                    : 'You haven\'t created any modules yet'
+                    ? 'You haven\'t enrolled in any courses yet'
+                    : 'You haven\'t created any courses yet'
                 }
               </p>
               {user?.role === 'TUTOR' && (
-                <Button className="bg-green-600 hover:bg-green-700">
+                <Button 
+                  className="bg-green-600 hover:bg-green-700"
+                  onClick={() => setIsModuleCreationOpen(true)}
+                >
                   <Plus className="w-4 h-4 mr-2" />
                   Create Your First Module
                 </Button>

@@ -1,0 +1,136 @@
+import axiosInstance from '@/app/utils/axiosInstance';
+
+// --- Types (aligned with latest backend response) -----------------------
+export interface RoleRef {
+	id: number;
+	name: string; // e.g. "STUDENT"
+}
+
+export interface UserEmbedded {
+	id: string;
+	role: RoleRef;
+	email: string;
+	providerid: string | null;
+	createdAt: string;
+	updatedAt: string;
+	emailVerified: boolean;
+}
+
+// Entity returned by backend
+export interface StudentProfileEntity {
+	studentId: string;
+	user: UserEmbedded;
+	name: string;        // full display name
+	birthday: string;    // ISO date string (YYYY-MM-DD)
+	imageUrl: string;
+	lastAccessed: string | null;
+	isActive: boolean | null;
+	phoneNumber: string;
+	bio: string;
+	createdAt: string;
+	updatedAt: string;
+	// Forward compatibility for extra backend fields
+	[key: string]: any;
+}
+
+// DTO we send when creating/updating (omit server-managed & nested user)
+export interface StudentProfileDto {
+	name?: string;
+	birthday?: string;
+	imageUrl?: string;
+	phoneNumber?: string;
+	bio?: string;
+	isActive?: boolean; // allow client to set initial active state
+}
+
+// --- Internal helpers ----------------------------------------------------
+const authHeader = (token?: string) => {
+	if (!token) return {};
+	return { Authorization: `Bearer ${token}` };
+};
+
+// Attempt to read a token if the application stored it in localStorage or a non-httpOnly cookie.
+// NOTE: If your backend sets an httpOnly cookie (recommended for security), you cannot manually
+// construct the Authorization header client-side. In that case, either:
+// 1) Adjust backend controller to also accept the JWT from the cookie (preferred), OR
+// 2) Return the token in the auth/login response body so the frontend can store it (less secure).
+const discoverToken = (): string | undefined => {
+	try {
+		const fromLocalStorage = localStorage.getItem('token');
+		if (fromLocalStorage) return fromLocalStorage;
+		// try cookie (only works if NOT httpOnly)
+		const match = document.cookie.match(/(?:^|; )jwt_token=([^;]+)/);
+		if (match) return decodeURIComponent(match[1]);
+	} catch {
+		/* no-op */
+	}
+	return undefined;
+};
+
+// Generic error normalizer
+const parseError = (err: any): Error => {
+	if (err?.response) {
+		const msg = err.response.data?.message || err.response.data || `Request failed (${err.response.status})`;
+		return new Error(msg);
+	}
+	return new Error(err?.message || 'Network error');
+};
+
+// --- API surface ---------------------------------------------------------
+export const StudentProfileApi = {
+	/** Create a new profile for the authenticated student */
+	async create(data: StudentProfileDto, token?: string): Promise<StudentProfileEntity> {
+		const t = token || discoverToken();
+		try {
+			const res = await axiosInstance.post('/api/student-profile', data, { headers: authHeader(t) });
+			return res.data as StudentProfileEntity;
+            console.log(res.data);
+		} catch (e) {
+			throw parseError(e);
+		}
+	},
+
+	/** Fetch current student's profile */
+	async getMe(token?: string): Promise<StudentProfileEntity> {
+		const t = token || discoverToken();
+		try {
+			const res = await axiosInstance.get('/api/student-profile/me', { headers: authHeader(t) });
+			return res.data as StudentProfileEntity;
+		} catch (e) {
+			throw parseError(e);
+		}
+	},
+
+	/** Update current student's profile */
+	async update(data: StudentProfileDto, token?: string): Promise<StudentProfileEntity> {
+		const t = token || discoverToken();
+		try {
+			const res = await axiosInstance.put('/api/student-profile', data, { headers: authHeader(t) });
+			return res.data as StudentProfileEntity;
+		} catch (e) {
+			throw parseError(e);
+		}
+	},
+
+	/** Delete current student's profile */
+	async delete(token?: string): Promise<void> {
+		const t = token || discoverToken();
+		try {
+			await axiosInstance.delete('/api/student-profile', { headers: authHeader(t) });
+		} catch (e) {
+			throw parseError(e);
+		}
+	},
+
+	/** Change password for current student */
+	async changePassword(newPassword: string, token?: string): Promise<void> {
+		const t = token || discoverToken();
+		try {
+			await axiosInstance.put('/api/student-profile/change-password', { newPassword }, { headers: authHeader(t) });
+		} catch (e) {
+			throw parseError(e);
+		}
+	},
+};
+
+export default StudentProfileApi;
