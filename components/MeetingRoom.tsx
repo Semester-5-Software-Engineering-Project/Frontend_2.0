@@ -35,207 +35,34 @@ export const MeetingRoom = ({ username, roomName, role, email, password, jwtToke
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const isTeacher = role === 'teacher';
 
-  // Debug logging
-  console.log('MeetingRoom Props:', { username, roomName, role, email, isTeacher, hasJwtToken: !!jwtToken });
-
-  // Function to detect if authentication token is stored in HTTP-only cookies
-  const detectHttpOnlyCookieAuth = async () => {
-    try {
-      console.log('Detecting HTTP-only cookie authentication...');
-      
-      // Step 1: Check if any auth-related cookies are visible to JavaScript
-      const visibleCookies = document.cookie;
-      console.log('Visible cookies:', visibleCookies);
-      
-      // Common authentication cookie names to check for
-      const authCookieNames = ['token', 'auth', 'jwt', 'session', 'access_token', 'authToken'];
-      const hasVisibleAuthCookies = authCookieNames.some(cookieName => 
-        visibleCookies.includes(`${cookieName}=`)
-      );
-      
-      console.log('Has visible auth cookies:', hasVisibleAuthCookies);
-      
-      // Step 2: Test if we can make authenticated requests despite no visible auth cookies
-      let canMakeAuthenticatedRequests = false;
-      try {
-        // Try to make a request that requires authentication
-        // This will succeed if HTTP-only cookies are being sent automatically
-        const testResponse = await axiosInstance.get('/api/user/profile', {
-          withCredentials: true,
-          timeout: 5000,
-        });
-        
-        if (testResponse.status === 200) {
-          canMakeAuthenticatedRequests = true;
-          console.log('Successfully made authenticated request with cookies');
-        }
-      } catch (error: any) {
-        // If it's a 404, try an alternative endpoint
-        if (error.response?.status === 404) {
-          try {
-            // Try the meeting creation endpoint as an alternative test
-            const altResponse = await axiosInstance.post('/create/meet', {}, {
-              withCredentials: true,
-              timeout: 5000,
-            });
-            canMakeAuthenticatedRequests = true;
-            console.log('Successfully made authenticated request to alternative endpoint');
-          } catch (altError: any) {
-            if (altError.response?.status !== 401 && altError.response?.status !== 403) {
-              // If it's not an auth error, we might still be authenticated
-              canMakeAuthenticatedRequests = true;
-              console.log('Request succeeded but with different response');
-            }
-          }
-        } else if (error.response?.status !== 401 && error.response?.status !== 403) {
-          // If it's not an authentication error, we might be authenticated
-          canMakeAuthenticatedRequests = true;
-          console.log('Request failed but not due to authentication');
-        }
-      }
-      
-      // Step 3: Determine authentication method
-      let authMethod = 'none';
-      let isHttpOnlyAuth = false;
-      
-      if (hasVisibleAuthCookies && canMakeAuthenticatedRequests) {
-        authMethod = 'visible-cookies';
-        isHttpOnlyAuth = false;
-        console.log('Authentication: Visible cookies (not HTTP-only)');
-      } else if (!hasVisibleAuthCookies && canMakeAuthenticatedRequests) {
-        authMethod = 'http-only-cookies';
-        isHttpOnlyAuth = true;
-        console.log('Authentication: HTTP-only cookies detected');
-      } else if (hasVisibleAuthCookies && !canMakeAuthenticatedRequests) {
-        authMethod = 'visible-but-invalid';
-        isHttpOnlyAuth = false;
-        console.log('Authentication: Visible cookies but requests fail (expired/invalid)');
-      } else {
-        authMethod = 'none';
-        isHttpOnlyAuth = false;
-        console.log('Authentication: No authentication detected');
-      }
-      
-      // Step 4: Additional HTTP-only detection techniques
-      const additionalChecks = {
-        // Check if Set-Cookie headers were received (indicates server is setting cookies)
-        receivedSetCookie: false,
-        // Check if we have any cookies at all vs having some but not auth cookies
-        hasCookies: visibleCookies.length > 0,
-        // Check cookie count - HTTP-only auth often means fewer visible cookies
-        visibleCookieCount: visibleCookies.split(';').filter(c => c.trim()).length
-      };
-      
-      const result = {
-        isHttpOnlyAuth,
-        authMethod,
-        hasVisibleAuthCookies,
-        canMakeAuthenticatedRequests,
-        visibleCookies: visibleCookies || 'none',
-        additionalChecks,
-        recommendation: isHttpOnlyAuth 
-          ? 'Use axios with withCredentials:true for all authenticated requests'
-          : hasVisibleAuthCookies 
-            ? 'Can access auth tokens via document.cookie'
-            : 'No authentication detected - user may need to login'
-      };
-      
-      console.log('HTTP-only cookie detection result:', result);
-      return result;
-      
-    } catch (error: any) {
-      console.error('Error detecting HTTP-only cookie auth:', error);
-      return {
-        isHttpOnlyAuth: false,
-        authMethod: 'error',
-        hasVisibleAuthCookies: false,
-        canMakeAuthenticatedRequests: false,
-        error: error.message,
-        recommendation: 'Unable to detect authentication method due to error'
-      };
-    }
-  };
-
-  // Function to test if authentication works despite missing visible cookies
-  const testHttpOnlyAuthentication = async () => {
-    console.log('Running HTTP-only authentication test...');
-    
-    // Use the comprehensive detection function
-    const cookieAnalysis = await detectHttpOnlyCookieAuth();
-    
-    // Display results with toast notifications
-    if (cookieAnalysis.isHttpOnlyAuth) {
-      console.log('🔒 HTTP-Only Authentication Detected: Can authenticate but no auth cookies visible in JavaScript');
-      
-      toast({
-        title: "Secure Authentication Detected",
-        description: "Using HTTP-only cookies for enhanced security",
-      });
-    } else if (cookieAnalysis.hasVisibleAuthCookies) {
-      console.log('🔓 Standard Cookie Authentication: Auth cookies visible in JavaScript');
-      
-      toast({
-        title: "Standard Authentication",
-        description: "Auth cookies are accessible via JavaScript",
-      });
-    } else if (!cookieAnalysis.canMakeAuthenticatedRequests) {
-      console.log('❌ Authentication Failed: Cannot make authenticated requests');
-      
-      toast({
-        title: "Authentication Required",
-        description: "Please log in to access this feature",
-        variant: "destructive"
-      });
-    }
-    
-    return cookieAnalysis;
-  };
-
   // Function to get JWT token from API or use provided token
   const getJWTToken = async () => {
     // If we have a JWT token provided (from the new meeting flow), use it
     if (jwtToken) {
-      console.log('Using provided JWT token from meeting join API');
       return jwtToken;
     }
 
     // Fallback to the old API call for backward compatibility
     try {
-      console.log('Making API call to /create/meet');
-      console.log('Current cookies:', document.cookie);
-      
-      // Check if we have authentication cookies
-      const cookies = document.cookie.split(';').map(cookie => cookie.trim());
-      console.log('Parsed cookies:', cookies);
-
-      // Your backend gets user info from JWT token in cookies, so we don't need to send user data
       const response = await axiosInstance.post('/create/meet', {}, {
         headers: {
           'Content-Type': 'application/json',
         },
-        withCredentials: true, // Include credentials (cookies) for authentication
-        timeout: 10000, // 10 second timeout
+        timeout: 10000,
       });
 
-      console.log('API Response:', response.data);
-
-      // Your backend returns the token directly in the response body
       if (response.data) {
-        return response.data; // The token is the response body itself
+        return response.data;
       } else {
         throw new Error('No token received from API');
       }
     } catch (error: any) {
-      console.error('Error getting JWT token from API:', error);
-      
-      // Handle specific backend error responses
       if (error.response) {
         if (error.response.status === 401) {
           throw new Error('Authentication failed. Please login again.');
         } else if (error.response.status === 403) {
           throw new Error('Access denied. You don\'t have permission to join meetings.');
         } else if (error.response.data) {
-          // Your backend returns error messages directly in the response body
           throw new Error(error.response.data);
         } else {
           throw new Error(`Server error: ${error.response.status}`);
@@ -262,13 +89,10 @@ export const MeetingRoom = ({ username, roomName, role, email, password, jwtToke
       return new Promise((resolve, reject) => {
         // Check if already loaded
         if (window.JitsiMeetExternalAPI) {
-          console.log('Jitsi API already loaded');
           resolve(window.JitsiMeetExternalAPI);
           return;
         }
 
-        console.log('Loading Jitsi Meet API script...');
-        
         // Try custom domain first, then fallback to public Jitsi
         const tryLoadScript = (scriptUrl: string, domain: string) => {
           return new Promise<any>((resolveScript, rejectScript) => {
@@ -283,7 +107,6 @@ export const MeetingRoom = ({ username, roomName, role, email, password, jwtToke
             
             script.onload = () => {
               clearTimeout(timeout);
-              console.log(`Jitsi API script loaded successfully from ${domain}`);
               if (window.JitsiMeetExternalAPI) {
                 resolveScript({ api: window.JitsiMeetExternalAPI, domain });
               } else {
@@ -293,7 +116,6 @@ export const MeetingRoom = ({ username, roomName, role, email, password, jwtToke
             
             script.onerror = (error) => {
               clearTimeout(timeout);
-              console.error(`Failed to load Jitsi script from ${domain}:`, error);
               rejectScript(new Error(`Failed to load from ${domain}`));
             };
             
@@ -305,7 +127,6 @@ export const MeetingRoom = ({ username, roomName, role, email, password, jwtToke
         tryLoadScript('https://jit.shancloudservice.com/external_api.js', 'jit.shancloudservice.com')
           .then(resolve)
           .catch((error) => {
-            console.warn('Custom Jitsi server failed, trying public server:', error.message);
             toast({
               title: "Trying Fallback Server",
               description: "Custom meeting server unavailable, using public server",
@@ -324,14 +145,11 @@ export const MeetingRoom = ({ username, roomName, role, email, password, jwtToke
       try {
         // Check if component is still mounted and not already initialized
         if (!isMounted || isInitialized || apiRef.current) {
-          console.log('Skipping initialization - component unmounted or already initialized');
           return;
         }
 
         setIsLoading(true);
         setError(null);
-        
-        console.log('Initializing Jitsi meeting...');
         
         // Try to load Jitsi script
         let jitsiDomain = 'jit.shancloudservice.com'; // default
@@ -339,10 +157,8 @@ export const MeetingRoom = ({ username, roomName, role, email, password, jwtToke
           const scriptResult = await loadJitsiScript() as any;
           if (scriptResult && scriptResult.domain) {
             jitsiDomain = scriptResult.domain;
-            console.log('Using Jitsi domain:', jitsiDomain);
           }
         } catch (scriptError: any) {
-          console.error('Script loading failed:', scriptError);
           throw new Error(`Failed to load meeting interface: ${scriptError.message || 'Unknown script error'}`);
         }
         
@@ -356,7 +172,6 @@ export const MeetingRoom = ({ username, roomName, role, email, password, jwtToke
                                window.location.hostname === '127.0.0.1';
 
         if (!isSecureContext) {
-          console.warn('Jitsi requires HTTPS for full functionality. Some features may not work over HTTP/IP.');
           toast({
             title: "Security Warning",
             description: "For full functionality, please use HTTPS or localhost",
@@ -368,36 +183,14 @@ export const MeetingRoom = ({ username, roomName, role, email, password, jwtToke
         let jwt: string | undefined;
         if (jitsiDomain === 'jit.shancloudservice.com') {
           try {
-            console.log('Getting JWT token from API for custom domain...');
             jwt = await getJWTToken();
-            console.log('Successfully obtained JWT token from API');
-            
-            // Debug: Try to decode JWT to see its contents (for debugging only)
-            if (jwt) {
-              try {
-                const base64Url = jwt.split('.')[1];
-                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-                const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-                  return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-                }).join(''));
-                const decoded = JSON.parse(jsonPayload);
-                console.log('JWT payload:', decoded);
-                console.log('Is moderator in JWT:', decoded.moderator);
-                console.log('User role in JWT:', decoded.context?.user);
-              } catch (decodeError) {
-                console.log('Could not decode JWT for debugging:', decodeError);
-              }
-            }
             
             toast({
               title: "Authentication Successful",
               description: "Successfully authenticated with meeting server",
             });
           } catch (jwtError: any) {
-            console.error('Failed to get JWT token from API:', jwtError);
-            
             // If JWT fails for custom domain, fall back to public Jitsi
-            console.warn('JWT failed for custom domain, falling back to public Jitsi server');
             jitsiDomain = 'meet.jit.si';
             
             toast({
@@ -407,7 +200,6 @@ export const MeetingRoom = ({ username, roomName, role, email, password, jwtToke
             });
           }
         } else {
-          console.log('Using public Jitsi server, no JWT required');
           toast({
             title: "Using Public Server",
             description: "Connected to public meeting server",
@@ -567,7 +359,6 @@ export const MeetingRoom = ({ username, roomName, role, email, password, jwtToke
 
         // Final check before creating Jitsi instance
         if (!isMounted || !jitsiContainerRef.current) {
-          console.log('Component unmounted or container not available, aborting Jitsi creation');
           return;
         }
 
@@ -576,16 +367,14 @@ export const MeetingRoom = ({ username, roomName, role, email, password, jwtToke
 
         // Dispose any existing instance
         if (apiRef.current) {
-          console.log('Disposing existing Jitsi instance');
           try {
             apiRef.current.dispose();
           } catch (e) {
-            console.warn('Error disposing existing instance:', e);
+            // Ignore disposal errors
           }
           apiRef.current = null;
         }
 
-        console.log('Creating new Jitsi instance with domain:', jitsiDomain);
         apiRef.current = new window.JitsiMeetExternalAPI(jitsiDomain, options);
         
         // Mark as initialized
@@ -594,16 +383,13 @@ export const MeetingRoom = ({ username, roomName, role, email, password, jwtToke
         // Event listeners
         apiRef.current.addEventListener('ready', () => {
           if (!isMounted) return;
-          console.log("Jitsi API is ready");
-          console.log("User role:", role, "Is teacher:", isTeacher);
           
           // Check if user is moderator
           setTimeout(() => {
             try {
               const iframe = apiRef.current.getIFrame();
-              console.log("Jitsi iframe ready");
             } catch (e) {
-              console.log("Could not access iframe:", e);
+              // Ignore iframe access errors
             }
           }, 1000);
           
@@ -617,25 +403,20 @@ export const MeetingRoom = ({ username, roomName, role, email, password, jwtToke
         // Add event listener for when conference is joined
         apiRef.current.addEventListener('videoConferenceJoined', (event: any) => {
           if (!isMounted) return;
-          console.log("Video conference joined:", event);
-          console.log("Conference joined successfully - checking moderator status");
         });
 
         // Add event listener for moderator status
         apiRef.current.addEventListener('participantRoleChanged', (event: any) => {
           if (!isMounted) return;
-          console.log("Participant role changed:", event);
         });
 
         apiRef.current.addEventListener('videoConferenceLeft', () => {
           if (!isMounted) return;
-          console.log("Left the meeting");
           onLeave();
         });
 
         apiRef.current.addEventListener('participantJoined', (participant: any) => {
           if (!isMounted) return;
-          console.log("Participant joined:", participant);
           if (isTeacher) {
             toast({
               title: "Participant joined",
@@ -647,20 +428,18 @@ export const MeetingRoom = ({ username, roomName, role, email, password, jwtToke
         // Handle connection failures
         apiRef.current.addEventListener('connectionFailed', () => {
           if (!isMounted) return;
-          console.error("Connection failed");
           setError("Connection failed. Please check your internet connection and try again.");
           setIsLoading(false);
         });
 
         // Handle device errors
         apiRef.current.addEventListener('deviceListChanged', (devices: any) => {
-          console.log("Available devices:", devices);
+          // Device list changed - can be used for device management
         });
 
         // Handle moderator actions and permissions
         apiRef.current.addEventListener('participantKicked', (event: any) => {
           if (!isMounted) return;
-          console.log("Participant kicked:", event);
           if (isTeacher) {
             toast({
               title: "Participant Removed",
@@ -672,18 +451,15 @@ export const MeetingRoom = ({ username, roomName, role, email, password, jwtToke
         // Handle mute actions
         apiRef.current.addEventListener('audioMuteStatusChanged', (event: any) => {
           if (!isMounted) return;
-          console.log("Audio mute status changed:", event);
         });
 
         apiRef.current.addEventListener('videoMuteStatusChanged', (event: any) => {
           if (!isMounted) return;
-          console.log("Video mute status changed:", event);
         });
 
         // Handle recording events
         apiRef.current.addEventListener('recordingStatusChanged', (event: any) => {
           if (!isMounted) return;
-          console.log("Recording status changed:", event);
           if (event.on && isTeacher) {
             toast({
               title: "Recording Started",
@@ -700,7 +476,6 @@ export const MeetingRoom = ({ username, roomName, role, email, password, jwtToke
         // Handle screen sharing
         apiRef.current.addEventListener('screenSharingStatusChanged', (event: any) => {
           if (!isMounted) return;
-          console.log("Screen sharing status changed:", event);
           if (event.on) {
             toast({
               title: "Screen Sharing",
@@ -712,7 +487,6 @@ export const MeetingRoom = ({ username, roomName, role, email, password, jwtToke
         // Handle errors and restrictions
         apiRef.current.addEventListener('errorOccurred', (event: any) => {
           if (!isMounted) return;
-          console.log("Jitsi error occurred:", event);
           
           // Handle permission denied errors for students
           if (!isTeacher && (
@@ -731,21 +505,15 @@ export const MeetingRoom = ({ username, roomName, role, email, password, jwtToke
         if (isTeacher) {
           apiRef.current.addEventListener('knockingParticipant', (event: any) => {
             if (!isMounted) return;
-            console.log("Participant knocking:", event);
             toast({
               title: "Participant Waiting",
               description: `${event.participant?.name || 'Someone'} is waiting to join`,
             });
-            
-            // You can add a separate UI component to handle admitting participants
-            // For now, just log it
-            console.log("Participant waiting to be admitted:", event.participant);
           });
         }
 
       } catch (err: any) {
         if (!isMounted) return;
-        console.error("Jitsi Meeting Error:", err);
         setError(`Meeting failed to load: ${err.message || 'Unknown error'}`);
         setIsLoading(false);
         toast({
@@ -759,14 +527,13 @@ export const MeetingRoom = ({ username, roomName, role, email, password, jwtToke
     initializeJitsi();
 
     return () => {
-      console.log('Cleaning up MeetingRoom component...');
       isMounted = false;
       
       if (apiRef.current) {
         try {
           apiRef.current.dispose();
         } catch (e) {
-          console.warn('Error disposing Jitsi API:', e);
+          // Ignore disposal errors
         }
         apiRef.current = null;
       }
@@ -780,111 +547,13 @@ export const MeetingRoom = ({ username, roomName, role, email, password, jwtToke
         try {
           mediaRecorderRef.current.stop();
         } catch (e) {
-          console.warn('Error stopping media recorder:', e);
+          // Ignore recorder stop errors
         }
       }
       
       setIsInitialized(false);
     };
   }, [username, roomName]); // Reduced dependencies to prevent frequent re-runs
-
-  // Teacher control functions
-  const muteAllParticipants = () => {
-    if (!isTeacher || !apiRef.current) return;
-    
-    try {
-      apiRef.current.executeCommand('muteEveryone');
-      toast({
-        title: "All Participants Muted",
-        description: "You have muted all participants",
-      });
-    } catch (error) {
-      console.error('Error muting all participants:', error);
-      toast({
-        title: "Error",
-        description: "Failed to mute all participants",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const muteAllVideo = () => {
-    if (!isTeacher || !apiRef.current) return;
-    
-    try {
-      apiRef.current.executeCommand('muteVideoEveryone');
-      toast({
-        title: "All Video Disabled",
-        description: "You have disabled video for all participants",
-      });
-    } catch (error) {
-      console.error('Error disabling all video:', error);
-      toast({
-        title: "Error",
-        description: "Failed to disable video for all participants",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const toggleLobbyMode = () => {
-    if (!isTeacher || !apiRef.current) return;
-    
-    try {
-      apiRef.current.executeCommand('toggleLobby');
-      toast({
-        title: "Lobby Mode Toggled",
-        description: "Lobby mode has been enabled/disabled",
-      });
-    } catch (error) {
-      console.error('Error toggling lobby mode:', error);
-      toast({
-        title: "Error",
-        description: "Failed to toggle lobby mode",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const startJitsiRecording = () => {
-    if (!isTeacher || !apiRef.current) return;
-    
-    try {
-      apiRef.current.executeCommand('startRecording', {
-        mode: 'stream'
-      });
-      toast({
-        title: "Recording Started",
-        description: "Jitsi recording has been started",
-      });
-    } catch (error) {
-      console.error('Error starting Jitsi recording:', error);
-      toast({
-        title: "Error",
-        description: "Failed to start recording",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const stopJitsiRecording = () => {
-    if (!isTeacher || !apiRef.current) return;
-    
-    try {
-      apiRef.current.executeCommand('stopRecording');
-      toast({
-        title: "Recording Stopped",
-        description: "Jitsi recording has been stopped",
-      });
-    } catch (error) {
-      console.error('Error stopping Jitsi recording:', error);
-      toast({
-        title: "Error",
-        description: "Failed to stop recording",
-        variant: "destructive",
-      });
-    }
-  };
 
   // Recording functions (local screen recording)
   const startRecording = async () => {
@@ -950,7 +619,6 @@ export const MeetingRoom = ({ username, roomName, role, email, password, jwtToke
       });
 
     } catch (error) {
-      console.error('Error starting recording:', error);
       toast({
         title: "Recording Error",
         description: "Failed to start recording. Please try again.",
@@ -984,66 +652,6 @@ export const MeetingRoom = ({ username, roomName, role, email, password, jwtToke
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const testApiConnection = async () => {
-    try {
-      console.log('Testing API connection...');
-      console.log('Current cookies:', document.cookie);
-      console.log('Axios base URL:', axiosInstance.defaults.baseURL);
-      console.log('With credentials:', axiosInstance.defaults.withCredentials);
-      
-      const token = await getJWTToken();
-      console.log('API test successful! Token received:', token.substring(0, 50) + '...');
-      toast({
-        title: "API Test Successful",
-        description: "Successfully connected to backend and received token",
-      });
-    } catch (error: any) {
-      console.error('API test failed:', error);
-      console.log('Full error object:', error);
-      console.log('Response status:', error.response?.status);
-      console.log('Response headers:', error.response?.headers);
-      console.log('Response data:', error.response?.data);
-      toast({
-        title: "API Test Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const testAuth = async () => {
-    try {
-      console.log('Testing authentication status...');
-      console.log('Current cookies:', document.cookie);
-      
-      // Test if we can access a protected endpoint
-      const response = await axiosInstance.get('/api/user/profile', {
-        withCredentials: true,
-        timeout: 5000,
-      });
-      
-      console.log('Auth test successful! User data:', response.data);
-      toast({
-        title: "Authentication Test Successful",
-        description: "User is properly authenticated",
-      });
-    } catch (error: any) {
-      console.error('Auth test failed:', error);
-      let message = 'Authentication failed';
-      if (error.response?.status === 401) {
-        message = 'User not authenticated - please login again';
-      } else if (error.response?.status === 404) {
-        message = 'Profile endpoint not found - trying alternative check';
-      }
-      
-      toast({
-        title: "Authentication Test Failed",
-        description: message,
-        variant: "destructive",
-      });
-    }
-  };
-
   return (
     <div className="min-h-screen bg-meeting flex flex-col items-center justify-center p-4">
       <div className="bg-card border-b border-border p-4 w-full max-w-5xl flex items-center justify-between rounded-t-xl">
@@ -1070,63 +678,24 @@ export const MeetingRoom = ({ username, roomName, role, email, password, jwtToke
         </div>
         <div className="flex items-center space-x-2">
           {isTeacher && (
-            <>
-              <Button
-                onClick={isRecording ? stopRecording : startRecording}
-                variant={isRecording ? "destructive" : "secondary"}
-                size="sm"
-                className="mr-2"
-              >
-                {isRecording ? (
-                  <>
-                    <Square className="w-4 h-4 mr-2" />
-                    Stop Recording
-                  </>
-                ) : (
-                  <>
-                    <Video className="w-4 h-4 mr-2" />
-                    Start Recording
-                  </>
-                )}
-              </Button>
-              
-              {/* Teacher Control Buttons */}
-              <Button
-                onClick={muteAllParticipants}
-                variant="outline"
-                size="sm"
-                title="Mute all participants"
-              >
-                🔇 Mute All
-              </Button>
-              
-              <Button
-                onClick={muteAllVideo}
-                variant="outline"
-                size="sm"
-                title="Disable video for all participants"
-              >
-                📹 Video Off
-              </Button>
-              
-              <Button
-                onClick={toggleLobbyMode}
-                variant="outline"
-                size="sm"
-                title="Toggle lobby/waiting room"
-              >
-                🚪 Lobby
-              </Button>
-              
-              <Button
-                onClick={startJitsiRecording}
-                variant="outline"
-                size="sm"
-                title="Start Jitsi cloud recording"
-              >
-                ☁️ Record
-              </Button>
-            </>
+            <Button
+              onClick={isRecording ? stopRecording : startRecording}
+              variant={isRecording ? "destructive" : "secondary"}
+              size="sm"
+              className="mr-2"
+            >
+              {isRecording ? (
+                <>
+                  <Square className="w-4 h-4 mr-2" />
+                  Stop Recording
+                </>
+              ) : (
+                <>
+                  <Video className="w-4 h-4 mr-2" />
+                  Start Recording
+                </>
+              )}
+            </Button>
           )}
           <Button onClick={onLeave} variant="destructive" size="sm">
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -1144,15 +713,6 @@ export const MeetingRoom = ({ username, roomName, role, email, password, jwtToke
               <div className="space-y-2">
                 <Button onClick={() => window.location.reload()}>
                   Retry
-                </Button>
-                <Button onClick={testApiConnection} variant="outline">
-                  Test API Connection
-                </Button>
-                <Button onClick={testAuth} variant="outline">
-                  Test Authentication
-                </Button>
-                <Button onClick={testHttpOnlyAuthentication} variant="outline">
-                  Test HTTP-Only Cookies
                 </Button>
                 <div className="text-xs text-muted-foreground mt-4">
                   <p>Debug Info:</p>
