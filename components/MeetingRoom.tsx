@@ -12,6 +12,7 @@ interface MeetingRoomProps {
   role: 'student' | 'teacher';
   email?: string;
   password?: string;
+  jwtToken?: string;
   onLeave: () => void;
 }
 
@@ -21,7 +22,7 @@ declare global {
   }
 }
 
-export const MeetingRoom = ({ username, roomName, role, email, password, onLeave }: MeetingRoomProps) => {
+export const MeetingRoom = ({ username, roomName, role, email, password, jwtToken, onLeave }: MeetingRoomProps) => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,10 +36,170 @@ export const MeetingRoom = ({ username, roomName, role, email, password, onLeave
   const isTeacher = role === 'teacher';
 
   // Debug logging
-  console.log('MeetingRoom Props:', { username, roomName, role, email, isTeacher });
+  console.log('MeetingRoom Props:', { username, roomName, role, email, isTeacher, hasJwtToken: !!jwtToken });
 
-  // Function to get JWT token from API
+  // Function to detect if authentication token is stored in HTTP-only cookies
+  const detectHttpOnlyCookieAuth = async () => {
+    try {
+      console.log('Detecting HTTP-only cookie authentication...');
+      
+      // Step 1: Check if any auth-related cookies are visible to JavaScript
+      const visibleCookies = document.cookie;
+      console.log('Visible cookies:', visibleCookies);
+      
+      // Common authentication cookie names to check for
+      const authCookieNames = ['token', 'auth', 'jwt', 'session', 'access_token', 'authToken'];
+      const hasVisibleAuthCookies = authCookieNames.some(cookieName => 
+        visibleCookies.includes(`${cookieName}=`)
+      );
+      
+      console.log('Has visible auth cookies:', hasVisibleAuthCookies);
+      
+      // Step 2: Test if we can make authenticated requests despite no visible auth cookies
+      let canMakeAuthenticatedRequests = false;
+      try {
+        // Try to make a request that requires authentication
+        // This will succeed if HTTP-only cookies are being sent automatically
+        const testResponse = await axiosInstance.get('/api/user/profile', {
+          withCredentials: true,
+          timeout: 5000,
+        });
+        
+        if (testResponse.status === 200) {
+          canMakeAuthenticatedRequests = true;
+          console.log('Successfully made authenticated request with cookies');
+        }
+      } catch (error: any) {
+        // If it's a 404, try an alternative endpoint
+        if (error.response?.status === 404) {
+          try {
+            // Try the meeting creation endpoint as an alternative test
+            const altResponse = await axiosInstance.post('/create/meet', {}, {
+              withCredentials: true,
+              timeout: 5000,
+            });
+            canMakeAuthenticatedRequests = true;
+            console.log('Successfully made authenticated request to alternative endpoint');
+          } catch (altError: any) {
+            if (altError.response?.status !== 401 && altError.response?.status !== 403) {
+              // If it's not an auth error, we might still be authenticated
+              canMakeAuthenticatedRequests = true;
+              console.log('Request succeeded but with different response');
+            }
+          }
+        } else if (error.response?.status !== 401 && error.response?.status !== 403) {
+          // If it's not an authentication error, we might be authenticated
+          canMakeAuthenticatedRequests = true;
+          console.log('Request failed but not due to authentication');
+        }
+      }
+      
+      // Step 3: Determine authentication method
+      let authMethod = 'none';
+      let isHttpOnlyAuth = false;
+      
+      if (hasVisibleAuthCookies && canMakeAuthenticatedRequests) {
+        authMethod = 'visible-cookies';
+        isHttpOnlyAuth = false;
+        console.log('Authentication: Visible cookies (not HTTP-only)');
+      } else if (!hasVisibleAuthCookies && canMakeAuthenticatedRequests) {
+        authMethod = 'http-only-cookies';
+        isHttpOnlyAuth = true;
+        console.log('Authentication: HTTP-only cookies detected');
+      } else if (hasVisibleAuthCookies && !canMakeAuthenticatedRequests) {
+        authMethod = 'visible-but-invalid';
+        isHttpOnlyAuth = false;
+        console.log('Authentication: Visible cookies but requests fail (expired/invalid)');
+      } else {
+        authMethod = 'none';
+        isHttpOnlyAuth = false;
+        console.log('Authentication: No authentication detected');
+      }
+      
+      // Step 4: Additional HTTP-only detection techniques
+      const additionalChecks = {
+        // Check if Set-Cookie headers were received (indicates server is setting cookies)
+        receivedSetCookie: false,
+        // Check if we have any cookies at all vs having some but not auth cookies
+        hasCookies: visibleCookies.length > 0,
+        // Check cookie count - HTTP-only auth often means fewer visible cookies
+        visibleCookieCount: visibleCookies.split(';').filter(c => c.trim()).length
+      };
+      
+      const result = {
+        isHttpOnlyAuth,
+        authMethod,
+        hasVisibleAuthCookies,
+        canMakeAuthenticatedRequests,
+        visibleCookies: visibleCookies || 'none',
+        additionalChecks,
+        recommendation: isHttpOnlyAuth 
+          ? 'Use axios with withCredentials:true for all authenticated requests'
+          : hasVisibleAuthCookies 
+            ? 'Can access auth tokens via document.cookie'
+            : 'No authentication detected - user may need to login'
+      };
+      
+      console.log('HTTP-only cookie detection result:', result);
+      return result;
+      
+    } catch (error: any) {
+      console.error('Error detecting HTTP-only cookie auth:', error);
+      return {
+        isHttpOnlyAuth: false,
+        authMethod: 'error',
+        hasVisibleAuthCookies: false,
+        canMakeAuthenticatedRequests: false,
+        error: error.message,
+        recommendation: 'Unable to detect authentication method due to error'
+      };
+    }
+  };
+
+  // Function to test if authentication works despite missing visible cookies
+  const testHttpOnlyAuthentication = async () => {
+    console.log('Running HTTP-only authentication test...');
+    
+    // Use the comprehensive detection function
+    const cookieAnalysis = await detectHttpOnlyCookieAuth();
+    
+    // Display results with toast notifications
+    if (cookieAnalysis.isHttpOnlyAuth) {
+      console.log('🔒 HTTP-Only Authentication Detected: Can authenticate but no auth cookies visible in JavaScript');
+      
+      toast({
+        title: "Secure Authentication Detected",
+        description: "Using HTTP-only cookies for enhanced security",
+      });
+    } else if (cookieAnalysis.hasVisibleAuthCookies) {
+      console.log('🔓 Standard Cookie Authentication: Auth cookies visible in JavaScript');
+      
+      toast({
+        title: "Standard Authentication",
+        description: "Auth cookies are accessible via JavaScript",
+      });
+    } else if (!cookieAnalysis.canMakeAuthenticatedRequests) {
+      console.log('❌ Authentication Failed: Cannot make authenticated requests');
+      
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to access this feature",
+        variant: "destructive"
+      });
+    }
+    
+    return cookieAnalysis;
+  };
+
+  // Function to get JWT token from API or use provided token
   const getJWTToken = async () => {
+    // If we have a JWT token provided (from the new meeting flow), use it
+    if (jwtToken) {
+      console.log('Using provided JWT token from meeting join API');
+      return jwtToken;
+    }
+
+    // Fallback to the old API call for backward compatibility
     try {
       console.log('Making API call to /create/meet');
       console.log('Current cookies:', document.cookie);
@@ -989,6 +1150,9 @@ export const MeetingRoom = ({ username, roomName, role, email, password, onLeave
                 </Button>
                 <Button onClick={testAuth} variant="outline">
                   Test Authentication
+                </Button>
+                <Button onClick={testHttpOnlyAuthentication} variant="outline">
+                  Test HTTP-Only Cookies
                 </Button>
                 <div className="text-xs text-muted-foreground mt-4">
                   <p>Debug Info:</p>

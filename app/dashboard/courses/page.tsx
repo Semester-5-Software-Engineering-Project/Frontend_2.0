@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -22,177 +22,265 @@ import {
   Eye,
   Play,
   Download,
-  MoreHorizontal
+  MoreHorizontal,
+  Loader2
 } from 'lucide-react'
 import Link from 'next/link'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
 import ModuleCreation from '@/components/ui/modulecreation'
+import axiosInstance from '@/app/utils/axiosInstance'
+import { useToast } from '@/hooks/use-toast'
 
-// TypeScript interfaces for course types
+// TypeScript interfaces for API response
+interface ApiModule {
+  moduleId: string
+  tutorId: string
+  name: string
+  domain: string
+  averageRatings: number
+  fee: number
+  duration: string // ISO 8601 duration format like "PT2H30M"
+  status: string
+}
+
+// Frontend interfaces for display
 interface EnrolledCourse {
-  id: number
+  id: string
   title: string
   tutor: string
-  progress: number
-  nextSession: string | null
+  domain: string
   rating: number
-  students: number
+  fee: number
   duration: string
   status: string
   image: string
-  description: string
 }
 
 interface TeachingCourse {
-  id: number
+  id: string
   title: string
-  students: number
+  domain: string
   rating: number
-  revenue: number
-  status: string
+  fee: number
   duration: string
+  status: string
   image: string
-  description: string
 }
 
 type Course = EnrolledCourse | TeachingCourse
 
 export default function CoursesPage() {
   const { user } = useAuth()
+  const { toast } = useToast()
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [isModuleCreationOpen, setIsModuleCreationOpen] = useState(false)
+  const [courses, setCourses] = useState<Course[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // Mock data for enrolled courses (students)
-  const enrolledCourses = [
-    {
-      id: 1,
-      title: 'Advanced Mathematics',
-      tutor: 'Dr. Sarah Johnson',
-      progress: 75,
-      nextSession: '2024-01-15T10:00:00',
-      rating: 4.8,
-      students: 24,
-      duration: '12 weeks',
-      status: 'active',
-      image: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=300&h=200&fit=crop',
-      description: 'Master advanced mathematical concepts including calculus, linear algebra, and differential equations.'
-    },
-    {
-      id: 2,
-      title: 'Physics Fundamentals',
-      tutor: 'Prof. Michael Chen',
-      progress: 60,
-      nextSession: '2024-01-16T14:00:00',
-      rating: 4.9,
-      students: 18,
-      duration: '10 weeks',
-      status: 'active',
-      image: 'https://images.unsplash.com/photo-1636466497217-26a8cbeaf0aa?w=300&h=200&fit=crop',
-      description: 'Learn the fundamental principles of physics through interactive experiments and real-world applications.'
-    },
-    {
-      id: 3,
-      title: 'Chemistry Lab Prep',
-      tutor: 'Dr. Emily Davis',
-      progress: 40,
-      nextSession: '2024-01-17T16:00:00',
-      rating: 4.7,
-      students: 15,
-      duration: '8 weeks',
-      status: 'active',
-      image: 'https://images.unsplash.com/photo-1554475901-4538ddfbccc2?w=300&h=200&fit=crop',
-      description: 'Prepare for laboratory work with hands-on chemistry experiments and safety protocols.'
-    },
-    {
-      id: 4,
-      title: 'Computer Science Basics',
-      tutor: 'Dr. James Wilson',
-      progress: 90,
-      nextSession: null,
-      rating: 4.9,
-      students: 156,
-      duration: '6 weeks',
-      status: 'completed',
-      image: 'https://images.unsplash.com/photo-1517077304055-6e89abbf09b0?w=300&h=200&fit=crop',
-      description: 'Introduction to programming concepts, algorithms, and software development fundamentals.'
+  // Helper function to convert ISO 8601 duration to readable format
+  const formatDuration = (isoDuration: string): string => {
+    // Parse PT2H30M format
+    const regex = /PT(?:(\d+)H)?(?:(\d+)M)?/
+    const match = isoDuration.match(regex)
+    if (!match) return isoDuration
+
+    const hours = parseInt(match[1] || '0')
+    const minutes = parseInt(match[2] || '0')
+    
+    if (hours && minutes) {
+      return `${hours}h ${minutes}m`
+    } else if (hours) {
+      return `${hours}h`
+    } else if (minutes) {
+      return `${minutes}m`
     }
-  ]
+    return isoDuration
+  }
 
-  // Mock data for teaching courses (tutors)
-  const teachingCourses = [
-    {
-      id: 1,
-      title: 'Advanced Mathematics',
-      students: 24,
-      rating: 4.8,
-      revenue: 1200,
-      status: 'active',
-      duration: '12 weeks',
-      image: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=300&h=200&fit=crop',
-      description: 'Master advanced mathematical concepts including calculus, linear algebra, and differential equations.'
-    },
-    {
-      id: 2,
-      title: 'Calculus Fundamentals',
-      students: 18,
-      rating: 4.9,
-      revenue: 900,
-      status: 'active',
-      duration: '10 weeks',
-      image: 'https://images.unsplash.com/photo-1509228468518-180dd4864904?w=300&h=200&fit=crop',
-      description: 'Comprehensive introduction to calculus concepts with practical applications and problem-solving techniques.'
-    },
-    {
-      id: 3,
-      title: 'Statistics & Probability',
-      students: 12,
-      rating: 4.7,
-      revenue: 600,
-      status: 'draft',
-      duration: '8 weeks',
-      image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=300&h=200&fit=crop',
-      description: 'Learn statistical analysis, probability theory, and data interpretation methods.'
-    },
-    {
-      id: 4,
-      title: 'Linear Algebra',
-      students: 8,
-      rating: 4.6,
-      revenue: 400,
-      status: 'active',
-      duration: '6 weeks',
-      image: 'https://images.unsplash.com/photo-1509228468518-180dd4864904?w=300&h=200&fit=crop',
-      description: 'Explore vector spaces, matrices, eigenvalues, and their applications in various fields.'
+  // Helper function to get domain-based image
+  const getDomainImage = (domain: string): string => {
+    const domainImages: Record<string, string> = {
+      'Mathematics': 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=300&h=200&fit=crop',
+      'Computer Science': 'https://images.unsplash.com/photo-1517077304055-6e89abbf09b0?w=300&h=200&fit=crop',
+      'Physics': 'https://images.unsplash.com/photo-1636466497217-26a8cbeaf0aa?w=300&h=200&fit=crop',
+      'Chemistry': 'https://images.unsplash.com/photo-1554475901-4538ddfbccc2?w=300&h=200&fit=crop',
+      'Biology': 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=300&h=200&fit=crop',
     }
-  ]
+    return domainImages[domain] || 'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=300&h=200&fit=crop'
+  }
 
-  const courses = user?.role === 'STUDENT' ? enrolledCourses : teachingCourses
+  // Convert API module to frontend course
+  const convertApiModuleToCourse = (apiModule: ApiModule): Course => {
+    const baseData = {
+      id: apiModule.moduleId,
+      title: apiModule.name,
+      domain: apiModule.domain,
+      rating: apiModule.averageRatings || 0,
+      fee: apiModule.fee,
+      duration: formatDuration(apiModule.duration),
+      status: apiModule.status.toLowerCase(),
+      image: getDomainImage(apiModule.domain),
+    }
+
+    if (user?.role === 'STUDENT') {
+      return {
+        ...baseData,
+        tutor: 'Loading...', // We'll need to fetch tutor info separately if needed
+      } as EnrolledCourse
+    } else {
+      return {
+        ...baseData,
+      } as TeachingCourse
+    }
+  }
+
+  // Fetch modules for tutors
+  const fetchTutorModules = async (): Promise<Course[]> => {
+    try {
+      const response = await axiosInstance.get('/api/modules/get-modulesfortutor')
+      const apiModules: ApiModule[] = response.data
+      return apiModules.map(convertApiModuleToCourse)
+    } catch (error: any) {
+      console.error('Error fetching tutor modules:', error)
+      throw new Error(error.response?.data || 'Failed to fetch tutor modules')
+    }
+  }
+
+  // Fetch enrollments for students
+  const fetchStudentEnrollments = async (): Promise<Course[]> => {
+    try {
+      console.log('Fetching student enrollments...')
+      const response = await axiosInstance.get('/api/enrollment/get-enrollments')
+      console.log('Enrollment API response:', response.data)
+      
+      const enrollments = response.data
+      
+      // Handle different possible response structures
+      let apiModules: ApiModule[] = []
+      
+      if (Array.isArray(enrollments)) {
+        // Extract modules from enrollments with flexible structure handling
+        apiModules = enrollments
+          .map((enrollment: any) => {
+            // Try different possible structures
+            return enrollment.moduleDetails || enrollment.module || enrollment
+          })
+          .filter(Boolean) // Remove any null/undefined values
+        
+        console.log('Extracted modules from enrollments:', apiModules)
+      } else {
+        console.error('Unexpected enrollment response format:', enrollments)
+        throw new Error('Invalid enrollment data format received from server')
+      }
+      
+      if (apiModules.length === 0) {
+        console.log('No modules found in enrollments')
+        return []
+      }
+      
+      return apiModules.map(convertApiModuleToCourse)
+    } catch (error: any) {
+      console.error('Error fetching student enrollments:', error)
+      throw new Error(error.response?.data || 'Failed to fetch enrollments')
+    }
+  }
+
+  // Debug function to test enrollment API (for development)
+  const debugEnrollmentAPI = async () => {
+    try {
+      console.log('=== DEBUGGING ENROLLMENT API ===')
+      const response = await axiosInstance.get('/api/enrollment/get-enrollments')
+      console.log('Raw API response:', response)
+      console.log('Response status:', response.status)
+      console.log('Response data type:', typeof response.data)
+      console.log('Is array:', Array.isArray(response.data))
+      console.log('Raw response data:', JSON.stringify(response.data, null, 2))
+      
+      if (Array.isArray(response.data)) {
+        console.log('Array length:', response.data.length)
+        response.data.forEach((item: any, index: number) => {
+          console.log(`Item ${index}:`, JSON.stringify(item, null, 2))
+          console.log(`Item ${index} keys:`, Object.keys(item))
+        })
+      }
+      
+      toast({
+        title: "Debug Complete",
+        description: "Check console for enrollment API debug info",
+      })
+    } catch (error: any) {
+      console.error('Debug enrollment API error:', error)
+      toast({
+        title: "Debug Error",
+        description: error.message,
+        variant: "destructive",
+      })
+    }
+  }
+
+  // Fetch courses based on user role
+  useEffect(() => {
+    const fetchCourses = async () => {
+      if (!user) return
+
+      setLoading(true)
+      setError(null)
+
+      try {
+        let fetchedCourses: Course[]
+        if (user.role === 'TUTOR') {
+          fetchedCourses = await fetchTutorModules()
+        } else {
+          fetchedCourses = await fetchStudentEnrollments()
+        }
+        
+        setCourses(fetchedCourses)
+        console.log('Fetched courses:', fetchedCourses)
+      } catch (err: any) {
+        setError(err.message)
+        toast({
+          title: "Error",
+          description: err.message,
+          variant: "destructive",
+        })
+        setCourses([]) // Set empty array on error
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchCourses()
+  }, [user, toast])
 
   // Type guard functions
   const isEnrolledCourse = (course: Course): course is EnrolledCourse => {
-    return 'tutor' in course && 'progress' in course && 'nextSession' in course
+    return 'tutor' in course
   }
 
   const isTeachingCourse = (course: Course): course is TeachingCourse => {
-    return 'revenue' in course && !('tutor' in course)
+    return !('tutor' in course)
   }
 
   const filteredCourses = courses.filter(course => {
     const matchesSearch = course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         course.domain.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (isEnrolledCourse(course) ? course.tutor.toLowerCase().includes(searchTerm.toLowerCase()) : false)
     const matchesFilter = filterStatus === 'all' || course.status === filterStatus
     return matchesSearch && matchesFilter
   })
 
   const getStatusColor = (status: string) => {
-    switch (status) {
+    switch (status.toLowerCase()) {
       case 'active':
         return 'bg-primary/10 text-primary'
       case 'completed':
         return 'bg-muted text-foreground'
       case 'draft':
         return 'bg-yellow-100 text-yellow-700'
+      case 'inactive':
+        return 'bg-gray-100 text-gray-700'
       default:
         return 'bg-gray-100 text-gray-700'
     }
@@ -216,12 +304,12 @@ export default function CoursesPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">
-              {user?.role === 'STUDENT' ? 'My Courses' : 'Teaching Courses'}
+              {user?.role === 'STUDENT' ? 'My Modules' : 'Teaching Modules'}
             </h1>
             <p className="text-muted-foreground">
               {user?.role === 'STUDENT' 
                 ? 'Track your learning progress and manage your enrollments'
-                : 'Manage your courses, materials, and student progress'
+                : 'Manage your modules, materials, and student progress'
               }
             </p>
           </div>
@@ -255,9 +343,9 @@ export default function CoursesPage() {
                   <BookOpen className="w-6 h-6 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{courses.length}</p>
+                  <p className="text-2xl font-bold">{loading ? '...' : courses.length}</p>
                   <p className="text-sm text-muted-foreground">
-                    {user?.role === 'STUDENT' ? 'Enrolled Courses' : 'Active Courses'}
+                    {user?.role === 'STUDENT' ? 'Enrolled Modules' : 'Created Modules'}
                   </p>
                 </div>
               </div>
@@ -273,9 +361,10 @@ export default function CoursesPage() {
                 <div>
                   <p className="text-2xl font-bold">
                     {user?.role === 'STUDENT' ? '24' : '156'}
+                    {loading ? '...' : courses.filter(c => c.status === 'active').length}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {user?.role === 'STUDENT' ? 'Hours Completed' : 'Total Students'}
+                    Active Modules
                   </p>
                 </div>
               </div>
@@ -289,7 +378,12 @@ export default function CoursesPage() {
                   <Star className="w-6 h-6 text-purple-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">4.8</p>
+                  <p className="text-2xl font-bold">
+                    {loading ? '...' : courses.length > 0 
+                      ? (courses.reduce((sum, c) => sum + c.rating, 0) / courses.length).toFixed(1)
+                      : '0.0'
+                    }
+                  </p>
                   <p className="text-sm text-muted-foreground">Average Rating</p>
                 </div>
               </div>
@@ -305,9 +399,13 @@ export default function CoursesPage() {
                 <div>
                   <p className="text-2xl font-bold">
                     {user?.role === 'STUDENT' ? '3' : '12'}
+                    {loading ? '...' : user?.role === 'TUTOR' 
+                      ? `$${courses.reduce((sum, c) => sum + c.fee, 0).toFixed(0)}`
+                      : courses.length
+                    }
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {user?.role === 'STUDENT' ? 'Upcoming Sessions' : 'This Week'}
+                    {user?.role === 'STUDENT' ? 'Total Modules' : 'Total Fees'}
                   </p>
                 </div>
               </div>
@@ -322,7 +420,7 @@ export default function CoursesPage() {
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <Input
-                  placeholder="Search courses..."
+                  placeholder="Search modules..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -366,89 +464,100 @@ export default function CoursesPage() {
           </CardContent>
         </Card>
 
+        {/* Loading State */}
+        {loading && (
+          <Card>
+            <CardContent className="p-12 text-center">
+              <Loader2 className="w-12 h-12 text-gray-400 mx-auto mb-4 animate-spin" />
+              <h3 className="text-lg font-semibold mb-2">Loading modules...</h3>
+              <p className="text-gray-600">Please wait while we fetch your data</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Error State */}
+        {error && !loading && (
+          <Card>
+            <CardContent className="p-12 text-center">
+              <BookOpen className="w-12 h-12 text-red-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2 text-red-600">Error loading modules</h3>
+              <p className="text-gray-600 mb-4">{error}</p>
+              <Button 
+                onClick={() => window.location.reload()} 
+                className="bg-red-600 hover:bg-red-700"
+              >
+                Try Again
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Courses Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredCourses.map((course) => (
-            <Card key={course.id} className="hover:shadow-lg transition-shadow">
-              <div className="relative">
-                <img 
-                  src={course.image} 
-                  alt={course.title}
-                  className="w-full h-48 object-cover rounded-t-lg"
-                />
-                <Badge 
-                  className={`absolute top-4 right-4 ${getStatusColor(course.status)}`}
-                >
-                  {course.status}
-                </Badge>
-                                 {user?.role === 'STUDENT' && isEnrolledCourse(course) && course.progress && (
-                   <div className="absolute bottom-4 left-4 right-4">
-                     <Progress value={course.progress} className="h-2" />
-                     <p className="text-xs text-white mt-1">{course.progress}% Complete</p>
-                   </div>
-                 )}
-              </div>
-              
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                                     <div>
-                     <h3 className="font-semibold text-lg mb-1">{course.title}</h3>
-                     <p className="text-sm text-gray-600 mb-2">{course.description}</p>
-                     <p className="text-sm text-gray-500">
-                       {isEnrolledCourse(course) ? `by ${course.tutor}` : `${course.students} students enrolled`}
-                     </p>
-                   </div>
-
-                  <div className="flex items-center justify-between text-sm text-gray-600">
-                    <div className="flex items-center space-x-1">
-                      <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                      <span>{course.rating}</span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <Users className="w-4 h-4" />
-                      <span>{course.students}</span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <Clock className="w-4 h-4" />
-                      <span>{course.duration}</span>
-                    </div>
-                  </div>
-
-                                     {user?.role === 'TUTOR' && isTeachingCourse(course) && (
-                     <div className="text-sm font-semibold text-green-600">
-                       ${course.revenue} revenue
-                     </div>
-                   )}
-
-                  <div className="flex gap-2">
-                    <Link href={`/dashboard/courses/${course.id}`} className="flex-1">
-                      <Button className="w-full bg-green-600 hover:bg-green-700">
-                        {user?.role === 'STUDENT' ? 'Continue Learning' : 'Manage Course'}
-                      </Button>
-                    </Link>
-                    {user?.role === 'TUTOR' && (
-                      <Button variant="outline" size="sm">
-                        <MoreHorizontal className="w-4 h-4" />
-                      </Button>
-                    )}
-                  </div>
-
-                                     {user?.role === 'STUDENT' && isEnrolledCourse(course) && course.nextSession && (
-                     <div className="text-xs text-gray-500 text-center">
-                       Next session: {new Date(course.nextSession).toLocaleDateString()}
-                     </div>
-                   )}
+        {!loading && !error && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredCourses.map((course) => (
+              <Card key={course.id} className="hover:shadow-lg transition-shadow">
+                <div className="relative">
+                  <img 
+                    src={course.image} 
+                    alt={course.title}
+                    className="w-full h-48 object-cover rounded-t-lg"
+                  />
+                  <Badge 
+                    className={`absolute top-4 right-4 ${getStatusColor(course.status)}`}
+                  >
+                    {course.status}
+                  </Badge>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                
+                <CardContent className="p-6">
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="font-semibold text-lg mb-1">{course.title}</h3>
+                      <p className="text-sm text-gray-600 mb-2">{course.domain}</p>
+                      <p className="text-sm text-gray-500">
+                        {isEnrolledCourse(course) ? `by ${course.tutor}` : `${course.fee} fee`}
+                      </p>
+                    </div>
 
-        {filteredCourses.length === 0 && (
+                    <div className="flex items-center justify-between text-sm text-gray-600">
+                      <div className="flex items-center space-x-1">
+                        <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                        <span>{course.rating || 'No rating'}</span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <Clock className="w-4 h-4" />
+                        <span>{course.duration}</span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <span className="text-green-600 font-semibold">${course.fee}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Link href={`/dashboard/courses/${course.id}`} className="flex-1">
+                        <Button className="w-full bg-green-600 hover:bg-green-700">
+                          {user?.role === 'STUDENT' ? 'Continue Learning' : 'Manage Module'}
+                        </Button>
+                      </Link>
+                      {user?.role === 'TUTOR' && (
+                        <Button variant="outline" size="sm">
+                          <MoreHorizontal className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {!loading && !error && filteredCourses.length === 0 && (
           <Card>
             <CardContent className="p-12 text-center">
               <BookOpen className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No courses found</h3>
+              <h3 className="text-lg font-semibold mb-2">No modules found</h3>
               <p className="text-gray-600 mb-4">
                 {searchTerm || filterStatus !== 'all' 
                   ? 'Try adjusting your search or filter criteria'
@@ -463,7 +572,7 @@ export default function CoursesPage() {
                   onClick={() => setIsModuleCreationOpen(true)}
                 >
                   <Plus className="w-4 h-4 mr-2" />
-                  Create Your First Course
+                  Create Your First Module
                 </Button>
               )}
             </CardContent>
@@ -472,4 +581,4 @@ export default function CoursesPage() {
       </div>
     </DashboardLayout>
   )
-} 
+}
