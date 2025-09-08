@@ -2,13 +2,15 @@ import axiosInstance from '@/app/utils/axiosInstance';
 
 // --- Types (aligned with backend ModuelsDto and ModuelsEntity) ----------
 export interface ModuleDto {
-	id?: string;
+	moduleId?: string;
+	id?: string; // Keep for backward compatibility
 	name: string;
 	domain: string;
 	fee: number;
 	duration: number; // Changed to number to match backend long type (minutes)
 	status: string;
 	tutorId?: string;
+	averageRatings?: number;
 	createdAt?: string;
 	updatedAt?: string;
 }
