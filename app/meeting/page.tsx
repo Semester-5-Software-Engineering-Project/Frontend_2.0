@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,13 +10,35 @@ import { MeetingRoom } from '../../components/MeetingRoom'
 
 export default function MeetingPage() {
   const { user } = useAuth()
+  const router = useRouter()
 
   const [roomInput, setRoomInput] = useState('')
   const [activeRoom, setActiveRoom] = useState<string | null>(null)
   const [showMeetingRoom, setShowMeetingRoom] = useState(false)
+  const [meetingData, setMeetingData] = useState<{roomId: string, token: string, moduleId: string} | null>(null)
 
-  // If a room is provided via query (?room=xyz) or hash (#xyz), use it initially
+  // Check for stored meeting data from module join or query/hash room
   useEffect(() => {
+    // First check for stored meeting data from module join
+    const storedMeetingData = localStorage.getItem('meetingData')
+    if (storedMeetingData) {
+      try {
+        const parsedData = JSON.parse(storedMeetingData)
+        if (parsedData.roomId && parsedData.token) {
+          setMeetingData(parsedData)
+          setActiveRoom(parsedData.roomId)
+          setShowMeetingRoom(true)
+          // Clear the stored data after using it
+          localStorage.removeItem('meetingData')
+          return
+        }
+      } catch (error) {
+        console.error('Error parsing stored meeting data:', error)
+        localStorage.removeItem('meetingData')
+      }
+    }
+
+    // Fallback to URL-based room joining
     const url = new URL(window.location.href)
     const fromQuery = url.searchParams.get('room')
     const fromHash = window.location.hash?.replace('#', '')
@@ -37,6 +60,20 @@ export default function MeetingPage() {
   const handleLeave = () => {
     setShowMeetingRoom(false)
     setActiveRoom(null)
+    
+    // If we have a moduleId, redirect back to the module page
+    if (meetingData?.moduleId) {
+      // Clear stored data before redirecting
+      localStorage.removeItem('meetingData')
+      setMeetingData(null)
+      
+      // Redirect to the module page
+      router.push(`/dashboard/courses/${meetingData.moduleId}`)
+    } else {
+      // If no moduleId, just clear state and stay on meeting page
+      setMeetingData(null)
+      localStorage.removeItem('meetingData')
+    }
   }
 
   if (showMeetingRoom && activeRoom && user) {
@@ -46,6 +83,7 @@ export default function MeetingPage() {
         roomName={activeRoom}
         role={user.role === 'TUTOR' ? 'teacher' : 'student'}
         email={user.email || undefined}
+        jwtToken={meetingData?.token}
         onLeave={handleLeave}
       />
     )
