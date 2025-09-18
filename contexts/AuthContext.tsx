@@ -143,12 +143,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error: any) {
       console.log('Auth status check failed:', error.response?.status || error.message);
-      // Clear any stale data
+      
+      // Check for specific backend profile issues
+      if (error.response?.status === 404 && error.response?.data?.includes?.('profile not found')) {
+        console.error('BACKEND ISSUE: User authenticated but profile missing in database');
+        console.error('This requires backend database fix - user profile needs to be created');
+        
+        // Show user-friendly error
+        if (typeof window !== 'undefined') {
+          alert('Account setup incomplete. Please contact support - your profile needs to be created in the system.');
+        }
+        
+        // Force logout to prevent infinite loops
+        await forceLogout();
+        return false;
+      }
+      
+      // Clear any stale data for other errors
       setUser(null);
       localStorage.removeItem('user');
       localStorage.removeItem('token');
       return false;
     }
+  }
+
+  // Force logout without backend call (for when backend has issues)
+  const forceLogout = async () => {
+    console.log('Force logout - clearing all client data');
+    
+    setUser(null);
+    localStorage.clear();
+    sessionStorage.clear();
+    
+    // Clear all possible cookies
+    const cookiesToClear = ['jwtToken', 'jwt_token', 'role', 'JSESSIONID', 'sessionId'];
+    cookiesToClear.forEach(cookieName => {
+      document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+      document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${window.location.hostname};`;
+      document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.${window.location.hostname};`;
+    });
+    
+    // Redirect to auth page
+    window.location.href = '/auth?error=profile_missing';
   }
 
   const googleLogin = async (role:"STUDENT" | "TUTOR") =>{
