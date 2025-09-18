@@ -52,24 +52,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (parts.length === 2) return parts.pop()?.split(';').shift();
       return null;
     };
-    const jwtToken = getCookie('jwt_token');
+    
+    // Check both possible cookie names
+    const jwtToken = getCookie('jwt_token') || getCookie('jwtToken');
 
+    // Only proceed if we have both stored user AND valid token
     if (storedUser && jwtToken) {
       try {
-        checkAuthStatus() // Verify with backend
-        const parsed = JSON.parse(storedUser)
-        const normalizedRole = mapApiRoleToAppRole(parsed.role)
-        const normalizedUser = { ...parsed, role: normalizedRole }
-        setUser(normalizedUser)
-        localStorage.setItem('user', JSON.stringify(normalizedUser))
-        document.cookie = `role=${normalizedRole}; path=/; SameSite=Lax`
+        // First verify with backend, don't set user until verified
+        checkAuthStatus().then(isValid => {
+          if (isValid) {
+            console.log('Session verified, user already set by checkAuthStatus')
+          } else {
+            console.log('Session invalid, clearing stored data')
+            localStorage.clear()
+            setUser(null)
+          }
+          setIsLoading(false)
+        }).catch(() => {
+          console.log('Session verification failed, clearing data')
+          localStorage.clear()
+          setUser(null)
+          setIsLoading(false)
+        })
+      } catch (error) {
+        console.error('Session check error:', error)
+        localStorage.clear()
+        setUser(null)
         setIsLoading(false)
-      } catch {
-        localStorage.removeItem('user')
-        checkAuthStatus()
       }
     } else {
-      checkAuthStatus()
+      // No stored data or no token, check with backend once
+      console.log('No stored session, checking backend...')
+      checkAuthStatus().finally(() => {
+        setIsLoading(false)
+      })
     }
   }, [])
 
@@ -134,7 +151,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string, role: 'STUDENT' | 'TUTOR') => {
     console.log('Login started with:', { email, role })
     setIsLoading(true)
+    
     try {
+      // Clear any existing user data first
+      console.log('Clearing existing session data...')
+      setUser(null)
+      localStorage.clear()
+      sessionStorage.clear()
+      
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       const loginResponse = await axiosInstance.post("/api/auth/login", { email, password }, { withCredentials: true });
@@ -148,15 +172,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return null;
       };
       
-      const jwtToken = getCookie('jwt_token');
+      // Check both possible cookie names
+      const jwtToken = getCookie('jwt_token') || getCookie('jwtToken');
       if (jwtToken) {
         localStorage.setItem('token', jwtToken);
         console.log('JWT token stored in localStorage');
+      } else {
+        console.warn('No JWT token found after login')
       }
 
       const res = await axiosInstance.get("/api/getuser");
       console.log('Get user API response:', res.data)
       const userData: any = res.data.user;
+      
+      if (!userData) {
+        throw new Error('No user data received after login')
+      }
+      
       const normalizedRole = mapApiRoleToAppRole(userData.role)
       console.log('Normalized role:', normalizedRole)
       
@@ -237,18 +269,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Backend logout error:', error)
     }
     
-    // Clear client-side data
+    // Clear React state first
     setUser(null)
-    localStorage.removeItem('user')
-    localStorage.removeItem('token') // Clear JWT token from localStorage
-    // Clear role cookie
-    document.cookie = 'role=; path=/; Max-Age=0; SameSite=Lax'
-    // Clear JWT token cookie
-    document.cookie = 'jwt_token=; path=/; Max-Age=0; SameSite=Lax'
-    console.log('Client-side logout completed')
     
-    // Redirect to auth page
-    window.location.href = '/auth'
+    // Clear ALL localStorage items
+    localStorage.clear()
+    
+    // Clear sessionStorage as well
+    sessionStorage.clear()
+    
+    // Function to clear cookies thoroughly
+    const clearCookie = (name: string) => {
+      const domain = window.location.hostname
+      // Try multiple combinations to ensure complete clearing
+      const cookieConfigs = [
+        `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`,
+        `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${domain};`,
+        `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.${domain};`,
+        `${name}=; Max-Age=0; path=/;`,
+        `${name}=; Max-Age=0; path=/; domain=${domain};`,
+        `${name}=; Max-Age=0; path=/; domain=.${domain};`,
+        `${name}=; Max-Age=0; path=/; SameSite=Lax;`,
+        `${name}=; Max-Age=0; path=/; SameSite=None; Secure;`
+      ]
+      
+      cookieConfigs.forEach(config => {
+        try {
+          document.cookie = config
+        } catch (e) {
+          // Ignore cookie setting errors
+        }
+      })
+    }
+    
+    // Clear all possible authentication cookies
+    const cookiesToClear = ['jwt_token', 'jwtToken', 'role', 'JSESSIONID', 'sessionId', 'auth_token']
+    cookiesToClear.forEach(clearCookie)
+    
+    console.log('All client-side data cleared')
+    console.log('localStorage cleared:', Object.keys(localStorage).length === 0)
+    console.log('Cookies after clear:', document.cookie)
+    
+    // Force page reload and redirect to clear any cached state
+    window.location.replace('/auth?logout=true')
   }
 
   return (
