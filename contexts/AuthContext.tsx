@@ -82,6 +82,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('Mapped role:', role)
       
       if (userData) {
+        // Extract JWT token from cookie and store in localStorage for easier access
+        const getCookie = (name: string) => {
+          const value = `; ${document.cookie}`;
+          const parts = value.split(`; ${name}=`);
+          if (parts.length === 2) return parts.pop()?.split(';').shift();
+          return null;
+        };
+        
+        const jwtToken = getCookie('jwt_token');
+        if (jwtToken) {
+          localStorage.setItem('token', jwtToken);
+          console.log('JWT token stored in localStorage during auth check');
+        }
+
         // Add avatar based on role
         userData.avatar = `https://images.unsplash.com/photo-${role === 'TUTOR' ? '1494790108755-2616c0479506' : '1507003211169-0a1dd7228f2d'}?w=150&h=150&fit=crop&crop=face`
         userData.role = role
@@ -126,6 +140,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const loginResponse = await axiosInstance.post("/api/auth/login", { email, password }, { withCredentials: true });
       console.log('Login API response:', loginResponse.status)
 
+      // Extract JWT token from cookie and store in localStorage for easier access
+      const getCookie = (name: string) => {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop()?.split(';').shift();
+        return null;
+      };
+      
+      const jwtToken = getCookie('jwt_token');
+      if (jwtToken) {
+        localStorage.setItem('token', jwtToken);
+        console.log('JWT token stored in localStorage');
+      }
+
       const res = await axiosInstance.get("/api/getuser");
       console.log('Get user API response:', res.data)
       const userData: any = res.data.user;
@@ -160,6 +188,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Only try to get user data if registration was successful
       if (response.status === 200 || response.status === 201) {
+        // Extract JWT token from cookie and store in localStorage for easier access
+        const getCookie = (name: string) => {
+          const value = `; ${document.cookie}`;
+          const parts = value.split(`; ${name}=`);
+          if (parts.length === 2) return parts.pop()?.split(';').shift();
+          return null;
+        };
+        
+        const jwtToken = getCookie('jwt_token');
+        if (jwtToken) {
+          localStorage.setItem('token', jwtToken);
+          console.log('JWT token stored in localStorage after registration');
+        }
+
         const res = await axiosInstance.get("/api/getuser");
         const userData: any = res.data.user;
         const normalizedRole = mapApiRoleToAppRole(userData.role)
@@ -198,8 +240,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Clear client-side data
     setUser(null)
     localStorage.removeItem('user')
+    localStorage.removeItem('token') // Clear JWT token from localStorage
     // Clear role cookie
     document.cookie = 'role=; path=/; Max-Age=0; SameSite=Lax'
+    // Clear JWT token cookie
+    document.cookie = 'jwt_token=; path=/; Max-Age=0; SameSite=Lax'
     console.log('Client-side logout completed')
     
     // Redirect to auth page

@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import Cookies from "js-cookie";
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -13,8 +12,7 @@ import DashboardLayout from '@/components/dashboard/DashboardLayout'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { ShieldAlert, CheckCircle, XCircle } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import axios from 'axios'
-import axiosInstance from '@/app/utils/axiosInstance'
+import axiosInstance, { getAuthToken } from '@/app/utils/axiosInstance'
 
 interface ScheduleFormData {
   date: string
@@ -176,7 +174,7 @@ export default function Schedule() {
       console.log('moduleId type:', typeof moduleId)
       console.log('moduleId length:', moduleId?.length)
 
-      const token = Cookies.get('jwt_token');
+      const token = getAuthToken();
       if (!token) {
         throw new Error('Authentication token not found. Please log in again.')
       }
@@ -193,17 +191,10 @@ export default function Schedule() {
       console.log('Scheduling payload:', payload)
       console.log('Using token:', token)
 
-      // Make the API request WITHOUT credentials
+      // Make the API request - axiosInstance will handle Authorization header automatically
       const response = await axiosInstance.post(
         '/api/schedules/create',
-        payload,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          withCredentials: true // Explicitly set to false
-        }
+        payload
       )
 
       if (response.status === 200 || response.status === 201) {
