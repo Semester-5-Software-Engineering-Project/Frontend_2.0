@@ -107,24 +107,25 @@ export interface TutorProfileSearchResult extends TutorProfileDto {
 }
 
 // --- Internal helpers ----------------------------------------------------
-const authHeader = (token?: string) => {
-	if (!token) return {}; // Some endpoints may not strictly require auth (e.g., /all, /search)
-	return { Authorization: `Bearer ${token}` };
+// For production deployment, manually extract and include Authorization header
+const getTokenAndHeaders = () => {
+    try {
+        // Try localStorage first
+        let token = localStorage.getItem('token');
+        
+        // Try cookies if localStorage is empty
+        if (!token && typeof document !== 'undefined') {
+            const match = document.cookie.match(/(?:^|; )jwt_token=([^;]+)/);
+            if (match) token = decodeURIComponent(match[1]);
+        }
+        
+        return token ? { Authorization: `Bearer ${token}` } : {};
+    } catch (error) {
+        return {};
+    }
 };
 
-// Attempt to discover a token stored client-side (only works if not httpOnly)
-const discoverToken = (): string | undefined => {
-	try {
-		const fromLS = localStorage.getItem('token');
-		if (fromLS) return fromLS;
-		const match = document.cookie.match(/(?:^|; )jwt_token=([^;]+)/);
-		if (match) return decodeURIComponent(match[1]);
-	} catch {
-		/* noop */
-	}
-	return undefined;
-};
-
+// Generic error normalizer
 const parseError = (err: any): Error => {
 	if (err?.response) {
 		const msg = err.response.data?.message || err.response.data || `Request failed (${err.response.status})`;
@@ -136,11 +137,11 @@ const parseError = (err: any): Error => {
 // --- API surface ---------------------------------------------------------
 export const TutorProfileApi = {
 	/** Create a tutor profile for the authenticated tutor */
-	async create(data: TutorProfileDto | TutorProfileLegacyCreatePayload, token?: string): Promise<TutorProfileEntity> {
-		const t = token || discoverToken();
+	async create(data: TutorProfileDto | TutorProfileLegacyCreatePayload): Promise<TutorProfileEntity> {
 		try {
 			const normalized = normalizeTutorProfileInput(data);
-			const res = await axiosInstance.post('/api/tutor-profile', normalized, { headers: authHeader(t) });
+			const headers = getTokenAndHeaders();
+			const res = await axiosInstance.post('/api/tutor-profile', normalized, { headers });
 			return res.data as TutorProfileEntity;
 		} catch (e) {
 			throw parseError(e);
@@ -148,10 +149,10 @@ export const TutorProfileApi = {
 	},
 
 	/** Get current tutor's profile ("/me") */
-	async getMe(token?: string): Promise<TutorProfileEntity> {
-		const t = token || discoverToken();
+	async getMe(): Promise<TutorProfileEntity> {
 		try {
-			const res = await axiosInstance.get('/api/tutor-profile/me', { headers: authHeader(t) });
+			const headers = getTokenAndHeaders();
+			const res = await axiosInstance.get('/api/tutor-profile/me', { headers });
 			return res.data as TutorProfileEntity;
 		} catch (e) {
 			throw parseError(e);
@@ -159,10 +160,10 @@ export const TutorProfileApi = {
 	},
 
 	/** Update current tutor's profile */
-	async update(data: TutorProfileDto, token?: string): Promise<TutorProfileEntity> {
-		const t = token || discoverToken();
+	async update(data: TutorProfileDto): Promise<TutorProfileEntity> {
 		try {
-			const res = await axiosInstance.put('/api/tutor-profile', data, { headers: authHeader(t) });
+			const headers = getTokenAndHeaders();
+			const res = await axiosInstance.put('/api/tutor-profile', data, { headers });
 			return res.data as TutorProfileEntity;
 		} catch (e) {
 			throw parseError(e);
@@ -170,30 +171,27 @@ export const TutorProfileApi = {
 	},
 
 	/** Delete current tutor's profile */
-	async delete(token?: string): Promise<void> {
-		const t = token || discoverToken();
+	async delete(): Promise<void> {
 		try {
-			await axiosInstance.delete('/api/tutor-profile', { headers: authHeader(t) });
+			await axiosInstance.delete('/api/tutor-profile');
 		} catch (e) {
 			throw parseError(e);
 		}
 	},
 
 	/** Change password for current tutor */
-	async changePassword(newPassword: string, token?: string): Promise<void> {
-		const t = token || discoverToken();
+	async changePassword(newPassword: string): Promise<void> {
 		try {
-			await axiosInstance.put('/api/tutor-profile/change-password', { newPassword }, { headers: authHeader(t) });
+			await axiosInstance.put('/api/tutor-profile/change-password', { newPassword });
 		} catch (e) {
 			throw parseError(e);
 		}
 	},
 
 	/** Fetch all tutor profiles (public or admin view depends on backend auth rules) */
-	async getAll(token?: string): Promise<TutorProfileEntity[]> {
-		const t = token || discoverToken();
+	async getAll(): Promise<TutorProfileEntity[]> {
 		try {
-			const res = await axiosInstance.get('/api/tutor-profile/all', { headers: authHeader(t) });
+			const res = await axiosInstance.get('/api/tutor-profile/all');
 			return res.data as TutorProfileEntity[];
 		} catch (e) {
 			throw parseError(e);
@@ -201,12 +199,10 @@ export const TutorProfileApi = {
 	},
 
 	/** Search tutor profiles by query param */
-	async search(query: string, token?: string): Promise<TutorProfileSearchResult[]> {
-		const t = token || discoverToken();
+	async search(query: string): Promise<TutorProfileSearchResult[]> {
 		try {
 			const res = await axiosInstance.get('/api/tutor-profile/search', {
 				params: { query },
-				headers: authHeader(t),
 			});
 			return res.data as TutorProfileSearchResult[];
 		} catch (e) {
