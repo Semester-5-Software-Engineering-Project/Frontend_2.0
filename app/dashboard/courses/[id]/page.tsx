@@ -424,24 +424,18 @@ export default function CoursePage() {
 
     try {
       const now = new Date();
-      
-      // Use local date instead of UTC date to avoid timezone issues
-      const year = now.getFullYear();
-      const month = (now.getMonth() + 1).toString().padStart(2, '0'); // getMonth() is 0-indexed
-      const day = now.getDate().toString().padStart(2, '0');
-      const requestedDate = `${year}-${month}-${day}`; // YYYY-MM-DD format in local timezone
+      const requestedDate = now.toISOString().slice(0, 10); // YYYY-MM-DD format
       
       // Use time format exactly like the schedule page (HH:MM)
       const hours = now.getHours().toString().padStart(2, '0');
       const minutes = now.getMinutes().toString().padStart(2, '0');
       const requestedTime = `${hours}:${minutes}`; // HH:MM format (no seconds)
 
-      console.log('Joining meeting with LOCAL date/time (no timezone conversion):', { 
+      console.log('Joining meeting with simplified time format:', { 
         requestedDate, 
         requestedTime, 
         moduleId: params.id,
-        localDate: now.toString(),
-        utcDate: now.toISOString(),
+        originalDate: now.toISOString(),
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
       })
 

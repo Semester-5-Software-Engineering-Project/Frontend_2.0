@@ -274,9 +274,9 @@ export default function FindNewModulesPage() {
                 <CardContent className="pt-0">
                   <div className="space-y-4">
                     {/* Module Description */}
-                    {module.description && (
+                    {module.status && (
                       <p className="text-sm text-muted-foreground line-clamp-3">
-                        {module.description}
+                        {module.status}
                       </p>
                     )}
                     

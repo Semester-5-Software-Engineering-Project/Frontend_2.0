@@ -109,7 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Redirect to OAuth endpoint with success redirect URL
       const redirectUrl = encodeURIComponent(`${window.location.origin}/dashboard`)
       console.log(role)
-      window.location.href = `http://localhost:8080/oauth2/login/${role}?redirect_uri=${redirectUrl}`
+      window.location.href = `${process.env.NEXT_PUBLIC_API_BASE_URL}/oauth2/login/${role}?redirect_uri=${redirectUrl}`
     } catch (error) {
       setIsLoading(false);
       throw error;

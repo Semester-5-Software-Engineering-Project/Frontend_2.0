@@ -104,7 +104,7 @@ export default function Payments() {
           <div>
             <h1 className="text-3xl font-bold">Payments & Billing</h1>
             <p className="text-gray-600">
-              {user?.role === 'student' 
+              {user?.role === 'STUDENT' 
                 ? 'Manage your course payments and billing information'
                 : 'Track your earnings and payment history'
               }
@@ -143,7 +143,7 @@ export default function Payments() {
                   <Calendar className="w-6 h-6 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">${user?.role === 'student' ? '180' : '450'}</p>
+                  <p className="text-2xl font-bold">${user?.role === 'STUDENT' ? '180' : '450'}</p>
                   <p className="text-sm text-muted-foreground">This Month</p>
                 </div>
               </div>
@@ -240,7 +240,7 @@ export default function Payments() {
 
           {/* Payment Methods & Quick Actions */}
           <div className="space-y-6">
-            {user?.role === 'student' && (
+            {user?.role === 'STUDENT' && (
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Payment Methods</CardTitle>
