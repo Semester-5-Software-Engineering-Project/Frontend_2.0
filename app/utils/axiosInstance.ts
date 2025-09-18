@@ -1,12 +1,7 @@
 import axios from 'axios';
 
-const axiosInstance = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080',
-    withCredentials: true,
-});
-
-// Function to get JWT token from various sources
-const getAuthToken = (): string | null => {
+// Function to get JWT token from various sources - exported for use in other components
+export const getAuthToken = (): string | null => {
     try {
         // Try localStorage first
         const tokenFromLS = localStorage.getItem('token');
@@ -22,6 +17,11 @@ const getAuthToken = (): string | null => {
     }
     return null;
 };
+
+const axiosInstance = axios.create({
+    baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080',
+    withCredentials: true,
+});
 
 // Add request interceptor to include Authorization header
 axiosInstance.interceptors.request.use(
