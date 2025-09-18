@@ -269,7 +269,7 @@ export default function Profile() {
                           formData.append('file', file)
                           
                           // Upload to backend
-                          const response = await fetch('http://localhost:8080/api/materials/upload/image', {
+                          const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/materials/upload/image`, {
                             method: 'POST',
                             body: formData,
                             credentials: 'include'

@@ -14,6 +14,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { ShieldAlert, CheckCircle, XCircle } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import axios from 'axios'
+import axiosInstance from '@/app/utils/axiosInstance'
 
 interface ScheduleFormData {
   date: string
@@ -193,8 +194,8 @@ export default function Schedule() {
       console.log('Using token:', token)
 
       // Make the API request WITHOUT credentials
-      const response = await axios.post(
-        'http://localhost:8080/api/schedules/create',
+      const response = await axiosInstance.post(
+        '/api/schedules/create',
         payload,
         {
           headers: {

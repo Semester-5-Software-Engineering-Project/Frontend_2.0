@@ -16,6 +16,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { ShieldAlert } from 'lucide-react'
 import { toast } from 'sonner'
 import axios from 'axios'
+import axiosInstance from '@/app/utils/axiosInstance'
 
 export default function UploadMaterials() {
   const { user } = useAuth() // make sure your AuthContext provides JWT token
@@ -38,7 +39,7 @@ export default function UploadMaterials() {
       if (!user || user.role !== 'TUTOR') return;
 
       try {
-        const res = await fetch("http://localhost:8080/api/modules/tutor", {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/modules/tutor`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -130,7 +131,7 @@ export default function UploadMaterials() {
         formData.get('link') 
       )
 
-      await axios.post("http://localhost:8080/api/materials/upload", formData, {
+      await axiosInstance.post("/api/materials/upload", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
           Authorization: `Bearer ${token}`,
