@@ -1,4 +1,5 @@
 import axios from 'axios';
+import CookieManager from '@/utils/cookieManager';
 
 // Function to get JWT token from various sources - exported for use in other components
 export const getAuthToken = (): string | null => {
@@ -7,11 +8,8 @@ export const getAuthToken = (): string | null => {
         const tokenFromLS = localStorage.getItem('token');
         if (tokenFromLS) return tokenFromLS;
 
-        // Try cookies - handle production environment properly
-        if (typeof document !== 'undefined') {
-            const match = document.cookie.match(/(?:^|; )jwt_token=([^;]+)/);
-            if (match) return decodeURIComponent(match[1]);
-        }
+        // Try cookies using CookieManager
+        return CookieManager.getJWTToken();
     } catch (error) {
         console.warn('Error getting auth token:', error);
     }

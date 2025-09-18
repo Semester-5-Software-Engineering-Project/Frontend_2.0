@@ -113,10 +113,15 @@ const getTokenAndHeaders = () => {
         // Try localStorage first
         let token = localStorage.getItem('token');
         
-        // Try cookies if localStorage is empty
+        // Try cookies if localStorage is empty - check both possible names
         if (!token && typeof document !== 'undefined') {
-            const match = document.cookie.match(/(?:^|; )jwt_token=([^;]+)/);
+            let match = document.cookie.match(/(?:^|; )jwtToken=([^;]+)/);
             if (match) token = decodeURIComponent(match[1]);
+            
+            if (!token) {
+                match = document.cookie.match(/(?:^|; )jwt_token=([^;]+)/);
+                if (match) token = decodeURIComponent(match[1]);
+            }
         }
         
         return token ? { Authorization: `Bearer ${token}` } : {};

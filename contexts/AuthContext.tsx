@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import axiosInstance from '@/app/utils/axiosInstance'
+import CookieManager from '@/utils/cookieManager'
 
 interface User {
   id: string
@@ -46,13 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Check for stored auth data
     const storedUser = localStorage.getItem('user')
-    const getCookie = (name: string) => {
-      const value = `; ${document.cookie}`;
-      const parts = value.split(`; ${name}=`);
-      if (parts.length === 2) return parts.pop()?.split(';').shift();
-      return null;
-    };
-    const jwtToken = getCookie('jwt_token');
+    const jwtToken = CookieManager.getJWTToken();
 
     if (storedUser && jwtToken) {
       try {
@@ -83,14 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (userData) {
         // Extract JWT token from cookie and store in localStorage for easier access
-        const getCookie = (name: string) => {
-          const value = `; ${document.cookie}`;
-          const parts = value.split(`; ${name}=`);
-          if (parts.length === 2) return parts.pop()?.split(';').shift();
-          return null;
-        };
-        
-        const jwtToken = getCookie('jwt_token');
+        const jwtToken = CookieManager.getJWTToken();
         if (jwtToken) {
           localStorage.setItem('token', jwtToken);
           console.log('JWT token stored in localStorage during auth check');
@@ -141,14 +129,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('Login API response:', loginResponse.status)
 
       // Extract JWT token from cookie and store in localStorage for easier access
-      const getCookie = (name: string) => {
-        const value = `; ${document.cookie}`;
-        const parts = value.split(`; ${name}=`);
-        if (parts.length === 2) return parts.pop()?.split(';').shift();
-        return null;
-      };
-      
-      const jwtToken = getCookie('jwt_token');
+      // Extract JWT token from cookie and store in localStorage for easier access
+      const jwtToken = CookieManager.getJWTToken();
       if (jwtToken) {
         localStorage.setItem('token', jwtToken);
         console.log('JWT token stored in localStorage');
@@ -189,14 +171,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Only try to get user data if registration was successful
       if (response.status === 200 || response.status === 201) {
         // Extract JWT token from cookie and store in localStorage for easier access
-        const getCookie = (name: string) => {
-          const value = `; ${document.cookie}`;
-          const parts = value.split(`; ${name}=`);
-          if (parts.length === 2) return parts.pop()?.split(';').shift();
-          return null;
-        };
-        
-        const jwtToken = getCookie('jwt_token');
+        // Extract JWT token from cookie and store in localStorage for easier access
+        const jwtToken = CookieManager.getJWTToken();
         if (jwtToken) {
           localStorage.setItem('token', jwtToken);
           console.log('JWT token stored in localStorage after registration');
@@ -229,6 +205,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async() => {
     console.log('Logout started')
+    
+    // Debug cookies before logout
+    CookieManager.debugCookies();
+    
     try {
       // Call backend logout endpoint first
       await axiosInstance.get("/api/logout", { withCredentials: true });
@@ -241,14 +221,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null)
     localStorage.removeItem('user')
     localStorage.removeItem('token') // Clear JWT token from localStorage
-    // Clear role cookie
-    document.cookie = 'role=; path=/; Max-Age=0; SameSite=Lax'
-    // Clear JWT token cookie
-    document.cookie = 'jwt_token=; path=/; Max-Age=0; SameSite=Lax'
+    sessionStorage.clear() // Clear all session storage
+    
+    // Clear all authentication cookies using the comprehensive method
+    CookieManager.clearAuthCookies();
+    
+    console.log('All cookies cleared')
     console.log('Client-side logout completed')
     
-    // Redirect to auth page
-    window.location.href = '/auth'
+    // Debug cookies after logout
+    CookieManager.debugCookies();
+    
+    // Small delay to ensure cookie clearing is processed
+    setTimeout(() => {
+      // Redirect to auth page with cache busting
+      window.location.href = '/auth?logout=true&t=' + Date.now()
+    }, 100)
   }
 
   return (

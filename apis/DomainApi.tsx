@@ -21,8 +21,11 @@ const discoverToken = (): string | undefined => {
 	try {
 		const fromLocalStorage = localStorage.getItem('token');
 		if (fromLocalStorage) return fromLocalStorage;
-		// try cookie (only works if NOT httpOnly)
-		const match = document.cookie.match(/(?:^|; )jwt_token=([^;]+)/);
+		// try cookie (only works if NOT httpOnly) - check both possible names
+		let match = document.cookie.match(/(?:^|; )jwtToken=([^;]+)/);
+		if (match) return decodeURIComponent(match[1]);
+		
+		match = document.cookie.match(/(?:^|; )jwt_token=([^;]+)/);
 		if (match) return decodeURIComponent(match[1]);
 	} catch {
 		/* no-op */

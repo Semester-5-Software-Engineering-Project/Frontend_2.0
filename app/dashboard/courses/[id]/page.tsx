@@ -29,6 +29,8 @@ import DashboardLayout from '@/components/dashboard/DashboardLayout'
 import axiosInstance from '@/app/utils/axiosInstance'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/contexts/AuthContext'
+import UpcomingSchedules from '@/components/UpcomingSchedules'
+import { ScheduleDto } from '@/apis/ScheduleApi'
 
 // TypeScript interfaces for module data
 interface ModuleDetails {
@@ -530,6 +532,71 @@ export default function CoursePage() {
     }
   }
 
+  // Handle joining a scheduled meeting
+  const handleScheduledMeetingJoin = async (schedule: ScheduleDto) => {
+    setIsJoiningMeeting(true)
+    
+    try {
+      console.log('Joining scheduled meeting:', schedule)
+      
+      const payload = {
+        moduleId: schedule.moduleId,
+        requestedDate: schedule.date,
+        requestedTime: schedule.time,
+      }
+      
+      console.log('Scheduled meeting payload:', payload)
+      
+      const token = Cookies.get('jwt_token');
+      const response = await axiosInstance.post('/api/meeting/join', payload, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        withCredentials: true,
+        timeout: 10000,
+      })
+
+      if (response.data && response.data.roomId && response.data.token) {
+        const { roomId, token: meetingToken } = response.data
+        
+        localStorage.setItem('meetingData', JSON.stringify({
+          roomId,
+          token: meetingToken,
+          moduleId: schedule.moduleId,
+        }))
+        
+        router.push('/meeting')
+        
+        toast({
+          title: "Joining Scheduled Meeting",
+          description: `Joining ${schedule.moduleName} session...`,
+        })
+      } else {
+        throw new Error('Invalid response from server')
+      }
+    } catch (error: any) {
+      console.error('Error joining scheduled meeting:', error)
+      
+      let errorMessage = 'Failed to join the scheduled meeting. Please try again.'
+      if (error.response?.status === 401) {
+        errorMessage = 'Authentication failed. Please login again.'
+      } else if (error.response?.status === 404) {
+        errorMessage = 'Meeting not found. The session may have ended or been cancelled.'
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message
+      }
+      
+      toast({
+        title: "Meeting Join Failed",
+        description: errorMessage,
+        variant: "destructive",
+      })
+    } finally {
+      setIsJoiningMeeting(false)
+    }
+  }
+
   // Debug function to test the meeting API
   // const debugMeetingAPI = async () => {
   //   console.log('=== DEBUG: Testing Meeting API ===')
@@ -922,6 +989,12 @@ export default function CoursePage() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Upcoming Schedules */}
+              <UpcomingSchedules 
+                moduleId={params.id as string}
+                onJoinMeeting={handleScheduledMeetingJoin}
+              />
 
               <div className="space-y-6">
                 {/* Materials Sidebar */}
