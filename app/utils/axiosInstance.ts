@@ -51,22 +51,10 @@ axiosInstance.interceptors.response.use(
         if (error.response?.status === 401) {
             // Clear token and redirect to login if unauthorized
             localStorage.removeItem('token');
-            localStorage.removeItem('user');
             if (typeof window !== 'undefined' && !window.location.pathname.includes('/auth')) {
                 console.warn('Unauthorized access, redirecting to login');
                 window.location.href = '/auth';
             }
-        } else if (error.response?.status === 404 && 
-                   (error.config?.url?.includes('/tutor-profile') || 
-                    error.config?.url?.includes('/student-profile')) &&
-                   error.response?.data?.includes?.('profile not found')) {
-            // Handle missing profile errors
-            console.error('BACKEND ISSUE: Profile not found for authenticated user');
-            console.error('URL:', error.config?.url);
-            console.error('This is a backend database issue - profile needs to be created');
-            
-            // Don't redirect automatically for profile errors, let the component handle it
-            console.warn('Profile missing - this should be handled by the calling component');
         }
         return Promise.reject(error);
     }
