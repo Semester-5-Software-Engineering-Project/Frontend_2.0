@@ -7,9 +7,14 @@ export const getAuthToken = (): string | null => {
         const tokenFromLS = localStorage.getItem('token');
         if (tokenFromLS) return tokenFromLS;
 
-        // Try cookies - handle production environment properly
+        // Try cookies - check both possible names
         if (typeof document !== 'undefined') {
-            const match = document.cookie.match(/(?:^|; )jwt_token=([^;]+)/);
+            // Check for jwtToken first (backend preference)
+            let match = document.cookie.match(/(?:^|; )jwtToken=([^;]+)/);
+            if (match) return decodeURIComponent(match[1]);
+            
+            // Fallback to jwt_token
+            match = document.cookie.match(/(?:^|; )jwt_token=([^;]+)/);
             if (match) return decodeURIComponent(match[1]);
         }
     } catch (error) {
