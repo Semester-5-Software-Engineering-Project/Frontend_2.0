@@ -13,10 +13,11 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { ShieldAlert, CheckCircle, XCircle } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import axiosInstance, { getAuthToken } from '@/app/utils/axiosInstance'
+import { DateTimePicker, formatDateTimeForLegacyAPI } from '@/components/ui/datetime-picker'
+import { addDays } from 'date-fns'
 
 interface ScheduleFormData {
-  date: string
-  time: string
+  dateTime: Date | undefined
   duration: number
   recurrenceType: 'specific' | 'daily' | 'weekly'
   weekDay?: number // For weekly recurrence: 1=Monday, 2=Tuesday, ..., 7=Sunday
@@ -29,8 +30,7 @@ export default function Schedule() {
   const [moduleId, setModuleId] = useState<string | null>(null)
 
   const [formData, setFormData] = useState<ScheduleFormData>({
-    date: '',
-    time: '',
+    dateTime: undefined,
     duration: 60,
     recurrenceType: 'specific'
   })
@@ -144,8 +144,13 @@ export default function Schedule() {
     )
   }
 
-  const handleInputChange = (field: keyof ScheduleFormData, value: string | number) => {
+  const handleInputChange = (field: keyof ScheduleFormData, value: string | number | Date | undefined) => {
     setFormData(prev => ({ ...prev, [field]: value }))
+    setSubmitStatus({ type: null, message: '' })
+  }
+
+  const handleDateTimeChange = (dateTime: Date | undefined) => {
+    setFormData(prev => ({ ...prev, dateTime }))
     setSubmitStatus({ type: null, message: '' })
   }
 
@@ -179,11 +184,24 @@ export default function Schedule() {
         throw new Error('Authentication token not found. Please log in again.')
       }
 
+      // Validate dateTime
+      if (!formData.dateTime) {
+        throw new Error('Please select a date and time for the meeting.')
+      }
+
+      // Convert DateTime to separate date and time for backend compatibility
+      const { date, time } = formatDateTimeForLegacyAPI(formData.dateTime)
+      
+      console.log('Selected DateTime:', formData.dateTime)
+      console.log('Formatted date:', date)
+      console.log('Formatted time:', time)
+      console.log('ISO String:', formData.dateTime.toISOString())
+
       // Prepare the payload
       const payload = {
         moduleId: moduleId, // Keep as string UUID, don't parse as integer
-        date: formData.date,
-        time: formData.time,
+        date: date,
+        time: time,
         duration: formData.duration,
         weekNumber: getWeekNumber(formData.recurrenceType, formData.weekDay),
         recurrentType: formData.recurrenceType
@@ -205,8 +223,7 @@ export default function Schedule() {
         
         // Reset form
         setFormData({
-          date: '',
-          time: '',
+          dateTime: undefined,
           duration: 60,
           recurrenceType: 'specific'
         })
@@ -225,7 +242,7 @@ export default function Schedule() {
     }
   }
 
-  const isFormValid = formData.date && formData.time && formData.duration > 0 &&
+  const isFormValid = formData.dateTime && formData.duration > 0 &&
                      (formData.recurrenceType !== 'weekly' || formData.weekDay)
 
   return (
@@ -270,29 +287,22 @@ export default function Schedule() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="date">Date</Label>
-                    <Input
-                      id="date"
-                      type="date"
-                      value={formData.date}
-                      onChange={(e) => handleInputChange('date', e.target.value)}
-                      min={new Date().toISOString().split('T')[0]}
-                      required
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="time">Time</Label>
-                    <Input
-                      id="time"
-                      type="time"
-                      value={formData.time}
-                      onChange={(e) => handleInputChange('time', e.target.value)}
-                      required
-                    />
-                  </div>
+                {/* DateTime Picker */}
+                <div className="space-y-2">
+                  <Label htmlFor="datetime">Meeting Date & Time</Label>
+                  <DateTimePicker
+                    id="datetime"
+                    value={formData.dateTime}
+                    onChange={handleDateTimeChange}
+                    placeholder="Select date and time for the meeting"
+                    minDate={new Date()}
+                    maxDate={addDays(new Date(), 365)} // 1 year ahead
+                    required
+                    className="w-full"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Select both date and time for your meeting. Times around midnight (00:00) are handled correctly.
+                  </p>
                 </div>
 
                 <div className="space-y-2">

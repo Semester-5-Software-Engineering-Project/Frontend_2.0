@@ -55,8 +55,12 @@ export default function CoursePage() {
     console.log('=== CoursePage Debug Info ===')
     console.log('URL params:', params)
     console.log('Module ID from params:', params.id)
+    console.log('params.id type:', typeof params.id)
+    console.log('params.id length:', params.id?.length)
+    console.log('params.id as string:', String(params.id))
     console.log('Current user:', user)
     console.log('Current pathname:', window.location.pathname)
+    console.log('Current full URL:', window.location.href)
     console.log('============================')
   }, [params, user])
 
@@ -813,7 +817,29 @@ export default function CoursePage() {
               <div className="flex items-center space-x-2">
                 {user?.role === 'TUTOR' && (
                   <Button 
-                    onClick={() => router.push(`/dashboard/schedul?moduleId=${params.id}`)}
+                    onClick={() => {
+                      console.log('=== SCHEDULE BUTTON CLICKED ===')
+                      console.log('Original params.id:', params.id)
+                      console.log('params.id type:', typeof params.id)
+                      console.log('params.id length:', params.id?.length)
+                      console.log('Converting to string:', String(params.id))
+                      
+                      const moduleIdToStore = String(params.id)
+                      console.log('About to store in localStorage:', moduleIdToStore)
+                      localStorage.setItem('scheduleModuleId', moduleIdToStore)
+                      
+                      // Verify what was actually stored
+                      const storedValue = localStorage.getItem('scheduleModuleId')
+                      console.log('Verified stored value:', storedValue)
+                      console.log('Stored value type:', typeof storedValue)
+                      console.log('Stored value length:', storedValue?.length)
+                      
+                      const urlToNavigate = `/dashboard/schedul?moduleId=${moduleDetails?.moduleId}`
+                      console.log('Navigating to URL:', urlToNavigate)
+                      console.log('=== END SCHEDULE BUTTON DEBUG ===')
+                      
+                      router.push(urlToNavigate)
+                    }}
                     variant="outline"
                     className="flex items-center space-x-2"
                   >
