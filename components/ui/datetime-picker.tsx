@@ -17,6 +17,8 @@ interface DateTimePickerProps {
   minDate?: Date
   maxDate?: Date
   className?: string
+  id?: string
+  required?: boolean
 }
 
 export function DateTimePicker({
@@ -25,7 +27,9 @@ export function DateTimePicker({
   placeholder = 'Pick a date and time',
   minDate,
   maxDate,
-  className
+  className,
+  id,
+  required
 }: DateTimePickerProps) {
   const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(value)
   const [timeValue, setTimeValue] = React.useState<string>('')
