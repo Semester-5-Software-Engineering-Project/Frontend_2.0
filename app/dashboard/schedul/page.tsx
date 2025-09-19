@@ -11,7 +11,7 @@ import { Calendar as CalendarIcon, ChevronLeft } from 'lucide-react'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { ShieldAlert, CheckCircle, XCircle } from 'lucide-react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth, userType } from '@/contexts/AuthContext'
 import axiosInstance, { getAuthToken } from '@/app/utils/axiosInstance'
 import { DateTimePicker, formatDateTimeForLegacyAPI } from '@/components/ui/datetime-picker'
 import { addDays } from 'date-fns'
@@ -88,7 +88,7 @@ export default function Schedule() {
   }, [searchParams])
 
   // Redirect if not a tutor
-  if (user?.role !== 'TUTOR') {
+  if (user?.role !== userType.TUTOR) {
     return (
       <DashboardLayout>
         <div className="p-6">

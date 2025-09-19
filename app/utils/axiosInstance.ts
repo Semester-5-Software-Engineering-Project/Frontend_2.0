@@ -54,11 +54,21 @@ axiosInstance.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response?.status === 401) {
-            // Clear token and redirect to login if unauthorized
-            localStorage.removeItem('token');
-            if (typeof window !== 'undefined' && !window.location.pathname.includes('/auth')) {
-                console.warn('Unauthorized access, redirecting to login');
-                window.location.href = '/auth';
+            // Only redirect if this is a core auth endpoint like /api/getuser
+            // Don't redirect for resource-specific 401s like enrollment endpoints
+            const url = error.config?.url || '';
+            const isAuthEndpoint = url.includes('/api/getuser') || url.includes('/api/auth/');
+            
+            if (isAuthEndpoint) {
+                // Clear token and redirect to login if unauthorized on auth endpoints
+                localStorage.removeItem('token');
+                if (typeof window !== 'undefined' && !window.location.pathname.includes('/auth')) {
+                    console.warn('Unauthorized access on auth endpoint, redirecting to login');
+                    window.location.href = '/auth';
+                }
+            } else {
+                // For other endpoints, just log the error but don't redirect
+                console.warn('401 error on non-auth endpoint:', url);
             }
         }
         return Promise.reject(error);

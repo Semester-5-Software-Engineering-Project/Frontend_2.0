@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { BookOpen, Users } from 'lucide-react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth, userType } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 
@@ -19,7 +19,7 @@ export default function AuthPage() {
     name: '',
     email: 'admin@admin.com',
     password: '*****',
-    role: 'STUDENT' as 'STUDENT' | 'TUTOR'
+    role: userType.STUDENT as userType
   })
 
   const handleSubmit = async (action: 'login' | 'register') => {
@@ -125,9 +125,9 @@ export default function AuthPage() {
                         <div className="bg-muted rounded-full p-0.5 h-7 flex items-center w-36">
                           <button
                             type="button"
-                            onClick={() => setFormData({...formData, role: 'STUDENT'})}
+                            onClick={() => setFormData({...formData, role: userType.STUDENT})}
                             className={`flex-1 h-6 rounded-full flex items-center justify-center font-medium transition-all duration-300 ease-in-out text-xs ${
-                              formData.role === 'STUDENT' 
+                              formData.role === userType.STUDENT 
                                 ? 'bg-primary text-primary-foreground shadow-lg transform scale-105' 
                                 : 'text-gray-600 hover:text-gray-800'
                             }`}
@@ -136,9 +136,9 @@ export default function AuthPage() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => setFormData({...formData, role: 'TUTOR'})}
+                            onClick={() => setFormData({...formData, role: userType.TUTOR})}
                             className={`flex-1 h-6 rounded-full flex items-center justify-center font-medium transition-all duration-300 ease-in-out text-xs ${
-                              formData.role === 'TUTOR' 
+                              formData.role === userType.TUTOR 
                                 ? 'bg-primary text-primary-foreground shadow-lg transform scale-105' 
                                 : 'text-gray-600 hover:text-gray-800'
                             }`}
@@ -242,9 +242,9 @@ export default function AuthPage() {
                         <div className="bg-muted rounded-full p-0.5 h-9 flex items-center w-36">
                           <button
                             type="button"
-                            onClick={() => setFormData({...formData, role: 'STUDENT'})}
+                            onClick={() => setFormData({...formData, role: userType.STUDENT})}
                             className={`flex-1 h-8 rounded-full flex items-center justify-center font-medium transition-all duration-300 ease-in-out text-xs ${
-                              formData.role === 'STUDENT' 
+                              formData.role === userType.STUDENT 
                                 ? 'bg-primary text-primary-foreground shadow-lg transform scale-105' 
                                 : 'text-gray-600 hover:text-gray-800'
                             }`}
@@ -253,9 +253,9 @@ export default function AuthPage() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => setFormData({...formData, role: 'TUTOR'})}
+                            onClick={() => setFormData({...formData, role: userType.TUTOR})}
                             className={`flex-1 h-8 rounded-full flex items-center justify-center font-medium transition-all duration-300 ease-in-out text-xs ${
-                              formData.role === 'TUTOR' 
+                              formData.role === userType.TUTOR 
                                 ? 'bg-primary text-primary-foreground shadow-lg transform scale-105' 
                                 : 'text-gray-600 hover:text-gray-800'
                             }`}

@@ -179,6 +179,11 @@ export default function CoursesPage() {
       return apiModules.map(convertApiModuleToCourse)
     } catch (error: any) {
       console.error('Error fetching student enrollments:', error)
+      // Handle 401/404 gracefully for new students with no enrollments
+      if (error.response?.status === 401 || error.response?.status === 404) {
+        console.log('No enrollments found for student - this is normal for new students')
+        return [] // Return empty array instead of throwing error
+      }
       throw new Error(error.response?.data || 'Failed to fetch enrollments')
     }
   }

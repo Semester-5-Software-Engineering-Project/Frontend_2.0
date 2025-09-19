@@ -3,21 +3,26 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import axiosInstance from '@/app/utils/axiosInstance'
 
-interface User {
+export enum userType {
+  STUDENT = 'STUDENT',
+  TUTOR = 'TUTOR'
+}
+
+export interface User {
   id: string
   name: string
   email: string
-  role: 'STUDENT' | 'TUTOR'
+  role: userType
   avatar?: string
 }
 
 interface AuthContextType {
   user: User | null
-  login: (email: string, password: string, role: 'STUDENT' | 'TUTOR') => Promise<void>
-  register: (name: string, email: string, password: string, role: 'STUDENT' | 'TUTOR') => Promise<void>
+  login: (email: string, password: string, role: userType) => Promise<void>
+  register: (name: string, email: string, password: string, role: userType) => Promise<void>
   logout: () => void
   isLoading: boolean
-  googleLogin : (role:'STUDENT' | 'TUTOR') => Promise<void>
+  googleLogin: (role: userType) => Promise<void>
   checkAuthStatus: () => Promise<boolean>
 }
 
@@ -27,24 +32,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  const mapApiRoleToAppRole = (apiRole: any): 'STUDENT' | 'TUTOR' => {
-    const value = String(apiRole || '').toUpperCase().trim()
-    console.log('Raw API Role:', apiRole, 'Processed Value:', value)
-    
-    if (value === 'STUDENT') return 'STUDENT'
-    if (value === 'TUTOR') return 'TUTOR'
-    
-    // Also check for variants
-    if (value.includes('STUDENT')) return 'STUDENT'
-    if (value.includes('TUTOR') || value.includes('TEACHER')) return 'TUTOR'
-    
-    // Fallback: default to STUDENT to avoid over-permissioning
-    console.warn('Unknown role received from API:', apiRole, 'defaulting to STUDENT')
-    return 'STUDENT'
+  const mapApiRoleToAppRole = (apiRole: any): userType => {
+    console.log('Mapping API role to app role:', apiRole)
+    const value = typeof apiRole === 'string' ? apiRole.toUpperCase() : String(apiRole).toUpperCase()
+    console.log('Processed value:', value)
+    if (value === userType.STUDENT) return userType.STUDENT
+    if (value === userType.TUTOR) return userType.TUTOR
+    if (value.includes('STUDENT')) return userType.STUDENT
+    if (value.includes('TUTOR') || value.includes('TEACHER')) return userType.TUTOR
+    console.log('Defaulting to STUDENT for role:', apiRole)
+    return userType.STUDENT
   }
 
   useEffect(() => {
-    // Check for stored auth data
     const storedUser = localStorage.getItem('user')
     const getCookie = (name: string) => {
       const value = `; ${document.cookie}`;
@@ -52,7 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (parts.length === 2) return parts.pop()?.split(';').shift();
       return null;
     };
-    
+
     // Check both possible cookie names
     const jwtToken = getCookie('jwt_token') || getCookie('jwtToken');
 
@@ -97,7 +97,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('Raw user data from API:', userData)
       const role = mapApiRoleToAppRole(userData.role)
       console.log('Mapped role:', role)
-      
+
       if (userData) {
         // Extract JWT token from cookie and store in localStorage for easier access
         const getCookie = (name: string) => {
@@ -106,7 +106,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (parts.length === 2) return parts.pop()?.split(';').shift();
           return null;
         };
-        
+
         const jwtToken = getCookie('jwt_token');
         if (jwtToken) {
           localStorage.setItem('token', jwtToken);
@@ -114,9 +114,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         // Add avatar based on role
-        userData.avatar = `https://images.unsplash.com/photo-${role === 'TUTOR' ? '1494790108755-2616c0479506' : '1507003211169-0a1dd7228f2d'}?w=150&h=150&fit=crop&crop=face`
+        userData.avatar = `https://images.unsplash.com/photo-${role === userType.TUTOR ? '1494790108755-2616c0479506' : '1507003211169-0a1dd7228f2d'}?w=150&h=150&fit=crop&crop=face`
         userData.role = role
-        
+
         console.log('Final user data being set:', userData)
         setUser(userData)
         localStorage.setItem('user', JSON.stringify(userData))
@@ -134,9 +134,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const googleLogin = async (role:"STUDENT" | "TUTOR") =>{
+  const googleLogin = async (role: userType) => {
     setIsLoading(true);
-    try{
+    try {
       // Redirect to OAuth endpoint with success redirect URL
       const redirectUrl = encodeURIComponent(`${window.location.origin}/dashboard`)
       console.log(role)
@@ -148,17 +148,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Note: setIsLoading(false) is not needed here because the page will redirect
   }
 
-  const login = async (email: string, password: string, role: 'STUDENT' | 'TUTOR') => {
+  const login = async (email: string, password: string, role: userType) => {
     console.log('Login started with:', { email, role })
     setIsLoading(true)
-    
+
     try {
       // Clear any existing user data first
       console.log('Clearing existing session data...')
       setUser(null)
       localStorage.clear()
       sessionStorage.clear()
-      
+
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       const loginResponse = await axiosInstance.post("/api/auth/login", { email, password }, { withCredentials: true });
@@ -171,7 +171,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (parts.length === 2) return parts.pop()?.split(';').shift();
         return null;
       };
-      
+
       // Check both possible cookie names
       const jwtToken = getCookie('jwt_token') || getCookie('jwtToken');
       if (jwtToken) {
@@ -184,17 +184,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const res = await axiosInstance.get("/api/getuser");
       console.log('Get user API response:', res.data)
       const userData: any = res.data.user;
-      
+
       if (!userData) {
         throw new Error('No user data received after login')
       }
-      
+
       const normalizedRole = mapApiRoleToAppRole(userData.role)
       console.log('Normalized role:', normalizedRole)
-      
-      userData.avatar = `https://images.unsplash.com/photo-${normalizedRole === 'TUTOR' ? '1494790108755-2616c0479506' : '1507003211169-0a1dd7228f2d'}?w=150&h=150&fit=crop&crop=face`
+
+      userData.avatar = `https://images.unsplash.com/photo-${normalizedRole === userType.TUTOR ? '1494790108755-2616c0479506' : '1507003211169-0a1dd7228f2d'}?w=150&h=150&fit=crop&crop=face`
       userData.role = normalizedRole
-      
+
       console.log('Setting user data:', userData)
       setUser(userData)
       localStorage.setItem('user', JSON.stringify(userData))
@@ -208,7 +208,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const register = async (name: string, email: string, password: string, role: 'STUDENT' | 'TUTOR') => {
+  const register = async (name: string, email: string, password: string, role: userType) => {
     setIsLoading(true)
     try {
       const response = await axiosInstance.post('/api/register', {
@@ -227,7 +227,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (parts.length === 2) return parts.pop()?.split(';').shift();
           return null;
         };
-        
+
         const jwtToken = getCookie('jwt_token');
         if (jwtToken) {
           localStorage.setItem('token', jwtToken);
@@ -237,10 +237,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const res = await axiosInstance.get("/api/getuser");
         const userData: any = res.data.user;
         const normalizedRole = mapApiRoleToAppRole(userData.role)
-        
-        userData.avatar = `https://images.unsplash.com/photo-${normalizedRole === 'TUTOR' ? '1494790108755-2616c0479506' : '1507003211169-0a1dd7228f2d'}?w=150&h=150&fit=crop&crop=face`
+
+        userData.avatar = `https://images.unsplash.com/photo-${normalizedRole === userType.TUTOR ? '1494790108755-2616c0479506' : '1507003211169-0a1dd7228f2d'}?w=150&h=150&fit=crop&crop=face`
         userData.role = normalizedRole
-        
+
         setUser(userData)
         localStorage.setItem('user', JSON.stringify(userData))
         document.cookie = `role=${normalizedRole}; path=/; SameSite=Lax`
@@ -259,7 +259,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const logout = async() => {
+  const logout = async () => {
     console.log('Logout started')
     try {
       // Call backend logout endpoint first
@@ -268,16 +268,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('Backend logout error:', error)
     }
-    
+
     // Clear React state first
     setUser(null)
-    
+
     // Clear ALL localStorage items
     localStorage.clear()
-    
+
     // Clear sessionStorage as well
     sessionStorage.clear()
-    
+
     // Function to clear cookies thoroughly
     const clearCookie = (name: string) => {
       const domain = window.location.hostname
@@ -292,7 +292,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         `${name}=; Max-Age=0; path=/; SameSite=Lax;`,
         `${name}=; Max-Age=0; path=/; SameSite=None; Secure;`
       ]
-      
+
       cookieConfigs.forEach(config => {
         try {
           document.cookie = config
@@ -301,21 +301,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       })
     }
-    
+
     // Clear all possible authentication cookies
     const cookiesToClear = ['jwt_token', 'jwtToken', 'role', 'JSESSIONID', 'sessionId', 'auth_token']
     cookiesToClear.forEach(clearCookie)
-    
+
     console.log('All client-side data cleared')
     console.log('localStorage cleared:', Object.keys(localStorage).length === 0)
     console.log('Cookies after clear:', document.cookie)
-    
+
     // Force page reload and redirect to clear any cached state
     window.location.replace('/auth?logout=true')
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, isLoading ,googleLogin,checkAuthStatus}}>
+    <AuthContext.Provider value={{ user, login, register, logout, isLoading, googleLogin, checkAuthStatus }}>
       {children}
     </AuthContext.Provider>
   )
