@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth, userType } from '@/contexts/AuthContext'
 import { MeetingRoom } from '../../components/MeetingRoom'
 
 export default function MeetingPage() {
@@ -78,7 +78,7 @@ export default function MeetingPage() {
       <MeetingRoom
         username={user.name || 'Guest'}
         roomName={activeRoom}
-        role={user.role === 'TUTOR' ? 'teacher' : 'student'}
+        role={user.role === userType.TUTOR ? 'teacher' : 'student'}
         email={user.email || undefined}
         jwtToken={meetingData?.token}
         onLeave={handleLeave}
@@ -108,7 +108,7 @@ export default function MeetingPage() {
           {user && (
             <div className="mt-4 p-4 bg-muted rounded-lg">
               <p className="text-sm text-muted-foreground">
-                Joining as: <span className="font-medium">{user.name}</span> ({user.role === 'TUTOR' ? 'Teacher' : 'Student'})
+                Joining as: <span className="font-medium">{user.name}</span> ({user.role === userType.TUTOR ? 'Teacher' : 'Student'})
               </p>
               <p className="text-sm text-muted-foreground">
                 Email: <span className="font-medium">{user.email}</span>

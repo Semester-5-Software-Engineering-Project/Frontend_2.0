@@ -41,10 +41,21 @@ export default function StudentDashboard() {
         setIsLoading(true);
         setError(null);
         const response = await axiosInstance.get('/api/enrollment/get-enrollments');
-        setCourses(response.data);
-      } catch (error) {
+        setCourses(response.data || []); // Ensure we always have an array
+      } catch (error: any) {
         console.error('Error fetching courses:', error);
-        setError('Failed to load courses. Please try again.');
+        // Handle 401 gracefully for new students with no enrollments
+        if (error.response?.status === 401) {
+          console.log('No enrollments found for student (401) - this is normal for new students');
+          setCourses([]); // Set empty array instead of showing error
+          setError(null); // Don't show error message
+        } else if (error.response?.status === 404) {
+          console.log('No enrollments found for student (404) - this is normal for new students');
+          setCourses([]);
+          setError(null);
+        } else {
+          setError('Failed to load courses. Please try again.');
+        }
       } finally {
         setIsLoading(false);
       }
