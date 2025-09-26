@@ -54,6 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     // Check both possible cookie names
+    console.log('Checking for stored user and JWT token in cookies/localStorage',document.cookie)
     const jwtToken = getCookie('jwt_token') || getCookie('jwtToken');
 
     // Only proceed if we have both stored user AND valid token
@@ -148,7 +149,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Note: setIsLoading(false) is not needed here because the page will redirect
   }
 
-  const login = async (email: string, password: string, role: userType) => {
+  const login = async (email: string, password: string, role: userType) => { // need to remove role section from login
     console.log('Login started with:', { email, role })
     setIsLoading(true)
 
@@ -159,7 +160,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.clear()
       sessionStorage.clear()
 
-      // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       const loginResponse = await axiosInstance.post("/api/auth/login", { email, password }, { withCredentials: true });
       console.log('Login API response:', loginResponse.status)
