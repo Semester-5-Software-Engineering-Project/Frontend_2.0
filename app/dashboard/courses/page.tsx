@@ -28,7 +28,7 @@ import {
 import Link from 'next/link'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
 import ModuleCreation from '@/components/ui/modulecreation'
-import axiosInstance from '@/app/utils/axiosInstance'
+import { getModulesForTutor, getEnrollments } from '@/services/api'
 import { useToast } from '@/hooks/use-toast'
 
 // TypeScript interfaces for API response
@@ -134,10 +134,9 @@ export default function CoursesPage() {
   // Fetch modules for tutors
   const fetchTutorModules = async (): Promise<Course[]> => {
     try {
-      const response = await axiosInstance.get('/api/modules/get-modulesfortutor')
-      const apiModules: ApiModule[] = response.data
+      const apiModules = await getModulesForTutor()
       // console.log('Tutor modules API response:', apiModules)
-      return apiModules.map(convertApiModuleToCourse)
+      return (apiModules as ApiModule[]).map(convertApiModuleToCourse)
     } catch (error: any) {
       console.error('Error fetching tutor modules:', error)
       throw new Error(error.response?.data || 'Failed to fetch tutor modules')
@@ -148,10 +147,8 @@ export default function CoursesPage() {
   const fetchStudentEnrollments = async (): Promise<Course[]> => {
     try {
       console.log('Fetching student enrollments...')
-      const response = await axiosInstance.get('/api/enrollment/get-enrollments')
-      console.log('Enrollment API response:', response.data)
-      
-      const enrollments = response.data
+      const enrollments = await getEnrollments()
+      console.log('Enrollment API response:', enrollments)
       
       // Handle different possible response structures
       let apiModules: ApiModule[] = []
@@ -161,7 +158,7 @@ export default function CoursesPage() {
         apiModules = enrollments
           .map((enrollment: any) => {
             // Try different possible structures
-            return enrollment.moduleDetails || enrollment.module || enrollment
+            return enrollment.module || enrollment
           })
           .filter(Boolean) // Remove any null/undefined values
         
@@ -192,16 +189,15 @@ export default function CoursesPage() {
   const debugEnrollmentAPI = async () => {
     try {
       console.log('=== DEBUGGING ENROLLMENT API ===')
-      const response = await axiosInstance.get('/api/enrollment/get-enrollments')
-      console.log('Raw API response:', response)
-      console.log('Response status:', response.status)
-      console.log('Response data type:', typeof response.data)
-      console.log('Is array:', Array.isArray(response.data))
-      console.log('Raw response data:', JSON.stringify(response.data, null, 2))
+      const enrollments = await getEnrollments()
+      console.log('Raw API response:', enrollments)
+      console.log('Response data type:', typeof enrollments)
+      console.log('Is array:', Array.isArray(enrollments))
+      console.log('Raw response data:', JSON.stringify(enrollments, null, 2))
       
-      if (Array.isArray(response.data)) {
-        console.log('Array length:', response.data.length)
-        response.data.forEach((item: any, index: number) => {
+      if (Array.isArray(enrollments)) {
+        console.log('Array length:', enrollments.length)
+        enrollments.forEach((item: any, index: number) => {
           console.log(`Item ${index}:`, JSON.stringify(item, null, 2))
           console.log(`Item ${index} keys:`, Object.keys(item))
         })

@@ -10,7 +10,7 @@ import { ModuleApi, ModuleDto } from '@/apis/ModuleApi'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/hooks/use-toast'
-import axiosInstance from '@/app/utils/axiosInstance'
+import { enrollInModule } from '@/services/api'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
 
 export default function FindNewModulesPage() {
@@ -88,16 +88,7 @@ export default function FindNewModulesPage() {
 
     try {
       // Make enrollment request using cookies for authentication
-      const response = await axiosInstance.post(
-        '/api/enrollment/enroll',
-        { moduleId },
-        {
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          withCredentials: true
-        }
-      )
+      const response = await enrollInModule({ moduleId })
 
       toast({
         title: "Enrollment Successful!",

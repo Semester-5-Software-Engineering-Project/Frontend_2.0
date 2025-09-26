@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { BookOpen, Calendar, Video, Clock, Star, TrendingUp, Loader2 } from 'lucide-react'
 import Link from 'next/link'
-import axiosInstance from '@/app/utils/axiosInstance'
+import { getEnrollments } from '@/services/api'
 
 interface ApiModule {
   moduleId: string
@@ -40,8 +40,8 @@ export default function StudentDashboard() {
       try {
         setIsLoading(true);
         setError(null);
-        const response = await axiosInstance.get('/api/enrollment/get-enrollments');
-        setCourses(response.data || []); // Ensure we always have an array
+        const enrollments = await getEnrollments();
+        setCourses(enrollments || []); // Ensure we always have an array
       } catch (error: any) {
         console.error('Error fetching courses:', error);
         // Handle 401 gracefully for new students with no enrollments

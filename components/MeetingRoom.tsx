@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Video, Square } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect, useRef } from "react";
-import axiosInstance from "@/app/utils/axiosInstance";
+import { createMeet } from "@/services/api";
 
 interface MeetingRoomProps {
   username: string;
@@ -44,15 +44,10 @@ export const MeetingRoom = ({ username, roomName, role, email, password, jwtToke
 
     // Fallback to the old API call for backward compatibility
     try {
-      const response = await axiosInstance.post('/create/meet', {}, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        timeout: 10000,
-      });
+      const response = await createMeet();
 
-      if (response.data) {
-        return response.data;
+      if (response.meetingUrl) {
+        return response.meetingUrl;
       } else {
         throw new Error('No token received from API');
       }

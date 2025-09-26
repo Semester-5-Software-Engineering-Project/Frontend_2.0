@@ -17,7 +17,7 @@ import {
   Loader2
 } from 'lucide-react'
 import Link from 'next/link'
-import axiosInstance from '@/app/utils/axiosInstance'
+import { getModulesForTutor } from '@/services/api'
 
 interface ApiModule {
   moduleId: string
@@ -51,8 +51,8 @@ export default function TutorDashboard() {
       try {
         setIsLoading(true);
         setError(null);
-        const response = await axiosInstance.get('/api/modules/get-modulesfortutor');
-        setModules(response.data);
+        const modules = await getModulesForTutor();
+        setModules(modules as ApiModule[]);
       } catch (error) {
         console.error('Error fetching modules:', error);
         setError('Failed to load modules. Please try again.');

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import { Module as ApiModule } from '@/types/api'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -26,22 +27,14 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
-import axiosInstance from '@/app/utils/axiosInstance'
+import { getModulesForTutor, getEnrollments, getAllModulesPublic, getMaterials, joinMeeting } from '@/services/api'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/contexts/AuthContext'
 
 // TypeScript interfaces for module data
-interface ModuleDetails {
-  moduleId: string
-  tutorId: string
-  name: string
-  domain: string
-  averageRatings: number
-  fee: number
-  duration: string // ISO 8601 duration format like "PT2H30M"
-  status: string
-  description?: string
-  image?: string
+interface Module extends ApiModule {
+  moduleId: string; // Make it required
+  description?: string; // Add description
 }
 
 export default function CoursePage() {
@@ -66,7 +59,7 @@ export default function CoursePage() {
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [isJoiningMeeting, setIsJoiningMeeting] = useState(false)
-  const [moduleDetails, setModuleDetails] = useState<ModuleDetails | null>(null)
+  const [module, setModule] = useState<Module | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const materialRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
@@ -104,7 +97,7 @@ export default function CoursePage() {
   }
 
   // Fetch module details by moduleId
-  const fetchModuleDetails = async (moduleId: string): Promise<ModuleDetails> => {
+  const fetchModule = async (moduleId: string): Promise<Module> => {
     try {
       console.log('Fetching module details for moduleId:', moduleId)
       console.log('Current user:', user)
@@ -114,26 +107,22 @@ export default function CoursePage() {
       if (user?.role === 'TUTOR') {
         // For tutors, get modules they teach
         console.log('Fetching modules for tutor...')
-        response = await axiosInstance.get('/api/modules/get-modulesfortutor')
-        console.log('Tutor modules response:', response.data)
-        const modules = response.data
+        const modules = await getModulesForTutor()
+        console.log('Tutor modules response:', modules)
         const module = modules.find((m: any) => m.moduleId === moduleId)
         console.log('Found module for tutor:', module)
         if (!module) {
           throw new Error(`Module ${moduleId} not found in tutor's modules`)
         }
-        return module
+        return module as Module
       } else {
         // For students, first try enrolled modules
         console.log('Fetching enrollments for student...')
         try {
-          response = await axiosInstance.get('/api/enrollment/get-enrollments')
-          console.log('Student enrollments response:', response.data)
-          console.log('Response status:', response.status)
-          console.log('Response type:', typeof response.data)
-          console.log('Is array:', Array.isArray(response.data))
-          
-          const enrollments = response.data
+          const enrollments = await getEnrollments()
+          console.log('Student enrollments response:', enrollments)
+          console.log('Response type:', typeof enrollments)
+          console.log('Is array:', Array.isArray(enrollments))
           
           // Log the structure of each enrollment for debugging
           if (Array.isArray(enrollments) && enrollments.length > 0) {
@@ -144,7 +133,7 @@ export default function CoursePage() {
           }
           
           // Try to find the enrollment with more flexible matching
-          let enrollment = enrollments.find((e: any) => e.moduleDetails?.moduleId === moduleId)
+          let enrollment = enrollments.find((e: any) => e.module?.moduleId === moduleId)
           
           // If not found, try alternative structures
           if (!enrollment) {
@@ -163,14 +152,14 @@ export default function CoursePage() {
           
           if (enrollment) {
             // Return the module details with flexible structure handling
-            return enrollment.moduleDetails || enrollment.module || enrollment
+            return enrollment.module || enrollment
           }
           
           // If not found in enrollments, log available modules and try fallback
           const availableModuleIds = enrollments
             .map((e: any) => {
               // Try multiple possible structures
-              return e.moduleDetails?.moduleId || e.moduleId || e.module?.moduleId || e.id
+              return e.moduleId || e.module?.moduleId || e.id
             })
             .filter(Boolean)
           console.log('Module not found in enrollments. Available module IDs:', availableModuleIds)
@@ -186,15 +175,14 @@ export default function CoursePage() {
         // Fallback: Try to get all modules (this might work for viewing module details)
         try {
           console.log('Fetching all modules as fallback...')
-          const allModulesResponse = await axiosInstance.get('/api/modules/getAll')
-          console.log('All modules response:', allModulesResponse.data)
-          const allModules = allModulesResponse.data
+          const allModules = await getAllModulesPublic()
+          console.log('All modules response:', allModules)
           const module = allModules.find((m: any) => m.moduleId === moduleId)
           console.log('Found module in all modules:', module)
           
           if (module) {
             console.log('Using module from all modules API as fallback')
-            return module
+            return module as Module
           }
         } catch (allModulesError: any) {
           console.error('Fallback all modules API also failed:', allModulesError)
@@ -248,7 +236,7 @@ export default function CoursePage() {
 
   // Fetch module details on component mount
   useEffect(() => {
-    const loadModuleDetails = async () => {
+    const loadModule = async () => {
       // Wait for both params and user to be available
       if (!params.id || !user) {
         console.log('Waiting for params.id and user:', { paramsId: params.id, user: !!user })
@@ -260,10 +248,10 @@ export default function CoursePage() {
       
       try {
         console.log('Loading module details for:', params.id, 'User role:', user.role)
-        const details = await fetchModuleDetails(params.id as string)
+        const details = await fetchModule(params.id as string)
         console.log('Successfully loaded module details:', details)
-        setModuleDetails(details)
-        console.log('Course object for rendering:========================', moduleDetails)
+        setModule(details)
+        console.log('Course object for rendering:========================', module)
       } catch (err: any) {
         console.error('Failed to load module details:', err)
         setError(err.message)
@@ -277,38 +265,38 @@ export default function CoursePage() {
       }
     }
 
-    loadModuleDetails()
+    loadModule()
   }, [params.id, user, toast]) // Added toast to dependencies
 
   // Create display object from module details
-  const course = moduleDetails ? {
-    id: moduleDetails.moduleId,
-    title: moduleDetails.name,
+  const course = module ? {
+    id: module.moduleId,
+    title: module.name,
     tutor: 'Loading...', // We can fetch tutor info later if needed
-    description: moduleDetails.description || `Learn ${moduleDetails.name} in the ${moduleDetails.domain} domain.`,
-    rating: moduleDetails.averageRatings || 0,
+    description: module.description || `Learn ${module.name} in the ${module.domain} domain.`,
+    rating: module.averageRatings || 0,
     students: 0, // We don't have this data yet
-    duration: formatDuration(moduleDetails.duration),
+    duration: `${Math.floor(module.duration / 60)}h ${module.duration % 60}m`,
     progress: 0, // We don't have progress data yet
-    image: getDomainImage(moduleDetails.domain),
-    domain: moduleDetails.domain,
-    fee: moduleDetails.fee,
-    status: moduleDetails.status
+    image: getDomainImage(module.domain),
+    domain: module.domain,
+    fee: module.fee,
+    status: module.status
   } : null
   console.log('Courseii object for rendering:========================', course)
-  console.log('couser eded : ',moduleDetails?.moduleId )
+  console.log('couser eded : ',module?.moduleId )
 
 
   // Fetch materials for a module
   const fetchMaterials = async (moduleId: string) => {
     try {
       console.log('Fetching materials for moduleId:', moduleId)
-      const response = await axiosInstance.get(`/api/materials/fetchAll?module_id=${moduleId}`)
-      console.log('Materials API response:', response.data)
-      console.log('Materials count:', Array.isArray(response.data) ? response.data.length : 'Not an array')
+      const response = await getMaterials(moduleId)
+      console.log('Materials API response:', response)
+      console.log('Materials count:', Array.isArray(response) ? response.length : 'Not an array')
       
-      // Ensure we return an array
-      const materials = Array.isArray(response.data) ? response.data : []
+      // The API returns materials directly as an array, not nested in response.materials
+      const materials = Array.isArray(response) ? response : []
       return materials
     } catch (error: any) {
       console.error('Error fetching materials:', error)
@@ -450,18 +438,10 @@ export default function CoursePage() {
       console.log('Request payload JSON:=========================', JSON.stringify(payload))
 
       // Use the same authentication approach as the schedule page
-      const token = Cookies.get('jwt_token');
-      const response = await axiosInstance.post('/api/meeting/join', payload, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        withCredentials: true,
-        timeout: 10000,
-      })
+      const response = await joinMeeting(payload as any)
 
-      if (response.data && response.data.roomId && response.data.token) {
-        const { roomId, token } = response.data
+      if (response.success && (response as any).roomId && (response as any).token) {
+        const { roomId, token } = response as any
         
         localStorage.setItem('meetingData', JSON.stringify({
           roomId,
@@ -834,7 +814,7 @@ export default function CoursePage() {
                       console.log('Stored value type:', typeof storedValue)
                       console.log('Stored value length:', storedValue?.length)
                       
-                      const urlToNavigate = `/dashboard/schedul?moduleId=${moduleDetails?.moduleId}`
+                      const urlToNavigate = `/dashboard/schedul?moduleId=${module?.moduleId}`
                       console.log('Navigating to URL:', urlToNavigate)
                       console.log('=== END SCHEDULE BUTTON DEBUG ===')
                       
