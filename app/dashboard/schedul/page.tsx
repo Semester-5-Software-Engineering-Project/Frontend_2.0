@@ -12,7 +12,7 @@ import DashboardLayout from '@/components/dashboard/DashboardLayout'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { ShieldAlert, CheckCircle, XCircle } from 'lucide-react'
 import { useAuth, userType } from '@/contexts/AuthContext'
-import axiosInstance, { getAuthToken } from '@/app/utils/axiosInstance'
+import axiosInstance from '@/app/utils/axiosInstance'
 import { DateTimePicker, formatDateTimeForLegacyAPI } from '@/components/ui/datetime-picker'
 import { addDays } from 'date-fns'
 
@@ -179,10 +179,10 @@ export default function Schedule() {
       console.log('moduleId type:', typeof moduleId)
       console.log('moduleId length:', moduleId?.length)
 
-      const token = getAuthToken();
-      if (!token) {
-        throw new Error('Authentication token not found. Please log in again.')
-      }
+      // const token = getAuthToken();
+      // if (!token) {
+      //   throw new Error('Authentication token not found. Please log in again.')
+      // }
 
       // Validate dateTime
       if (!formData.dateTime) {
@@ -207,7 +207,7 @@ export default function Schedule() {
         recurrentType: formData.recurrenceType
       }
       console.log('Scheduling payload:', payload)
-      console.log('Using token:', token)
+      // console.log('Using token:', token)
 
       // Make the API request - axiosInstance will handle Authorization header automatically
       const response = await axiosInstance.post(
