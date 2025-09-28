@@ -1,5 +1,7 @@
 // types/api.ts
 
+import { UUID } from "node:crypto";
+
 // =====================================================================
 // COMMON TYPES
 // =====================================================================
@@ -467,6 +469,7 @@ export interface Schedule {
   tutorId: string;
   studentId?: string;
   moduleId: string;
+  moduleName: string;
   date: string;
   startTime: string;
   endTime: string;
@@ -477,21 +480,39 @@ export interface Schedule {
   updatedAt?: string;
 }
 
+export interface UpcomingSessionResponse {
+    schedule_id: UUID;
+    module_id: UUID;
+    tutor: string;
+    course: string;
+    Date: string;
+    time: string;
+    duration: number;
+    active: boolean;
+}
+
+
+export interface UpcomingSessionsRequest {
+    from_date: string;
+    from_time: string;
+    moduleId?: UUID;
+}
+
 export interface CreateScheduleRequest {
-  tutorId: string;
-  studentId?: string;
-  moduleId: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  title?: string;
-  description?: string;
+    tutorId: string;
+    studentId?: string;
+    moduleId: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+    title?: string;
+    description?: string;
 }
 
 export interface CreateScheduleResponse {
-  success: boolean;
-  message: string;
-  schedule?: Schedule;
+    success: boolean;
+    message: string;
+    schedule?: Schedule;
 }
 
 export interface GetSchedulesRequest {

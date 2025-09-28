@@ -411,99 +411,11 @@ export default function CoursePage() {
     setIsJoiningMeeting(true)
 
     try {
-      const now = new Date();
-      const requestedDate = now.toISOString().slice(0, 10); // YYYY-MM-DD format
-      
-      // Use time format exactly like the schedule page (HH:MM)
-      const hours = now.getHours().toString().padStart(2, '0');
-      const minutes = now.getMinutes().toString().padStart(2, '0');
-      const requestedTime = `${hours}:${minutes}`; // HH:MM format (no seconds)
-
-      console.log('Joining meeting with simplified time format:', { 
-        requestedDate, 
-        requestedTime, 
-        moduleId: params.id,
-        originalDate: now.toISOString(),
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
-      })
-
-      const payload = {
-        moduleId: params.id,
-        requestedDate,
-        requestedTime,
-      }
-
-      
-      console.log('Request payload================:', payload)
-      console.log('Request payload JSON:=========================', JSON.stringify(payload))
-
-      // Use the same authentication approach as the schedule page
-      const response = await joinMeeting(payload as any)
-
-      if (response.success && (response as any).roomId && (response as any).token) {
-        const { roomId, token } = response as any
-        
-        localStorage.setItem('meetingData', JSON.stringify({
-          roomId,
-          token,
-          moduleId: params.id,
-        }))
-        
-        router.push('/meeting')
-        
-        toast({
-          title: "Joining Meeting",
-          description: "Redirecting to meeting room...",
-        })
-      } else {
-        throw new Error('Invalid response from server')
-      }
-    } catch (error: any) {
-      console.error('Error joining meeting:', error)
-      console.error('Error response data:', error.response?.data)
-      console.error('Error response status:', error.response?.status)
-      console.error('Error response headers:', error.response?.headers)
-      
-      let errorMessage = 'Failed to join meeting'
-      if (error.response) {
-        // Log the full response for debugging
-        console.log('Full error response:', {
-          status: error.response.status,
-          statusText: error.response.statusText,
-          data: error.response.data,
-          headers: error.response.headers
-        })
-        
-        if (error.response.status === 400) {
-          // Handle 400 Bad Request specifically
-          if (error.response.data && typeof error.response.data === 'string') {
-            errorMessage = `Bad Request: ${error.response.data}`
-          } else if (error.response.data && error.response.data.message) {
-            errorMessage = `Bad Request: ${error.response.data.message}`
-          } else if (error.response.data && error.response.data.error) {
-            errorMessage = `Bad Request: ${error.response.data.error}`
-          } else {
-            errorMessage = 'Bad Request: Invalid request format or data'
-          }
-        } else if (error.response.status === 401) {
-          errorMessage = 'Authentication failed. Please login again.'
-        } else if (error.response.status === 403) {
-          errorMessage = 'Access denied. You don\'t have permission to join this meeting.'
-        } else if (error.response.status === 404) {
-          errorMessage = 'Meeting not found for this module.'
-        } else if (error.response.data && typeof error.response.data === 'string') {
-          errorMessage = error.response.data
-        } else if (error.response.data && error.response.data.message) {
-          errorMessage = error.response.data.message
-        }
-      } else if (error.request) {
-        errorMessage = 'Cannot connect to server. Please check your internet connection.'
-      }
-      
+      // Only pass moduleId as query param to meeting page
+      router.push(`/meeting?module=${encodeURIComponent(params.id as string)}`)
       toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
+        title: "Joining Meeting",
+        description: "Redirecting to meeting room...",
       })
     } finally {
       setIsJoiningMeeting(false)

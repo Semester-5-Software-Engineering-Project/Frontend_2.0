@@ -86,6 +86,8 @@ import {
   
   // Common types
   UserType,
+  UpcomingSessionsRequest,
+  UpcomingSessionResponse,
 } from "@/types/api";
 
 // =====================================================================
@@ -334,6 +336,13 @@ export const createSchedule = async (data: CreateScheduleRequest): Promise<Creat
     headers: {
       'Content-Type': 'application/json',
     },
+  });
+  return response.data;
+};
+
+export const upcomingSchedulesByTutor = async (req_data: UpcomingSessionsRequest): Promise<UpcomingSessionResponse> => {
+  const response = await axiosInstance.post<UpcomingSessionResponse>("/api/schedules/upcoming-by-tutor", {
+    body: req_data
   });
   return response.data;
 };
