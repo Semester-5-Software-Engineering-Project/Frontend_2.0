@@ -37,17 +37,20 @@ export default function Profile() {
   bio: '',
   imageUrl: '',
   // Student fields
+  firstName: '',
+  lastName: '',
   phone: '',
   birthday: '',
   isActive: false,
   // Tutor fields
-  firstName: '',
-  lastName: '',
   phoneNo: '',
   gender: '',
   dob: '',
   image: '',
   portfolio: '',
+  address: '',
+  city: '',
+  country: '',
   hourlyRate: '', // still local until backend supports
   education: '',
   experience: '',
@@ -69,16 +72,24 @@ export default function Profile() {
             gender: profile.gender || '',
             dob: profile.dob || '',
             portfolio: profile.portfolio || '',
+            address: profile.address || '',
+            city: profile.city || '',
+            country: profile.country || ''
         }))
       } else {
         setProfileData(prev => ({
           ...prev,
-          name: profile.name || user.name || '',
+          name: `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || user.name || '',
+          firstName: profile.firstName || '',
+          lastName: profile.lastName || '',
           email: user.email || '',
           phone: profile.phoneNumber || '',
           bio: profile.bio || '',
           imageUrl: profile.imageUrl || profile.image_url || '',
           birthday: profile.birthday || '',
+          address: profile.address || '',
+          city: profile.city || '',
+          country: profile.country || '',
           isActive: !!profile.isActive,
         }))
       }
@@ -104,6 +115,9 @@ export default function Profile() {
             image: profileData.imageUrl,
             portfolio: profileData.portfolio,
             bio: profileData.bio,
+            address: profileData.address,
+            city: profileData.city,
+            country: profileData.country,
           })
           toast.success('Tutor profile updated')
         } else {
@@ -116,6 +130,9 @@ export default function Profile() {
             image: profileData.imageUrl,
             portfolio: profileData.portfolio,
             bio: profileData.bio,
+            address: profileData.address,
+            city: profileData.city,
+            country: profileData.country,
           })
           toast.success('Tutor profile created')
         }
@@ -123,21 +140,29 @@ export default function Profile() {
       } else {
         if (profile) {
           await studentCtx.updateProfile({
-            name: profileData.name,
+            firstName: profileData.firstName || profileData.name.split(' ')[0],
+            lastName: profileData.lastName || profileData.name.split(' ').slice(1).join(' '),
             phoneNumber: profileData.phone,
             bio: profileData.bio,
             imageUrl: profileData.imageUrl,
             birthday: profileData.birthday,
+            address: profileData.address,
+            city: profileData.city,
+            country: profileData.country,
             isActive: profileData.isActive,
           })
           toast.success('Profile updated')
         } else {
           await studentCtx.createProfile({
-            name: profileData.name,
+            firstName: profileData.firstName || profileData.name.split(' ')[0],
+            lastName: profileData.lastName || profileData.name.split(' ').slice(1).join(' '),
             phoneNumber: profileData.phone,
             bio: profileData.bio,
             imageUrl: profileData.imageUrl,
             birthday: profileData.birthday,
+            address: profileData.address,
+            city: profileData.city,
+            country: profileData.country,
             isActive: profileData.isActive,
           })
           toast.success('Profile created')
@@ -316,17 +341,16 @@ export default function Profile() {
                     <Label htmlFor="lastName">Last Name</Label>
                     <Input id="lastName" value={profileData.lastName} disabled={!isEditing && hasProfile} onChange={e => setProfileData(p => ({...p, lastName: e.target.value, name: `${p.firstName} ${e.target.value}`.trim()}))} />
                   </div>
-                </>
-              ) : (
-                <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
-                  <Input id="name" value={profileData.name} disabled={!isEditing && hasProfile} onChange={e => setProfileData(p => ({...p, name: e.target.value}))} />
-                </div>
-              )}
-              <div className="space-y-2">
+
+                  <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input id="email" value={profileData.email} disabled readOnly />
               </div>
+                </>
+              ) : (
+                <></>
+              )}
+              
               {isTutor ? (
                 <>
                   <div className="space-y-2">
@@ -345,9 +369,35 @@ export default function Profile() {
                     <Label htmlFor="portfolio">Portfolio URL</Label>
                     <Input id="portfolio" value={profileData.portfolio} disabled={!isEditing && hasProfile} onChange={e => setProfileData(p => ({...p, portfolio: e.target.value}))} />
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="address">Address</Label>
+                    <Input id="address" value={profileData.address} disabled={!isEditing && hasProfile} onChange={e => setProfileData(p => ({...p, address: e.target.value}))} placeholder="e.g. Home 1, Street Name" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="city">City</Label>
+                    <Input id="city" value={profileData.city} disabled={!isEditing && hasProfile} onChange={e => setProfileData(p => ({...p, city: e.target.value}))} placeholder="e.g. Matara" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="country">Country</Label>
+                    <Input id="country" value={profileData.country} disabled={!isEditing && hasProfile} onChange={e => setProfileData(p => ({...p, country: e.target.value}))} placeholder="e.g. Sri Lanka" />
+                  </div>
                 </>
               ) : (
                 <>
+                  <div className="space-y-2">
+                    <Label htmlFor="student-firstName">First Name</Label>
+                    <Input id="student-firstName" value={profileData.firstName} disabled={!isEditing && hasProfile} onChange={e => setProfileData(p => ({...p, firstName: e.target.value, name: `${e.target.value} ${p.lastName}`.trim()}))} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="student-lastName">Last Name</Label>
+                    <Input id="student-lastName" value={profileData.lastName} disabled={!isEditing && hasProfile} onChange={e => setProfileData(p => ({...p, lastName: e.target.value, name: `${p.firstName} ${e.target.value}`.trim()}))} />
+                  </div>
+
+                  <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" value={profileData.email} disabled readOnly />
+              </div>
+              
                   <div className="space-y-2">
                     <Label htmlFor="phone">Phone</Label>
                     <Input id="phone" value={profileData.phone} disabled={!isEditing && hasProfile} onChange={e => setProfileData(p => ({...p, phone: e.target.value}))} />
@@ -355,6 +405,18 @@ export default function Profile() {
                   <div className="space-y-2">
                     <Label htmlFor="birthday">Birthday</Label>
                     <Input id="birthday" type="date" value={profileData.birthday} disabled={!isEditing && hasProfile} onChange={e => setProfileData(p => ({...p, birthday: e.target.value}))} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="student-address">Address</Label>
+                    <Input id="student-address" value={profileData.address} disabled={!isEditing && hasProfile} onChange={e => setProfileData(p => ({...p, address: e.target.value}))} placeholder="e.g. Home 1, Street Name" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="student-city">City</Label>
+                    <Input id="student-city" value={profileData.city} disabled={!isEditing && hasProfile} onChange={e => setProfileData(p => ({...p, city: e.target.value}))} placeholder="e.g. Matara" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="student-country">Country</Label>
+                    <Input id="student-country" value={profileData.country} disabled={!isEditing && hasProfile} onChange={e => setProfileData(p => ({...p, country: e.target.value}))} placeholder="e.g. Sri Lanka" />
                   </div>
                 </>
               )}
