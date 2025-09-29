@@ -7,6 +7,9 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Progress } from '@/components/ui/progress'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import Cookies from "js-cookie";
 import { 
   BookOpen, 
@@ -44,6 +47,22 @@ interface ModuleDetails {
   image?: string
 }
 
+interface EnrollmentDetails {
+  enrollmentId: string
+  moduleDetails: ModuleDetails
+  isPaid: boolean
+  enrollmentDate: string
+}
+
+interface UserProfile {
+  firstName: string
+  lastName: string
+  address: string
+  city: string
+  country: string
+  phoneNumber: string
+}
+
 export default function CoursePage() {
   const { user } = useAuth()
   const params = useParams()
@@ -67,8 +86,13 @@ export default function CoursePage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [isJoiningMeeting, setIsJoiningMeeting] = useState(false)
   const [moduleDetails, setModuleDetails] = useState<ModuleDetails | null>(null)
+  const [enrollment, setEnrollment] = useState<EnrollmentDetails | null>(null)
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false)
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false)
+  const [editableProfile, setEditableProfile] = useState<UserProfile | null>(null)
   const materialRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
 
   // Helper function to convert ISO 8601 duration to readable format
@@ -103,6 +127,25 @@ export default function CoursePage() {
     return domainImages[domain] || 'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=800&h=400&fit=crop'
   }
 
+  // Fetch enrollment payment status using the new endpoint
+  const getEnrollmentDetails = async (moduleId: string): Promise<{ isPaid: boolean } | null> => {
+  try {
+    // Call the API with moduleId as a path variable
+    const response = await axiosInstance.get(`/api/enrollment/get-enrollment-details/${moduleId}`);
+    
+    console.log('Enrollment details response:', response.data);
+
+    // Backend returns a boolean (true/false)
+    return {
+      isPaid: response.data === true
+    };
+  } catch (error) {
+    console.error('Error fetching enrollment details:', error);
+    return null;
+  }
+};
+
+
   // Fetch module details by moduleId
   const fetchModuleDetails = async (moduleId: string): Promise<ModuleDetails> => {
     try {
@@ -117,12 +160,12 @@ export default function CoursePage() {
         response = await axiosInstance.get('/api/modules/get-modulesfortutor')
         console.log('Tutor modules response:', response.data)
         const modules = response.data
-        const module = modules.find((m: any) => m.moduleId === moduleId)
-        console.log('Found module for tutor:', module)
-        if (!module) {
+        const foundModule = modules.find((m: any) => m.moduleId === moduleId)
+        console.log('Found module for tutor:', foundModule)
+        if (!foundModule) {
           throw new Error(`Module ${moduleId} not found in tutor's modules`)
         }
-        return module
+        return foundModule
       } else {
         // For students, first try enrolled modules
         console.log('Fetching enrollments for student...')
@@ -189,12 +232,12 @@ export default function CoursePage() {
           const allModulesResponse = await axiosInstance.get('/api/modules/getAll')
           console.log('All modules response:', allModulesResponse.data)
           const allModules = allModulesResponse.data
-          const module = allModules.find((m: any) => m.moduleId === moduleId)
-          console.log('Found module in all modules:', module)
+          const foundModule = allModules.find((m: any) => m.moduleId === moduleId)
+          console.log('Found module in all modules:', foundModule)
           
-          if (module) {
+          if (foundModule) {
             console.log('Using module from all modules API as fallback')
-            return module
+            return foundModule
           }
         } catch (allModulesError: any) {
           console.error('Fallback all modules API also failed:', allModulesError)
@@ -221,6 +264,136 @@ export default function CoursePage() {
       } else {
         throw new Error(error.response?.data || error.message || 'Failed to fetch module details')
       }
+    }
+  }
+
+  // Fetch enrollment details to check payment status
+  const fetchEnrollmentDetails = async (moduleId: string): Promise<EnrollmentDetails | null> => {
+    try {
+      console.log('Fetching enrollment details for moduleId:', moduleId)
+      const response = await axiosInstance.get('/api/enrollment/get-enrollments')
+      const enrollments = response.data
+      console.log('Enrollments fetched:', enrollments)
+      
+      const enrollmentData = enrollments.find((e: any) => 
+        e.moduleDetails?.moduleId === moduleId || e.moduleId === moduleId || e.module?.moduleId === moduleId
+      )
+      
+      if (enrollmentData) {
+        console.log('=== ENROLLMENT PAYMENT STATUS DEBUG ===')
+        console.log('Raw enrollment data:', enrollmentData)
+        console.log('enrollmentData.isPaid:', enrollmentData.isPaid)
+        console.log('enrollmentData.is_paid:', enrollmentData.is_paid)
+        console.log('Final isPaid value:', enrollmentData.is_paid || enrollmentData.isPaid || false)
+        console.log('======================================')
+        
+        return {
+          enrollmentId: enrollmentData.enrollmentId || enrollmentData.id,
+          moduleDetails: enrollmentData.moduleDetails || enrollmentData.module || enrollmentData,
+          isPaid: enrollmentData.is_paid || enrollmentData.isPaid || false,
+          enrollmentDate: enrollmentData.enrollmentDate || enrollmentData.createdAt
+        }
+      }
+      return null
+    } catch (error: any) {
+      console.error('Error fetching enrollment details:', error)
+      return null
+    }
+  }
+
+  // Fetch user profile for payment checkout
+  const fetchUserProfile = async (): Promise<UserProfile | null> => {
+    try {
+      console.log('Fetching user profile for payment')
+      const response = await axiosInstance.get('/api/student-profile/me')
+      const profile = response.data
+      
+      return {
+        firstName: profile.firstName || '',
+        lastName: profile.lastName || '',
+        address: profile.address || '',
+        city: profile.city || '',
+        country: profile.country || '',
+        phoneNumber: profile.phoneNumber || ''
+      }
+    } catch (error: any) {
+      console.error('Error fetching user profile:', error)
+      return null
+    }
+  }
+
+  // Create payment and redirect to PayHere
+  const startPayment = async () => {
+    if (!moduleDetails || !user) {
+      console.error("Missing required data:", { 
+        hasModuleDetails: !!moduleDetails, 
+        hasUser: !!user,
+        userId: user?.id,
+        moduleId: moduleDetails?.moduleId
+      })
+      return
+    }
+    
+    setIsProcessingPayment(true)
+    try {
+      console.log('Creating payment for module:', moduleDetails.moduleId)
+      const token = Cookies.get('jwt_token')
+      console.log('Using auth token:', token)
+      // Prepare payload
+      const paymentPayload = {
+        moduleId: moduleDetails.moduleId,
+        amount: course?.fee || moduleDetails?.fee
+      }
+      
+      console.log("=== PAYMENT PAYLOAD ===")
+      console.log("Raw payload object:", paymentPayload)
+
+      const paymentResponse = await axiosInstance.post('http://localhost:8080/api/payments/create', 
+        paymentPayload,
+        { headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+          }
+        }
+      
+      )
+
+      const paymentData = paymentResponse.data
+      console.log('Payment creation response:', paymentData)
+
+      if (paymentResponse.status === 200 && paymentData) {
+        // Create a form and submit to PayHere
+        const form = document.createElement('form')
+        form.method = 'POST'
+        form.action = 'https://sandbox.payhere.lk/pay/checkout'
+        
+        // Add all payment data as form inputs
+        Object.keys(paymentData).forEach(key => {
+          const input = document.createElement('input')
+          input.type = 'hidden'
+          input.name = key
+          input.value = paymentData[key]
+          form.appendChild(input)
+        })
+        
+        document.body.appendChild(form)
+        form.submit()
+      } else {
+        toast({
+          title: "Error",
+          description: paymentData.message || "Payment creation failed. Please try again.",
+          variant: "destructive",
+        })
+      }
+    } catch (error: any) {
+      console.error('Error creating payment:', error)
+      toast({
+        title: "Payment Error",
+        description: "Failed to create payment. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsProcessingPayment(false)
     }
   }
 
@@ -254,7 +427,9 @@ export default function CoursePage() {
         console.log('Waiting for params.id and user:', { paramsId: params.id, user: !!user })
         return
       }
-      
+      console.log("heeeeeeeeeeeeeee:", user?.id)
+    console.log("moduleid:", moduleDetails?.moduleId)
+    console.log("course fee:", course?.fee)
       setLoading(true)
       setError(null)
       
@@ -263,6 +438,31 @@ export default function CoursePage() {
         const details = await fetchModuleDetails(params.id as string)
         console.log('Successfully loaded module details:', details)
         setModuleDetails(details)
+        
+        // For students, also fetch enrollment and user profile
+        if (user.role === 'STUDENT') {
+          
+          const enrollmentData = await getEnrollmentDetails(params.id as string)
+          console.log('Payment_status:', enrollmentData?.isPaid)
+          
+          console.log('=== PAYMENT DIALOG DECISION =======================================')
+          console.log('enrollmentData.isPaid:', enrollmentData?.isPaid)
+          
+          
+          // If not paid, show payment dialog
+          if (enrollmentData && !enrollmentData.isPaid) {
+            console.log('Showing payment dialog - student not paid')
+            const profile = await fetchUserProfile()
+            setUserProfile(profile)
+            setEditableProfile(profile) // Set editable copy
+            setShowPaymentDialog(true)
+          } else if (enrollmentData && enrollmentData.isPaid) {
+            console.log('Student has paid - not showing payment dialog')
+          } else {
+            console.log('No enrollment data found')
+          }
+        }
+        
         console.log('Course object for rendering:========================', moduleDetails)
       } catch (err: any) {
         console.error('Failed to load module details:', err)
@@ -295,8 +495,6 @@ export default function CoursePage() {
     fee: moduleDetails.fee,
     status: moduleDetails.status
   } : null
-  console.log('Courseii object for rendering:========================', course)
-  console.log('couser eded : ',moduleDetails?.moduleId )
 
 
   // Fetch materials for a module
@@ -787,27 +985,60 @@ export default function CoursePage() {
         {/* Main Content - Only show when course data is loaded */}
         {!loading && !error && course && (
           <>
-            {/* Backdrop Overlay for Mobile */}
-            {!sidebarCollapsed && (
-              <div 
-                className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-                onClick={() => setSidebarCollapsed(true)}
-              />
-            )}
+            {/* Payment Status Check for Students */}
+            {user?.role === 'STUDENT' && enrollment && !enrollment.isPaid ? (
+              <Card className="mx-auto max-w-md">
+                <CardHeader className="text-center">
+                  <CardTitle className="text-xl text-red-600">Payment Required</CardTitle>
+                  <CardDescription>
+                    Sorry, you need to pay for this course to view the content.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="text-center">
+                  <div className="space-y-4">
+                    <div className="p-4 bg-gray-50 rounded-lg">
+                      <h3 className="font-semibold">{course.title}</h3>
+                      <p className="text-sm text-gray-600">{course.domain}</p>
+                      <p className="text-lg font-bold text-green-600 mt-2">
+                        ${course.fee} USD
+                      </p>
+                    </div>
+                    <Button 
+                      onClick={() => setShowPaymentDialog(true)}
+                      className="w-full bg-blue-600 hover:bg-blue-700"
+                      size="lg"
+                    >
+                      Pay for Course
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <>
+                {/* Show course content only if paid or user is tutor */}
+                {/* Backdrop Overlay for Mobile */}
+                {!sidebarCollapsed && (
+                  <div 
+                    className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+                    onClick={() => setSidebarCollapsed(true)}
+                  />
+                )}
 
-            {/* Toggle Button for Collapsed Sidebar */}
-            <div className={`fixed top-4 left-4 z-100 transition-all duration-300 ease-in-out ${
-              sidebarCollapsed ? 'translate-x-0' : '-translate-x-full'
-            }`}>
-              <Button
-                variant="default"
-                size="sm"
-                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                className="rounded-full w-12 h-12 -pr-20 shadow-lg absolute top-12 -left-9 bg-green-500 opacity-50"
-              >
-                <ChevronRight className="w-6 h-6"/>
-              </Button>
-            </div>
+                {/* Toggle Button for Collapsed Sidebar */}
+                <div className={`fixed top-4 left-4 z-100 transition-all duration-300 ease-in-out ${
+                  sidebarCollapsed ? 'translate-x-0' : '-translate-x-full'
+                }`}>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                    className="rounded-full w-12 h-12 -pr-20 shadow-lg absolute top-12 -left-9 bg-green-500 opacity-50"
+                  >
+                    <ChevronRight className="w-6 h-6"/>
+                  </Button>
+                </div>
+              </>
+            )}
 
             {/* Top Actions */}
             <div className={`flex justify-between items-center space-x-4 ${sidebarCollapsed ? 'ml-0' : 'ml-0 lg:ml-80 md:ml-72 sm:ml-64'}`}>
@@ -1052,6 +1283,135 @@ export default function CoursePage() {
             </div>
           </>
         )}
+
+        {/* Payment Dialog */}
+        <Dialog open={showPaymentDialog} onOpenChange={() => {}}>
+          <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto" onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+            <DialogHeader>
+              <DialogTitle>Complete Payment</DialogTitle>
+              <DialogDescription>
+                Please review your details and proceed to payment
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              {/* Course Details */}
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <h3 className="font-semibold">{course?.title}</h3>
+                <p className="text-sm text-gray-600">{course?.domain}</p>
+                <p className="text-lg font-bold text-green-600 mt-2">
+                  ${course?.fee} USD
+                </p>
+              </div>
+
+              {/* User Details */}
+              {editableProfile && (
+                <div className="space-y-3">
+                  <h4 className="font-medium">Billing Information</h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor="firstName">First Name</Label>
+                      <Input 
+                        id="firstName" 
+                        value={editableProfile.firstName} 
+                        onChange={(e) => setEditableProfile({
+                          ...editableProfile,
+                          firstName: e.target.value
+                        })}
+                        placeholder="Enter first name"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="lastName">Last Name</Label>
+                      <Input 
+                        id="lastName" 
+                        value={editableProfile.lastName} 
+                        onChange={(e) => setEditableProfile({
+                          ...editableProfile,
+                          lastName: e.target.value
+                        })}
+                        placeholder="Enter last name"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="address">Address</Label>
+                    <Input 
+                      id="address" 
+                      value={editableProfile.address} 
+                      onChange={(e) => setEditableProfile({
+                        ...editableProfile,
+                        address: e.target.value
+                      })}
+                      placeholder="Enter your address"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor="city">City</Label>
+                      <Input 
+                        id="city" 
+                        value={editableProfile.city} 
+                        onChange={(e) => setEditableProfile({
+                          ...editableProfile,
+                          city: e.target.value
+                        })}
+                        placeholder="Enter city"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="country">Country</Label>
+                      <Input 
+                        id="country" 
+                        value={editableProfile.country} 
+                        onChange={(e) => setEditableProfile({
+                          ...editableProfile,
+                          country: e.target.value
+                        })}
+                        placeholder="Enter country"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="phone">Phone</Label>
+                    <Input 
+                      id="phone" 
+                      value={editableProfile.phoneNumber} 
+                      onChange={(e) => setEditableProfile({
+                        ...editableProfile,
+                        phoneNumber: e.target.value
+                      })}
+                      placeholder="Enter phone number"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="flex space-x-2 pt-4">
+                <Button 
+                  onClick={startPayment}
+                  disabled={isProcessingPayment}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700"
+                >
+                  {isProcessingPayment ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    'Proceed to Payment'
+                  )}
+                </Button>
+                <Button 
+                  onClick={() => router.push('/dashboard/courses')}
+                  variant="outline"
+                  disabled={isProcessingPayment}
+                >
+                  Back to modules
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   )
