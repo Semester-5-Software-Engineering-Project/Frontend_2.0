@@ -78,8 +78,8 @@ export default function TutorDashboard() {
         // You may want to set from_date/from_time to now, or allow filtering by module
         const now = new Date();
         const req: UpcomingSessionsRequest = {
-          from_date: now.toISOString().slice(0, 10),
-          from_time: now.toTimeString().slice(0, 8),
+          date: now.toISOString().slice(0, 10),
+          time: now.toTimeString().slice(0, 8),
         };
         const res = await upcomingSchedulesByTutor(req);
         console.log("response from api:", res);

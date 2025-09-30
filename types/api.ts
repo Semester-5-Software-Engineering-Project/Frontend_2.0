@@ -493,9 +493,9 @@ export interface UpcomingSessionResponse {
 
 
 export interface UpcomingSessionsRequest {
-    from_date: string;
-    from_time: string;
-    moduleId?: UUID;
+    date: string;
+    time: string;
+    moduleId?: string;
 }
 
 export interface CreateScheduleRequest {

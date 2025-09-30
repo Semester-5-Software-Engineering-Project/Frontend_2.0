@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Module as ApiModule } from '@/types/api'
+import { Module as ApiModule, UpcomingSessionsRequest } from '@/types/api'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -27,7 +27,11 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
-import { getModulesForTutor, getEnrollments, getAllModulesPublic, getMaterials, joinMeeting } from '@/services/api'
+import { getModulesForTutor, getEnrollments, getAllModulesPublic, getMaterials, joinMeeting, upcomingSchedulesByModule } from '@/services/api'
+// Schedules section state
+import { UpcomingSessionResponse } from '@/types/api'
+  // Schedules state
+
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -44,6 +48,35 @@ export default function CoursePage() {
   const { toast } = useToast()
   
   // Debug: Log the params
+  const [schedules, setSchedules] = useState<UpcomingSessionResponse[]>([]);
+  const [schedulesLoading, setSchedulesLoading] = useState(false);
+  const [schedulesError, setSchedulesError] = useState<string | null>(null);
+
+  // Fetch schedules for this module
+  useEffect(() => {
+    const fetchSchedules = async () => {
+      if (!params.id) return;
+      setSchedulesLoading(true);
+      setSchedulesError(null);
+      try {
+        const now = new Date();
+        const req: UpcomingSessionsRequest = {
+          date: now.toISOString().slice(0, 10),
+          time: now.toTimeString().slice(0, 8),
+          moduleId: String(params.id),
+        };
+        // API expects { moduleId, date, time }
+        const res = await upcomingSchedulesByModule(req);
+        console.log("Schedules for module", params.id, ":", res);
+        setSchedules(Array.isArray(res) ? res : [res]);
+      } catch (err) {
+        setSchedulesError('Failed to load schedules.' + (err instanceof Error ? ` ${err.message}` : ''));
+      } finally {
+        setSchedulesLoading(false);
+      }
+    };
+    fetchSchedules();
+  }, []);
   useEffect(() => {
     console.log('=== CoursePage Debug Info ===')
     console.log('URL params:', params)
@@ -933,6 +966,49 @@ export default function CoursePage() {
                       </div>
                     ))
                   )}
+
+                  {/* Schedules Section */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Schedules</CardTitle>
+                      <CardDescription>All upcoming and past schedules for this module</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {schedulesLoading ? (
+                        <div className="text-center py-4"><Loader2 className="animate-spin inline mr-2" />Loading schedules...</div>
+                      ) : schedulesError ? (
+                        <div className="text-red-500 text-center py-4">{schedulesError}</div>
+                      ) : schedules.length === 0 ? (
+                        <div className="text-center py-4">No schedules found for this module.</div>
+                      ) : (
+                        <div className="space-y-3">
+                          {schedules.map((session) => (
+                            <div key={session.schedule_id} className="border-l-4 border-primary pl-4 py-2">
+                              <h4 className="font-medium text-sm">{session.tutor}</h4>
+                              <p className="text-xs text-gray-500">{session.course}</p>
+                              <div className="flex items-center justify-between mt-2">
+                                <p className="text-xs text-gray-600">{session.Date} {session.time}</p>
+                                <Badge variant="outline" className="text-xs">{session.duration}min</Badge>
+                              </div>
+                              <Button
+                                size="sm"
+                                className="w-full mt-2 bg-primary hover:bg-primary/90"
+                                disabled={!session.active}
+                                onClick={() => {
+                                  if (session.active && session.module_id) {
+                                    window.location.href = `/meeting?module=${encodeURIComponent(session.module_id)}`;
+                                  }
+                                }}
+                              >
+                                <Video className="w-4 h-4 mr-2" />
+                                {session.active ? 'Join Now' : 'Inactive'}
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
                 </div>
               </div>
             </div>

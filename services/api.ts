@@ -347,6 +347,18 @@ export const upcomingSchedulesByTutor = async (req_data: UpcomingSessionsRequest
   return response.data;
 };
 
+export const upcomingSchedulesByStudent = async (req_data: UpcomingSessionsRequest): Promise<UpcomingSessionResponse> => {
+  const response = await axiosInstance.post<UpcomingSessionResponse>("/api/schedules/upcoming-by-student", {
+    body: req_data
+  });
+  return response.data;
+};
+
+export const upcomingSchedulesByModule = async (req_data: UpcomingSessionsRequest): Promise<UpcomingSessionResponse> => {
+  const response = await axiosInstance.post<UpcomingSessionResponse>("/api/schedules/upcoming-by-module", req_data);
+  return response.data;
+};
+
 export const getSchedules = async (params?: GetSchedulesRequest): Promise<GetSchedulesResponse> => {
   const response = await axiosInstance.get<GetSchedulesResponse>("/api/schedules", {
     params
