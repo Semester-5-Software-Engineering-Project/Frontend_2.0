@@ -357,7 +357,7 @@ export const createSchedule = async (data: CreateScheduleRequest): Promise<Creat
 
 export const upcomingSchedulesByTutor = async (req_data: UpcomingSessionsRequest): Promise<UpcomingSessionResponse> => {
   const response = await axiosInstance.post<UpcomingSessionResponse>("/api/schedules/upcoming-by-tutor", {
-    body: req_data
+    req_data
   });
   return response.data;
 };
