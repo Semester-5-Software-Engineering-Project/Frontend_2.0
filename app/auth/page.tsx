@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { BookOpen, Users } from 'lucide-react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth, userType } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 
@@ -17,10 +17,23 @@ export default function AuthPage() {
   const router = useRouter()
   const [formData, setFormData] = useState({
     name: '',
-    email: 'admin@admin.com',
-    password: '*****',
-    role: 'STUDENT' as 'STUDENT' | 'TUTOR'
+    email: '',
+    password: '',
+    role: userType.STUDENT as userType
   })
+  
+  const [placeholders, setPlaceholders] = useState({
+    email: 'admin@admin.com',
+    password: '*****'
+  })
+  
+  const handleInputChange = (field: string, value: string) => {
+    setFormData({...formData, [field]: value})
+    // Clear placeholder when user starts typing
+    if (field === 'email' || field === 'password') {
+      setPlaceholders({...placeholders, [field]: ''})
+    }
+  }
 
   const handleSubmit = async (action: 'login' | 'register') => {
     if (!formData.email || !formData.password) {
@@ -104,7 +117,8 @@ export default function AuthPage() {
                         id="email"
                         type="email"
                         value={formData.email}
-                        onChange={(e) => setFormData({...formData, email: e.target.value})}
+                        placeholder={placeholders.email}
+                        onChange={(e) => handleInputChange('email', e.target.value)}
                         className="border-input focus:border-primary h-8 text-sm"
                       />
                     </div>
@@ -114,39 +128,10 @@ export default function AuthPage() {
                         id="password"
                         type="password"
                         value={formData.password}
-                        onChange={(e) => setFormData({...formData, password: e.target.value})}
+                        placeholder={placeholders.password}
+                        onChange={(e) => handleInputChange('password', e.target.value)}
                         className="border-input focus:border-primary h-8 text-sm"
                       />
-                    </div>
-                    
-                    <div className="space-y-1">
-                      <Label className="text-sm align-center items-center justify-center">Login As</Label>
-                      <div className="flex justify-center">
-                        <div className="bg-muted rounded-full p-0.5 h-7 flex items-center w-36">
-                          <button
-                            type="button"
-                            onClick={() => setFormData({...formData, role: 'STUDENT'})}
-                            className={`flex-1 h-6 rounded-full flex items-center justify-center font-medium transition-all duration-300 ease-in-out text-xs ${
-                              formData.role === 'STUDENT' 
-                                ? 'bg-primary text-primary-foreground shadow-lg transform scale-105' 
-                                : 'text-gray-600 hover:text-gray-800'
-                            }`}
-                          >
-                            STUDENT
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setFormData({...formData, role: 'TUTOR'})}
-                            className={`flex-1 h-6 rounded-full flex items-center justify-center font-medium transition-all duration-300 ease-in-out text-xs ${
-                              formData.role === 'TUTOR' 
-                                ? 'bg-primary text-primary-foreground shadow-lg transform scale-105' 
-                                : 'text-gray-600 hover:text-gray-800'
-                            }`}
-                          >
-                            TUTOR
-                          </button>
-                        </div>
-                      </div>
                     </div>
 
 
@@ -208,10 +193,12 @@ export default function AuthPage() {
                       <Label htmlFor="name" className="text-sm">Full Name</Label>
                       <Input
                         id="name"
-                        placeholder="Enter your full name"
+                        placeholder="John Doe"
                         value={formData.name}
                         onChange={(e) => setFormData({...formData, name: e.target.value})}
                         className="border-input focus:border-primary h-8 text-sm"
+                        onFocus={(e) => e.target.placeholder = ""}
+                        onBlur={(e) => e.target.placeholder = formData.name ? "" : "John Doe"}
                       />
                     </div>
                     <div className="space-y-1">
@@ -219,10 +206,12 @@ export default function AuthPage() {
                       <Input
                         id="email-register"
                         type="email"
-                        placeholder="Enter your email"
+                        placeholder="john.doe@example.com"
                         value={formData.email}
                         onChange={(e) => setFormData({...formData, email: e.target.value})}
                         className="border-input focus:border-primary h-8 text-sm"
+                        onFocus={(e) => e.target.placeholder = ""}
+                        onBlur={(e) => e.target.placeholder = formData.email ? "" : "john.doe@example.com"}
                       />
                     </div>
                     <div className="space-y-1">
@@ -230,10 +219,12 @@ export default function AuthPage() {
                       <Input
                         id="password-register"
                         type="password"
-                        placeholder="Create a password"
+                        placeholder="Create a strong password"
                         value={formData.password}
                         onChange={(e) => setFormData({...formData, password: e.target.value})}
                         className="border-input focus:border-primary h-8 text-sm"
+                        onFocus={(e) => e.target.placeholder = ""}
+                        onBlur={(e) => e.target.placeholder = formData.password ? "" : "Create a strong password"}
                       />
                     </div>
                     <div className="space-y-1">
@@ -242,9 +233,9 @@ export default function AuthPage() {
                         <div className="bg-muted rounded-full p-0.5 h-9 flex items-center w-36">
                           <button
                             type="button"
-                            onClick={() => setFormData({...formData, role: 'STUDENT'})}
+                            onClick={() => setFormData({...formData, role: userType.STUDENT})}
                             className={`flex-1 h-8 rounded-full flex items-center justify-center font-medium transition-all duration-300 ease-in-out text-xs ${
-                              formData.role === 'STUDENT' 
+                              formData.role === userType.STUDENT 
                                 ? 'bg-primary text-primary-foreground shadow-lg transform scale-105' 
                                 : 'text-gray-600 hover:text-gray-800'
                             }`}
@@ -253,9 +244,9 @@ export default function AuthPage() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => setFormData({...formData, role: 'TUTOR'})}
+                            onClick={() => setFormData({...formData, role: userType.TUTOR})}
                             className={`flex-1 h-8 rounded-full flex items-center justify-center font-medium transition-all duration-300 ease-in-out text-xs ${
-                              formData.role === 'TUTOR' 
+                              formData.role === userType.TUTOR 
                                 ? 'bg-primary text-primary-foreground shadow-lg transform scale-105' 
                                 : 'text-gray-600 hover:text-gray-800'
                             }`}

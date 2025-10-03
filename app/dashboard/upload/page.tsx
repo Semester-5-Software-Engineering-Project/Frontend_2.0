@@ -1,5 +1,4 @@
 'use client'
-import Cookies from "js-cookie";
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -15,7 +14,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { ShieldAlert } from 'lucide-react'
 import { toast } from 'sonner'
-import axios from 'axios'
+import { uploadMaterial, getModulesByTutorId } from '@/services/api'
 
 export default function UploadMaterials() {
   const { user } = useAuth() // make sure your AuthContext provides JWT token
@@ -31,31 +30,16 @@ export default function UploadMaterials() {
     file: null as File | null
   })
 
-  const token = Cookies.get('jwt_token');
-
   useEffect(() => {
     const fetchModules = async () => {
       if (!user || user.role !== 'TUTOR') return;
 
       try {
-        const res = await fetch("http://localhost:8080/api/modules/tutor", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        const data = await res.json();
+        const data = await getModulesByTutorId();
         console.log("Fetched modules:", data);
      
-        if (Array.isArray(data)) {
-          setModules(data);
-        } else if (Array.isArray(data.modules)) {
-          setModules(data.modules);
-        } else if (Array.isArray(data.data)) {
-          setModules(data.data);
-        } else {
-          setModules([]);
-        }
+        // The service returns Module[] directly
+        setModules(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error(err);
         setModules([]);
@@ -64,7 +48,7 @@ export default function UploadMaterials() {
     };
 
     fetchModules();
-  }, [user, token]);
+  }, [user]);
 
 
 
@@ -130,13 +114,7 @@ export default function UploadMaterials() {
         formData.get('link') 
       )
 
-      await axios.post("http://localhost:8080/api/materials/upload", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-          Authorization: `Bearer ${token}`,
-        },
-        withCredentials: true,
-      })
+      await uploadMaterial(formData)
     }
 
     toast.success('All materials uploaded successfully!')

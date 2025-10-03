@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth, userType } from '@/contexts/AuthContext'
 import { MeetingRoom } from '../../components/MeetingRoom'
 
 export default function MeetingPage() {
@@ -18,27 +18,37 @@ export default function MeetingPage() {
   const [meetingData, setMeetingData] = useState<{roomId: string, token: string, moduleId: string} | null>(null)
 
   useEffect(() => {
-    
-    const storedMeetingData = localStorage.getItem('meetingData')
-    if (storedMeetingData) {
-      try {
-        const parsedData = JSON.parse(storedMeetingData)
-        if (parsedData.roomId && parsedData.token) {
-          setMeetingData(parsedData)
-          setActiveRoom(parsedData.roomId)
-          setShowMeetingRoom(true)
-          // Clear the stored data after using it
-          localStorage.removeItem('meetingData')
-          return
-        }
-      } catch (error) {
-        console.error('Error parsing stored meeting data:', error)
-        localStorage.removeItem('meetingData')
-      }
-    }
-
-    // Fallback to URL-based room joining
+    // If moduleId is present in query, call joinMeeting API
     const url = new URL(window.location.href)
+    const moduleId = url.searchParams.get('module')
+    if (moduleId) {
+      // Prepare payload for joinMeeting
+      const now = new Date();
+      const requestedDate = now.toISOString().slice(0, 10); // YYYY-MM-DD format
+      const hours = now.getHours().toString().padStart(2, '0');
+      const minutes = now.getMinutes().toString().padStart(2, '0');
+      const requestedTime = `${hours}:${minutes}`;
+      const payload = {
+        moduleId,
+        requestedDate,
+        requestedTime,
+      };
+      import('@/services/api').then(({ joinMeeting }) => {
+        joinMeeting(payload as any).then((response: any) => {
+          if (response.success && response.roomId && response.token) {
+            setMeetingData({ roomId: response.roomId, token: response.token, moduleId });
+            setActiveRoom(response.roomId);
+            setShowMeetingRoom(true);
+          } else {
+            alert('Failed to join meeting: ' + (response.message || 'Unknown error'));
+          }
+        }).catch((err: any) => {
+          alert('Failed to join meeting: ' + (err?.message || 'Unknown error'));
+        });
+      });
+      return;
+    }
+    // Fallback: manual room join
     const fromQuery = url.searchParams.get('room')
     const fromHash = window.location.hash?.replace('#', '')
     const initial = fromQuery || fromHash || ''
@@ -78,7 +88,7 @@ export default function MeetingPage() {
       <MeetingRoom
         username={user.name || 'Guest'}
         roomName={activeRoom}
-        role={user.role === 'TUTOR' ? 'teacher' : 'student'}
+        role={user.role === userType.TUTOR ? 'teacher' : 'student'}
         email={user.email || undefined}
         jwtToken={meetingData?.token}
         onLeave={handleLeave}
@@ -86,39 +96,39 @@ export default function MeetingPage() {
     )
   }
 
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <Card className="border-0 shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-2xl">Start a video meeting</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-[1fr_auto] items-center">
-            <Input
-              placeholder="Enter room name (e.g., algebra-101)"
-              value={roomInput}
-              onChange={(e) => setRoomInput(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleJoin()}
-            />
-            <Button onClick={handleJoin} disabled={!roomInput.trim()}>
-              Join Meeting
-            </Button>
-          </div>
+  // return (
+  //   <div className="container mx-auto px-4 py-8">
+  //     <Card className="border-0 shadow-lg">
+  //       <CardHeader>
+  //         <CardTitle className="text-2xl">Start a video meeting</CardTitle>
+  //       </CardHeader>
+  //       <CardContent>
+  //         <div className="grid gap-4 md:grid-cols-[1fr_auto] items-center">
+  //           <Input
+  //             placeholder="Enter room name (e.g., algebra-101)"
+  //             value={roomInput}
+  //             onChange={(e) => setRoomInput(e.target.value)}
+  //             onKeyPress={(e) => e.key === 'Enter' && handleJoin()}
+  //           />
+  //           <Button onClick={handleJoin} disabled={!roomInput.trim()}>
+  //             Join Meeting
+  //           </Button>
+  //         </div>
           
-          {user && (
-            <div className="mt-4 p-4 bg-muted rounded-lg">
-              <p className="text-sm text-muted-foreground">
-                Joining as: <span className="font-medium">{user.name}</span> ({user.role === 'TUTOR' ? 'Teacher' : 'Student'})
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Email: <span className="font-medium">{user.email}</span>
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  )
+  //         {user && (
+  //           <div className="mt-4 p-4 bg-muted rounded-lg">
+  //             <p className="text-sm text-muted-foreground">
+  //               Joining as: <span className="font-medium">{user.name}</span> ({user.role === userType.TUTOR ? 'Teacher' : 'Student'})
+  //             </p>
+  //             <p className="text-sm text-muted-foreground">
+  //               Email: <span className="font-medium">{user.email}</span>
+  //             </p>
+  //           </div>
+  //         )}
+  //       </CardContent>
+  //     </Card>
+  //   </div>
+  // )
 }
 
 

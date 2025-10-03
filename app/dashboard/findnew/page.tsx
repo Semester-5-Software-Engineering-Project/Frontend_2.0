@@ -10,7 +10,7 @@ import { ModuleApi, ModuleDto } from '@/apis/ModuleApi'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/hooks/use-toast'
-import axiosInstance from '@/app/utils/axiosInstance'
+import { enrollInModule } from '@/services/api'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
 
 export default function FindNewModulesPage() {
@@ -88,6 +88,7 @@ export default function FindNewModulesPage() {
 
     try {
       // Make enrollment request using cookies for authentication
+
       const response = await axiosInstance.post(
         '/api/enrollment/enroll',
         { moduleId },
@@ -99,6 +100,7 @@ export default function FindNewModulesPage() {
         }
       )
       router.push(`/dashboard/courses/${moduleId}`)
+
       toast({
         title: "Enrollment Successful!",
         description: `You have successfully enrolled in the module.`,
@@ -274,9 +276,9 @@ export default function FindNewModulesPage() {
                 <CardContent className="pt-0">
                   <div className="space-y-4">
                     {/* Module Description */}
-                    {module.description && (
+                    {module.status && (
                       <p className="text-sm text-muted-foreground line-clamp-3">
-                        {module.description}
+                        {module.status}
                       </p>
                     )}
                     

@@ -1,3 +1,4 @@
+import { userType } from './contexts/AuthContext'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
@@ -14,7 +15,7 @@ export function middleware(request: NextRequest) {
   const role = request.cookies.get('role')?.value || ''
 
   // Block student from tutor-only paths
-  if (role === 'STUDENT' && TUTOR_ONLY_PATHS.some((rx) => rx.test(pathname))) {
+  if (role === userType.STUDENT && TUTOR_ONLY_PATHS.some((rx) => rx.test(pathname))) {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
     url.searchParams.set('forbidden', '1')
