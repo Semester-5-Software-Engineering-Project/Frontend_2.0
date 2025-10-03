@@ -167,10 +167,7 @@ const ModuleRatingModal: React.FC<ModuleRatingModalProps> = ({ isOpen, onClose, 
                 </span>
               ) : (
                 <span className="flex items-center space-x-2">
-                  <Send classNam
-                  
-                  
-                  e="w-4 h-4" />
+                  <Send className="w-4 h-4" />
                   <span>Submit Rating</span>
                 </span>
               )}
