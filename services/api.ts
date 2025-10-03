@@ -99,6 +99,21 @@ export const login = async (email: string, password: string): Promise<LoginRespo
   return response.data;
 };
 
+export const checkProfile = async (): Promise<{
+  hasTutorProfile: boolean;
+  userId: string;
+  hasStudentProfile: boolean;
+  hasAnyProfile: boolean;
+}> => {
+  const response = await axiosInstance.get<{
+    hasTutorProfile: boolean;
+    userId: string;
+    hasStudentProfile: boolean;
+    hasAnyProfile: boolean;
+  }>("/api/profile-status", { withCredentials: true });
+  return response.data;
+};
+
 export const register = async (data: RegisterRequest): Promise<RegisterResponse> => {
   const response = await axiosInstance.post<RegisterResponse>("/api/register", data, { withCredentials: true });
   return response.data;
@@ -162,7 +177,7 @@ export const searchModules = async (query: string): Promise<Module[]> => {
 };
 
 export const getAllModulesPublic = async (): Promise<Module[]> => {
-  const response = await axiosInstance.get<Module[]>("/api/modules/getAll");
+  const response = await axiosInstance.get<Module[]>("/api/modules");
   return response.data;
 };
 

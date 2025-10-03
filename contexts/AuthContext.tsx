@@ -1,8 +1,10 @@
 'use client'
 
 import React, { createContext, useContext, useState, useEffect } from 'react'
-import { getUser, login as apiLogin, register as apiRegister, logout as apiLogout, googleLogin as apiGoogleLogin } from '@/services/api'
+import { useRouter, usePathname } from 'next/navigation'
+import { getUser, login as apiLogin, register as apiRegister, logout as apiLogout, googleLogin as apiGoogleLogin, checkProfile } from '@/services/api'
 import { UserType } from '@/types/api'
+import { useToast } from '@/hooks/use-toast'
 
 export enum userType {
   STUDENT = 'STUDENT',
@@ -17,6 +19,13 @@ export interface User {
   avatar?: string
 }
 
+interface ProfileStatus {
+  hasTutorProfile: boolean
+  userId: string
+  hasStudentProfile: boolean
+  hasAnyProfile: boolean
+}
+
 interface AuthContextType {
   user: User | null
   login: (email: string, password: string, role: userType) => Promise<void>
@@ -24,6 +33,8 @@ interface AuthContextType {
   logout: () => void
   isLoading: boolean
   googleLogin: (role: userType) => Promise<void>
+  profileStatus: ProfileStatus | null
+  checkUserProfile: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -31,6 +42,10 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [profileStatus, setProfileStatus] = useState<ProfileStatus | null>(null)
+  const router = useRouter()
+  const pathname = usePathname()
+  const { toast } = useToast()
 
   useEffect(() => {
     if (typeof window !== 'undefined' && !window.location.pathname.includes('/auth')) {
@@ -107,8 +122,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     apiGoogleLogin(role as unknown as UserType)
   }
 
+  const checkUserProfile = async () => {
+    if (!user) return
+
+    try {
+      const status = await checkProfile()
+      setProfileStatus(status)
+      
+      // Check if we're on a protected route that requires profile
+      const protectedRoutes = ['/dashboard', '/dashboard/courses', '/dashboard/sessions', '/dashboard/payments']
+      const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route))
+      const isProfileRoute = pathname.startsWith('/dashboard/profile')
+      
+      if (!status.hasAnyProfile && isProtectedRoute && !isProfileRoute) {
+        toast({
+          title: "Profile Required",
+          description: "You need to fill your profile first",
+          variant: "destructive",
+        })
+        
+        // Redirect based on user role
+        if (user.role === userType.STUDENT) {
+          router.push('/dashboard/profile?create=student')
+        } else if (user.role === userType.TUTOR) {
+          router.push('/dashboard/profile?create=tutor')
+        } else {
+          router.push('/dashboard/profile')
+        }
+      }
+    } catch (error) {
+      console.error('Error checking profile status:', error)
+    }
+  }
+
+  // Check profile when user changes or when navigating to protected routes
+  useEffect(() => {
+    if (user && !isLoading) {
+      checkUserProfile()
+    }
+  }, [user, pathname, isLoading])
+
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, isLoading, googleLogin }}>
+    <AuthContext.Provider value={{ user, login, register, logout, isLoading, googleLogin, profileStatus, checkUserProfile }}>
       {children}
     </AuthContext.Provider>
   )

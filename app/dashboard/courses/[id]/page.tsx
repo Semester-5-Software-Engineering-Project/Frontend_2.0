@@ -379,7 +379,7 @@ export default function CoursePage() {
       console.log("=== PAYMENT PAYLOAD ===")
       console.log("Raw payload object:", paymentPayload)
 
-      const paymentResponse = await axiosInstance.post('http://localhost:8080/api/payments/create', 
+      const paymentResponse = await axiosInstance.post('/api/payments/create', 
         paymentPayload,
         { headers: {
           Authorization: `Bearer ${token}`,

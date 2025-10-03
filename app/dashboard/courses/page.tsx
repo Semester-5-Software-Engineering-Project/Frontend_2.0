@@ -523,10 +523,6 @@ export default function CoursesPage() {
                         <span>{course.rating || 'No rating'}</span>
                       </div>
                       <div className="flex items-center space-x-1">
-                        <Clock className="w-4 h-4" />
-                        <span>{course.duration}</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
                         <span className="text-green-600 font-semibold">${course.fee}</span>
                       </div>
                     </div>

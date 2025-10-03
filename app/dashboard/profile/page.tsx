@@ -1,22 +1,27 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useStudentProfile } from '@/contexts/StudentProfileContex'
 import { useTutorProfile } from '@/contexts/TutorProfileContex'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
-import { Save, Edit, Star, BookOpen, Award, Key, Upload } from 'lucide-react'
+import { Save, Edit, Star, BookOpen, Award, Key, Upload, AlertCircle } from 'lucide-react'
 
 export default function Profile() {
   const { user } = useAuth()
+  const searchParams = useSearchParams()
+  const createMode = searchParams.get('create') // 'student' or 'tutor'
   const studentCtx = useStudentProfile()
   const tutorCtx = useTutorProfile()
   const isTutor = user?.role === 'TUTOR'
@@ -24,7 +29,7 @@ export default function Profile() {
   const profileLoading = isTutor ? tutorCtx.isLoading : studentCtx.isLoading
   const hasProfile = !!profile
 
-  const [isEditing, setIsEditing] = useState(false)
+  const [isEditing, setIsEditing] = useState(createMode ? true : false)
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
     newPassword: '',
@@ -202,6 +207,16 @@ export default function Profile() {
   return (
     <DashboardLayout>
       <div className="p-6 space-y-6 max-w-4xl mx-auto">
+        {/* Profile Creation Alert */}
+        {createMode && !hasProfile && (
+          <Alert className="border-orange-200 bg-orange-50">
+            <AlertCircle className="h-4 w-4 text-orange-600" />
+            <AlertDescription className="text-orange-800">
+              <strong>Profile Required:</strong> You need to complete your profile to access all features. Please fill in the required information below.
+            </AlertDescription>
+          </Alert>
+        )}
+
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Profile</h1>
@@ -363,7 +378,19 @@ export default function Profile() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="gender">Gender</Label>
-                    <Input id="gender" value={profileData.gender} disabled={!isEditing && hasProfile} onChange={e => setProfileData(p => ({...p, gender: e.target.value}))} />
+                    <Select
+                      value={profileData.gender}
+                      onValueChange={(value) => setProfileData(p => ({...p, gender: value}))}
+                      disabled={!isEditing && hasProfile}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select gender" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="MALE">MALE</SelectItem>
+                        <SelectItem value="FEMALE">FEMALE</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="portfolio">Portfolio URL</Label>
