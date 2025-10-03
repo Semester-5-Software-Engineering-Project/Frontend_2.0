@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth, userType } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { 
@@ -47,7 +47,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { name: 'Profile', href: '/dashboard/profile', icon: User },
   ]
 
-  const navItems = user?.role === 'STUDENT' ? studentNavItems : tutorNavItems
+  const navItems = user?.role === userType.STUDENT ? studentNavItems : tutorNavItems
 
   return (
     <div className="min-h-screen bg-background">

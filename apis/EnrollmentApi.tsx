@@ -1,13 +1,8 @@
 import axiosInstance from '@/app/utils/axiosInstance';
 
-// --- Types (aligned with backend DomainDto) -----------------------------
-export interface DomainDto {
-	domainId?: number;
-	name: string;
-}
-
-export interface CreateDomainRequest {
-	name: string;
+// --- Types ---------------------------------------------------------------
+export interface EnrollmentResponse {
+	enrollmentId: string;
 }
 
 // --- Internal helpers ----------------------------------------------------
@@ -45,41 +40,20 @@ const parseError = (err: any): Error => {
 };
 
 // --- API surface ---------------------------------------------------------
-export const DomainApi = {
-	/** Get all domains */
-	async getAllDomains(): Promise<DomainDto[]> {
-		try {
-			const res = await axiosInstance.get('/api/domains/all');
-			return res.data as DomainDto[];
-		} catch (e) {
-			throw parseError(e);
-		}
-	},
-
-	/** Create a new domain (requires ADMIN role) */
-	async createDomain(data: CreateDomainRequest, token?: string): Promise<string> {
+export const EnrollmentApi = {
+	/** Get enrollment ID by module ID (requires authentication) */
+	async getEnrollmentId(moduleId: string, token?: string): Promise<string> {
 		const t = token || discoverToken();
 		try {
-			const res = await axiosInstance.post('/api/domains/create', data, { 
-				headers: authHeader(t) 
+			const res = await axiosInstance.get('/api/enrollment/getenrollmentid', {
+				params: { Module_Id: moduleId },
+				headers: authHeader(t)
 			});
-			return res.data; // "Domain created successfully"
-		} catch (e) {
-			throw parseError(e);
-		}
-	},
-
-	/** Delete a domain (requires ADMIN role) */
-	async deleteDomain(domainId: number, token?: string): Promise<void> {
-		const t = token || discoverToken();
-		try {
-			await axiosInstance.delete(`/api/domains/delete/${domainId}`, { 
-				headers: authHeader(t) 
-			});
+			return res.data; // Returns the enrollment ID as string
 		} catch (e) {
 			throw parseError(e);
 		}
 	}
 };
 
-export default DomainApi;
+export default EnrollmentApi;

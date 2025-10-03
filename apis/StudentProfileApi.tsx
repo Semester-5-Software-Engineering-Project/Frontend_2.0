@@ -52,28 +52,8 @@ export interface StudentProfileDto {
 }
 
 // --- Internal helpers ----------------------------------------------------
-const authHeader = (token?: string) => {
-	if (!token) return {};
-	return { Authorization: `Bearer ${token}` };
-};
-
-// Attempt to read a token if the application stored it in localStorage or a non-httpOnly cookie.
-// NOTE: If your backend sets an httpOnly cookie (recommended for security), you cannot manually
-// construct the Authorization header client-side. In that case, either:
-// 1) Adjust backend controller to also accept the JWT from the cookie (preferred), OR
-// 2) Return the token in the auth/login response body so the frontend can store it (less secure).
-const discoverToken = (): string | undefined => {
-	try {
-		const fromLocalStorage = localStorage.getItem('token');
-		if (fromLocalStorage) return fromLocalStorage;
-		// try cookie (only works if NOT httpOnly)
-		const match = document.cookie.match(/(?:^|; )jwt_token=([^;]+)/);
-		if (match) return decodeURIComponent(match[1]);
-	} catch {
-		/* no-op */
-	}
-	return undefined;
-};
+// Note: axiosInstance now automatically handles auth tokens via interceptors
+// so we don't need to manually pass tokens anymore
 
 // Generic error normalizer
 const parseError = (err: any): Error => {
@@ -87,10 +67,9 @@ const parseError = (err: any): Error => {
 // --- API surface ---------------------------------------------------------
 export const StudentProfileApi = {
 	/** Create a new profile for the authenticated student */
-	async create(data: StudentProfileDto, token?: string): Promise<StudentProfileEntity> {
-		const t = token || discoverToken();
+	async create(data: StudentProfileDto): Promise<StudentProfileEntity> {
 		try {
-			const res = await axiosInstance.post('/api/student-profile', data, { headers: authHeader(t) });
+			const res = await axiosInstance.post('/api/student-profile', data);
 			return res.data as StudentProfileEntity;
             console.log(res.data);
 		} catch (e) {
@@ -99,10 +78,9 @@ export const StudentProfileApi = {
 	},
 
 	/** Fetch current student's profile */
-	async getMe(token?: string): Promise<StudentProfileEntity> {
-		const t = token || discoverToken();
+	async getMe(): Promise<StudentProfileEntity> {
 		try {
-			const res = await axiosInstance.get('/api/student-profile/me', { headers: authHeader(t) });
+			const res = await axiosInstance.get('/api/student-profile/me');
 			return res.data as StudentProfileEntity;
 		} catch (e) {
 			throw parseError(e);
@@ -110,10 +88,9 @@ export const StudentProfileApi = {
 	},
 
 	/** Update current student's profile */
-	async update(data: StudentProfileDto, token?: string): Promise<StudentProfileEntity> {
-		const t = token || discoverToken();
+	async update(data: StudentProfileDto): Promise<StudentProfileEntity> {
 		try {
-			const res = await axiosInstance.put('/api/student-profile', data, { headers: authHeader(t) });
+			const res = await axiosInstance.put('/api/student-profile', data);
 			return res.data as StudentProfileEntity;
 		} catch (e) {
 			throw parseError(e);
@@ -121,20 +98,18 @@ export const StudentProfileApi = {
 	},
 
 	/** Delete current student's profile */
-	async delete(token?: string): Promise<void> {
-		const t = token || discoverToken();
+	async delete(): Promise<void> {
 		try {
-			await axiosInstance.delete('/api/student-profile', { headers: authHeader(t) });
+			await axiosInstance.delete('/api/student-profile');
 		} catch (e) {
 			throw parseError(e);
 		}
 	},
 
 	/** Change password for current student */
-	async changePassword(newPassword: string, token?: string): Promise<void> {
-		const t = token || discoverToken();
+	async changePassword(newPassword: string): Promise<void> {
 		try {
-			await axiosInstance.put('/api/student-profile/change-password', { newPassword }, { headers: authHeader(t) });
+			await axiosInstance.put('/api/student-profile/change-password', { newPassword });
 		} catch (e) {
 			throw parseError(e);
 		}

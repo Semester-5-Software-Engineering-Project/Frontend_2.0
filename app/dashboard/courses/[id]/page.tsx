@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import { Module as ApiModule, Module, UpcomingSessionsRequest } from '@/types/api'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -31,27 +32,27 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
-import axiosInstance from '@/app/utils/axiosInstance'
+import { getModulesForTutor, getEnrollments, getAllModulesPublic, getMaterials, joinMeeting, upcomingSchedulesByModule } from '@/services/api'
+// Schedules section state
+import { UpcomingSessionResponse } from '@/types/api'
+  // Schedules state
+
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/contexts/AuthContext'
+import ModuleRatingModal from '@/components/ui/ratingmodal'
+import { EnrollmentApi } from '@/apis/EnrollmentApi'
+import RatingApi, { RatingGetDto } from '@/apis/RatingApi'
+import axiosInstance from '@/app/utils/axiosInstance'
 
 // TypeScript interfaces for module data
-interface ModuleDetails {
-  moduleId: string
-  tutorId: string
-  name: string
-  domain: string
-  averageRatings: number
-  fee: number
-  duration: string // ISO 8601 duration format like "PT2H30M"
-  status: string
-  description?: string
-  image?: string
+interface LocalModule extends ApiModule {
+  moduleId: string; // Make it required
+  description?: string; // Add description
 }
 
 interface EnrollmentDetails {
   enrollmentId: string
-  moduleDetails: ModuleDetails
+  moduleDetails: LocalModule
   isPaid: boolean
   enrollmentDate: string
 }
@@ -73,6 +74,35 @@ export default function CoursePage() {
   
   
   // Debug: Log the params
+  const [schedules, setSchedules] = useState<UpcomingSessionResponse[]>([]);
+  const [schedulesLoading, setSchedulesLoading] = useState(false);
+  const [schedulesError, setSchedulesError] = useState<string | null>(null);
+
+  // Fetch schedules for this module
+  useEffect(() => {
+    const fetchSchedules = async () => {
+      if (!params.id) return;
+      setSchedulesLoading(true);
+      setSchedulesError(null);
+      try {
+        const now = new Date();
+        const req: UpcomingSessionsRequest = {
+          date: now.toISOString().slice(0, 10),
+          time: now.toTimeString().slice(0, 8),
+          moduleId: String(params.id),
+        };
+        // API expects { moduleId, date, time }
+        const res = await upcomingSchedulesByModule(req);
+        console.log("Schedules for module", params.id, ":", res);
+        setSchedules(Array.isArray(res) ? res : [res]);
+      } catch (err) {
+        setSchedulesError('Failed to load schedules.' + (err instanceof Error ? ` ${err.message}` : ''));
+      } finally {
+        setSchedulesLoading(false);
+      }
+    };
+    fetchSchedules();
+  }, []);
   useEffect(() => {
     console.log('=== CoursePage Debug Info ===')
     console.log('URL params:', params)
@@ -86,24 +116,96 @@ export default function CoursePage() {
     console.log('============================')
   }, [params, user])
 
+  // Fetch enrollment ID using EnrollmentApi
+  useEffect(() => {
+    const fetchEnrollmentId = async () => {
+      if (!params.id) {
+        console.log('No module ID available in params')
+        return
+      }
+
+      try {
+        console.log('=== Fetching Enrollment ID ===')
+        console.log('Module ID:', params.id)
+        
+        const fetchedEnrollmentId = await EnrollmentApi.getEnrollmentId(String(params.id))
+        console.log('Enrollment ID:', fetchedEnrollmentId)
+        console.log('================================')
+        
+        // Store the enrollment ID in state
+        setEnrollmentId(fetchedEnrollmentId)
+      } catch (error) {
+        console.error('Error fetching enrollment ID:', error)
+        setEnrollmentId(null)
+      }
+    }
+
+    // Only fetch if user is a student (enrollment is for students)
+    if (user?.role === 'STUDENT' && params.id) {
+      fetchEnrollmentId()
+    }
+  }, [params.id, user?.role])
+
+  // Fetch module ratings
+  useEffect(() => {
+    const fetchModuleRatings = async () => {
+      if (!params.id) {
+        console.log('No module ID available for fetching ratings')
+        return
+      }
+
+      setRatingsLoading(true)
+      try {
+        console.log('=== Fetching Module Ratings ===')
+        console.log('Module ID:', params.id)
+        
+        const ratings = await RatingApi.getRatingsByModuleId(String(params.id))
+        console.log('Fetched ratings:', ratings)
+        console.log('Number of ratings:', ratings.length)
+        
+        setModuleRatings(ratings)
+      } catch (error) {
+        console.error('Error fetching module ratings:', error)
+        setModuleRatings([])
+      } finally {
+        setRatingsLoading(false)
+      }
+    }
+
+    if (params.id) {
+      fetchModuleRatings()
+    }
+  }, [params.id])
+
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [isJoiningMeeting, setIsJoiningMeeting] = useState(false)
-  const [moduleDetails, setModuleDetails] = useState<ModuleDetails | null>(null)
+  const [moduleDetails, setModuleDetails] = useState<LocalModule | null>(null)
   const [enrollment, setEnrollment] = useState<EnrollmentDetails | null>(null)
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
+  const [module, setModule] = useState<LocalModule | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isRatingModalOpen, setIsRatingModalOpen] = useState(false)
+  const [enrollmentId, setEnrollmentId] = useState<string | null>(null)
+  const [moduleRatings, setModuleRatings] = useState<RatingGetDto[]>([])
+  const [ratingsLoading, setRatingsLoading] = useState(false)
   const [showPaymentDialog, setShowPaymentDialog] = useState(false)
   const [isProcessingPayment, setIsProcessingPayment] = useState(false)
   const [editableProfile, setEditableProfile] = useState<UserProfile | null>(null)
   const materialRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
 
   // Helper function to convert ISO 8601 duration to readable format
-  const formatDuration = (isoDuration: string): string => {
+  const formatDuration = (isoDuration: any): string => {
+    // Handle null, undefined, or non-string values
+    if (!isoDuration) return 'N/A'
+    
+    // Convert to string if it's not already
+    const durationStr = String(isoDuration)
+    
     // Parse PT2H30M format
     const regex = /PT(?:(\d+)H)?(?:(\d+)M)?/
-    const match = isoDuration.match(regex)
-    if (!match) return isoDuration
+    const match = durationStr.match(regex)
+    if (!match) return durationStr
 
     const hours = parseInt(match[1] || '0')
     const minutes = parseInt(match[2] || '0')
@@ -115,7 +217,7 @@ export default function CoursePage() {
     } else if (minutes) {
       return `${minutes}m`
     }
-    return isoDuration
+    return durationStr
   }
 
   // Helper function to get domain-based image
@@ -150,7 +252,7 @@ export default function CoursePage() {
 
 
   // Fetch module details by moduleId
-  const fetchModuleDetails = async (moduleId: string): Promise<ModuleDetails> => {
+  const fetchModule = async (moduleId: string): Promise<LocalModule> => {
     try {
       console.log('Fetching module details for moduleId:', moduleId)
       console.log('Current user:', user)
@@ -160,26 +262,29 @@ export default function CoursePage() {
       if (user?.role === 'TUTOR') {
         // For tutors, get modules they teach
         console.log('Fetching modules for tutor...')
-        response = await axiosInstance.get('/api/modules/get-modulesfortutor')
-        console.log('Tutor modules response:', response.data)
-        const modules = response.data
-        const foundModule = modules.find((m: any) => m.moduleId === moduleId)
-        console.log('Found module for tutor:', foundModule)
-        if (!foundModule) {
+        const modules = await getModulesForTutor()
+        console.log('Tutor modules response:', modules)
+        const module = modules.find((m: any) => m.moduleId === moduleId)
+        console.log('Found module for tutor:', module)
+        // if (!module) {
+        // response = await axiosInstance.get('/api/modules/get-modulesfortutor')
+        // console.log('Tutor modules response:', response.data)
+        // const modules = response.data
+        // const foundModule = modules.find((m: any) => m.moduleId === moduleId)
+        // console.log('Found module for tutor:', foundModule)
+        if (!module) {
           throw new Error(`Module ${moduleId} not found in tutor's modules`)
         }
-        return foundModule
+        return module as LocalModule
+        
       } else {
         // For students, first try enrolled modules
         console.log('Fetching enrollments for student...')
         try {
-          response = await axiosInstance.get('/api/enrollment/get-enrollments')
-          console.log('Student enrollments response:', response.data)
-          console.log('Response status:', response.status)
-          console.log('Response type:', typeof response.data)
-          console.log('Is array:', Array.isArray(response.data))
-          
-          const enrollments = response.data
+          const enrollments = await getEnrollments()
+          console.log('Student enrollments response:', enrollments)
+          console.log('Response type:', typeof enrollments)
+          console.log('Is array:', Array.isArray(enrollments))
           
           // Log the structure of each enrollment for debugging
           if (Array.isArray(enrollments) && enrollments.length > 0) {
@@ -190,7 +295,7 @@ export default function CoursePage() {
           }
           
           // Try to find the enrollment with more flexible matching
-          let enrollment = enrollments.find((e: any) => e.moduleDetails?.moduleId === moduleId)
+          let enrollment = enrollments.find((e: any) => e.module?.moduleId === moduleId)
           
           // If not found, try alternative structures
           if (!enrollment) {
@@ -209,14 +314,14 @@ export default function CoursePage() {
           
           if (enrollment) {
             // Return the module details with flexible structure handling
-            return enrollment.moduleDetails || enrollment.module || enrollment
+            return (enrollment.module || enrollment) as LocalModule
           }
           
           // If not found in enrollments, log available modules and try fallback
           const availableModuleIds = enrollments
             .map((e: any) => {
               // Try multiple possible structures
-              return e.moduleDetails?.moduleId || e.moduleId || e.module?.moduleId || e.id
+              return e.moduleId || e.module?.moduleId || e.id
             })
             .filter(Boolean)
           console.log('Module not found in enrollments. Available module IDs:', availableModuleIds)
@@ -232,7 +337,7 @@ export default function CoursePage() {
         // Fallback: Try to get all modules (this might work for viewing module details)
         try {
           console.log('Fetching all modules as fallback...')
-          const allModulesResponse = await axiosInstance.get('/api/modules/getAll')
+          const allModulesResponse = await axiosInstance.get('/api/modules')
           console.log('All modules response:', allModulesResponse.data)
           const allModules = allModulesResponse.data
           const foundModule = allModules.find((m: any) => m.moduleId === moduleId)
@@ -240,7 +345,7 @@ export default function CoursePage() {
           
           if (foundModule) {
             console.log('Using module from all modules API as fallback')
-            return foundModule
+            return foundModule as LocalModule
           }
         } catch (allModulesError: any) {
           console.error('Fallback all modules API also failed:', allModulesError)
@@ -351,7 +456,7 @@ export default function CoursePage() {
       console.log("=== PAYMENT PAYLOAD ===")
       console.log("Raw payload object:", paymentPayload)
 
-      const paymentResponse = await axiosInstance.post('http://localhost:8080/api/payments/create', 
+      const paymentResponse = await axiosInstance.post('/api/payments/create', 
         paymentPayload,
         { headers: {
           Authorization: `Bearer ${token}`,
@@ -460,7 +565,7 @@ export default function CoursePage() {
 
   // Fetch module details on component mount
   useEffect(() => {
-    const loadModuleDetails = async () => {
+    const loadModule = async () => {
       // Wait for both params and user to be available
       if (!params.id || !user) {
         console.log('Waiting for params.id and user:', { paramsId: params.id, user: !!user })
@@ -474,7 +579,7 @@ export default function CoursePage() {
       
       try {
         console.log('Loading module details for:', params.id, 'User role:', user.role)
-        const details = await fetchModuleDetails(params.id as string)
+        const details = await fetchModule(params.id as string)
         console.log('Successfully loaded module details:', details)
         setModuleDetails(details)
         
@@ -503,6 +608,8 @@ export default function CoursePage() {
         }
         
         console.log('Course object for rendering:========================', moduleDetails)
+        setModule(details)
+        console.log('Course object for rendering:========================', module)
       } catch (err: any) {
         console.error('Failed to load module details:', err)
         setError(err.message)
@@ -516,36 +623,38 @@ export default function CoursePage() {
       }
     }
 
-    loadModuleDetails()
+    loadModule()
   }, [params.id, user, toast]) // Added toast to dependencies
 
   // Create display object from module details
-  const course = moduleDetails ? {
-    id: moduleDetails.moduleId,
-    title: moduleDetails.name,
+  const course = module ? {
+    id: module.moduleId,
+    title: module.name,
     tutor: 'Loading...', // We can fetch tutor info later if needed
-    description: moduleDetails.description || `Learn ${moduleDetails.name} in the ${moduleDetails.domain} domain.`,
-    rating: moduleDetails.averageRatings || 0,
+    description: module.description || `Learn ${module.name} in the ${module.domain} domain.`,
+    rating: module.averageRatings || 0,
     students: 0, // We don't have this data yet
-    duration: formatDuration(moduleDetails.duration),
+    duration: `${Math.floor(module.duration / 60)}h ${module.duration % 60}m`,
     progress: 0, // We don't have progress data yet
-    image: getDomainImage(moduleDetails.domain),
-    domain: moduleDetails.domain,
-    fee: moduleDetails.fee,
-    status: moduleDetails.status
+    image: getDomainImage(module.domain),
+    domain: module.domain,
+    fee: module.fee,
+    status: module.status
   } : null
+  console.log('Courseii object for rendering:========================', course)
+  console.log('couser eded : ',module?.moduleId )
 
 
   // Fetch materials for a module
   const fetchMaterials = async (moduleId: string) => {
     try {
       console.log('Fetching materials for moduleId:', moduleId)
-      const response = await axiosInstance.get(`/api/materials/fetchAll?module_id=${moduleId}`)
-      console.log('Materials API response:', response.data)
-      console.log('Materials count:', Array.isArray(response.data) ? response.data.length : 'Not an array')
+      const response = await getMaterials(moduleId)
+      console.log('Materials API response:', response)
+      console.log('Materials count:', Array.isArray(response) ? response.length : 'Not an array')
       
-      // Ensure we return an array
-      const materials = Array.isArray(response.data) ? response.data : []
+      // The API returns materials directly as an array, not nested in response.materials
+      const materials = Array.isArray(response) ? response : []
       return materials
     } catch (error: any) {
       console.error('Error fetching materials:', error)
@@ -563,8 +672,6 @@ export default function CoursePage() {
       return []
     }
   }
-
-
 
   // State for fetched materials
   const [lectureMaterials, setLectureMaterials] = useState<any[]>([]);
@@ -660,119 +767,270 @@ export default function CoursePage() {
     setIsJoiningMeeting(true)
 
     try {
-      const now = new Date();
-      
-      // Use local date instead of UTC date to avoid timezone issues
-      const year = now.getFullYear();
-      const month = (now.getMonth() + 1).toString().padStart(2, '0'); // getMonth() is 0-indexed
-      const day = now.getDate().toString().padStart(2, '0');
-      const requestedDate = `${year}-${month}-${day}`; // YYYY-MM-DD format in local timezone
-      
-      // Use time format exactly like the schedule page (HH:MM)
-      const hours = now.getHours().toString().padStart(2, '0');
-      const minutes = now.getMinutes().toString().padStart(2, '0');
-      const requestedTime = `${hours}:${minutes}`; // HH:MM format (no seconds)
-
-      console.log('Joining meeting with LOCAL date/time (no timezone conversion):', { 
-        requestedDate, 
-        requestedTime, 
-        moduleId: params.id,
-        localDate: now.toString(),
-        utcDate: now.toISOString(),
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
-      })
-
-      const payload = {
-        moduleId: params.id,
-        requestedDate,
-        requestedTime,
-      }
-
-      
-      console.log('Request payload================:', payload)
-      console.log('Request payload JSON:=========================', JSON.stringify(payload))
-
-      // Use the same authentication approach as the schedule page
-      const token = Cookies.get('jwt_token');
-      const response = await axiosInstance.post('/api/meeting/join', payload, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        withCredentials: true,
-        timeout: 10000,
-      })
-
-      if (response.data && response.data.roomId && response.data.token) {
-        const { roomId, token } = response.data
-        
-        localStorage.setItem('meetingData', JSON.stringify({
-          roomId,
-          token,
-          moduleId: params.id,
-        }))
-        
-        router.push('/meeting')
-        
-        toast({
-          title: "Joining Meeting",
-          description: "Redirecting to meeting room...",
-        })
-      } else {
-        throw new Error('Invalid response from server')
-      }
-    } catch (error: any) {
-      console.error('Error joining meeting:', error)
-      console.error('Error response data:', error.response?.data)
-      console.error('Error response status:', error.response?.status)
-      console.error('Error response headers:', error.response?.headers)
-      
-      let errorMessage = 'Failed to join meeting'
-      if (error.response) {
-        // Log the full response for debugging
-        console.log('Full error response:', {
-          status: error.response.status,
-          statusText: error.response.statusText,
-          data: error.response.data,
-          headers: error.response.headers
-        })
-        
-        if (error.response.status === 400) {
-          // Handle 400 Bad Request specifically
-          if (error.response.data && typeof error.response.data === 'string') {
-            errorMessage = `Bad Request: ${error.response.data}`
-          } else if (error.response.data && error.response.data.message) {
-            errorMessage = `Bad Request: ${error.response.data.message}`
-          } else if (error.response.data && error.response.data.error) {
-            errorMessage = `Bad Request: ${error.response.data.error}`
-          } else {
-            errorMessage = 'Bad Request: Invalid request format or data'
-          }
-        } else if (error.response.status === 401) {
-          errorMessage = 'Authentication failed. Please login again.'
-        } else if (error.response.status === 403) {
-          errorMessage = 'Access denied. You don\'t have permission to join this meeting.'
-        } else if (error.response.status === 404) {
-          errorMessage = 'Meeting not found for this module.'
-        } else if (error.response.data && typeof error.response.data === 'string') {
-          errorMessage = error.response.data
-        } else if (error.response.data && error.response.data.message) {
-          errorMessage = error.response.data.message
-        }
-      } else if (error.request) {
-        errorMessage = 'Cannot connect to server. Please check your internet connection.'
-      }
-      
+      // Only pass moduleId as query param to meeting page
+      router.push(`/meeting?module=${encodeURIComponent(params.id as string)}`)
       toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
+        title: "Joining Meeting",
+        description: "Redirecting to meeting room...",
       })
     } finally {
       setIsJoiningMeeting(false)
     }
   }
 
+
+  // Handle rating submission
+  const handleRatingSubmission = async (ratingData: { rating: number; feedback: string }) => {
+    try {
+      if (!enrollmentId) {
+        toast({
+          title: "Error",
+          description: "Enrollment ID not found. Please try refreshing the page.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      console.log('=== Submitting Rating ===')
+      console.log('Enrollment ID:', enrollmentId)
+      console.log('Rating Data:', ratingData)
+
+      const response = await RatingApi.createRating({
+        enrolmentId: enrollmentId,
+        rating: ratingData.rating,
+        feedback: ratingData.feedback,
+      })
+
+      console.log('Rating submitted successfully:', response)
+      toast({
+        title: "Success",
+        description: "Rating submitted successfully! Thank you for your feedback.",
+      })
+    } catch (error: any) {
+      console.error('Error submitting rating:', error)
+      toast({
+        title: "Error",
+        description: error.message || "Failed to submit rating. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  // Debug function to test the meeting API
+  // const debugMeetingAPI = async () => {
+  //   console.log('=== DEBUG: Testing Meeting API ===')
+  //   console.log('Module ID:', params.id)
+  //   console.log('User from auth context:', user)
+  //   console.log('Axios base URL:', axiosInstance.defaults.baseURL)
+  //   console.log('Cookies:', document.cookie)
+    
+  //   // Extract JWT token from cookies
+  //   const extractJWTFromCookies = () => {
+  //     const cookies = document.cookie.split(';')
+  //     for (let cookie of cookies) {
+  //       const [name, value] = cookie.trim().split('=')
+  //       if (name === 'jwt_token') {
+  //         return value
+  //       }
+  //     }
+  //     return null
+  //   }
+
+  //   const jwtToken = extractJWTFromCookies()
+  //   console.log('JWT Token found:', !!jwtToken)
+  //   if (jwtToken) {
+  //     console.log('JWT Token preview:', jwtToken.substring(0, 50) + '...')
+  //   }
+    
+  //   const payload = {
+  //     moduleId: params.id,
+  //     requestedDate: "2025-09-16",
+  //     requestedTime: "17:59:00",
+  //   }
+    
+  //   // Test 1: With Bearer token (like Postman)
+  //   if (jwtToken) {
+  //     try {
+  //       console.log('TEST 1: Using Bearer token authentication (like Postman)')
+        
+  //       const response = await axiosInstance.post('/api/meeting/join', payload, {
+  //         headers: {
+  //           'Content-Type': 'application/json',
+  //           'Authorization': `Bearer ${jwtToken}`,
+  //         },
+  //         withCredentials: false, // Don't send cookies when using Bearer token
+  //       })
+        
+  //       console.log('TEST 1 SUCCESS! Response:', response)
+  //       console.log('Response data:', response.data)
+  //       console.log('Response status:', response.status)
+  //       return // If this works, we're done
+        
+  //     } catch (error: any) {
+  //       console.error('TEST 1 FAILED:', error.response?.status, error.response?.data)
+  //     }
+  //   }
+    
+  //   // Test 2: With cookies only (original method)
+  //   try {
+  //     console.log('TEST 2: Using cookie authentication only')
+      
+  //     const response = await axiosInstance.post('/api/meeting/join', payload, {
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //       },
+  //       withCredentials: true,
+  //     })
+      
+  //     console.log('TEST 2 SUCCESS! Response:', response)
+  //     console.log('Response data:', response.data)
+  //     console.log('Response status:', response.status)
+      
+  //   } catch (error: any) {
+  //     console.error('TEST 2 FAILED:', error.response?.status, error.response?.data)
+      
+  //     // Try to get more details about the error
+  //     if (error.response?.data) {
+  //       try {
+  //         const errorData = typeof error.response.data === 'string' 
+  //           ? error.response.data 
+  //           : JSON.stringify(error.response.data, null, 2)
+  //         console.error('Formatted error data:', errorData)
+  //       } catch (e) {
+  //         console.error('Could not format error data:', e)
+  //       }
+  //     }
+  //   }
+    
+  //   console.log('=== END DEBUG ===')
+  // }
+
+  // // Debug function to test different request variations
+  // const testDifferentRequestFormats = async () => {
+  //   if (!params.id) {
+  //     console.error('No module ID available')
+  //     return
+  //   }
+
+  //   const basePayload = {
+  //     moduleId: params.id,
+  //     requestedDate: "2025-09-16",
+  //     requestedTime: "17:59:00",
+  //   }
+
+  //   console.log('=== TESTING DIFFERENT REQUEST FORMATS ===')
+
+  //   // Test 1: Exactly as current
+  //   try {
+  //     console.log('Test 1: Current format')
+  //     const response1 = await axiosInstance.post('/api/meeting/join', basePayload, {
+  //       headers: { 'Content-Type': 'application/json' },
+  //       withCredentials: true,
+  //     })
+  //     console.log('Test 1 SUCCESS:', response1.data)
+  //   } catch (error: any) {
+  //     console.log('Test 1 FAILED:', error.response?.status, error.response?.data)
+  //   }
+
+  //   // Test 2: Try with snake_case
+  //   try {
+  //     console.log('Test 2: Snake case format')
+  //     const snakeCasePayload = {
+  //       module_id: params.id,
+  //       requested_date: "2025-09-16",
+  //       requested_time: "17:59:00",
+  //     }
+  //     const response2 = await axiosInstance.post('/api/meeting/join', snakeCasePayload, {
+  //       headers: { 'Content-Type': 'application/json' },
+  //       withCredentials: true,
+  //     })
+  //     console.log('Test 2 SUCCESS:', response2.data)
+  //   } catch (error: any) {
+  //     console.log('Test 2 FAILED:', error.response?.status, error.response?.data)
+  //   }
+
+  //   // Test 3: Try without explicit headers
+  //   try {
+  //     console.log('Test 3: No explicit headers')
+  //     const response3 = await axiosInstance.post('/api/meeting/join', basePayload)
+  //     console.log('Test 3 SUCCESS:', response3.data)
+  //   } catch (error: any) {
+  //     console.log('Test 3 FAILED:', error.response?.status, error.response?.data)
+  //   }
+
+  //   // Test 4: Try with raw fetch instead of axios
+  //   try {
+  //     console.log('Test 4: Raw fetch instead of axios')
+  //     const response4 = await fetch('http://localhost:8080/api/meeting/join', {
+  //       method: 'POST',
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //         'Accept': 'application/json',
+  //       },
+  //       credentials: 'include',
+  //       body: JSON.stringify(basePayload)
+  //     })
+      
+  //     if (response4.ok) {
+  //       const data = await response4.json()
+  //       console.log('Test 4 SUCCESS:', data)
+  //     } else {
+  //       const errorText = await response4.text()
+  //       console.log('Test 4 FAILED:', response4.status, errorText)
+  //     }
+  //   } catch (error: any) {
+  //     console.log('Test 4 ERROR:', error)
+  //   }
+
+  //   // Test 5: Try with different date format
+  //   try {
+  //     console.log('Test 5: ISO date format')
+  //     const isoPayload = {
+  //       moduleId: params.id,
+  //       requestedDate: "2025-09-16T17:59:00.000Z",
+  //     }
+  //     const response5 = await axiosInstance.post('/api/meeting/join', isoPayload, {
+  //       headers: { 'Content-Type': 'application/json' },
+  //       withCredentials: true,
+  //     })
+  //     console.log('Test 5 SUCCESS:', response5.data)
+  //   } catch (error: any) {
+  //     console.log('Test 5 FAILED:', error.response?.status, error.response?.data)
+  //   }
+
+  //   console.log('=== END TESTING ===')
+  // }
+
+  // Helper function to render stars for rating display
+  const renderStars = (rating: number) => {
+    const stars = []
+    const fullStars = Math.floor(rating)
+    const hasHalfStar = rating % 1 !== 0
+    
+    // Full stars
+    for (let i = 0; i < fullStars; i++) {
+      stars.push(
+        <Star key={`full-${i}`} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+      )
+    }
+    
+    // Half star
+    if (hasHalfStar) {
+      stars.push(
+        <Star key="half" className="w-4 h-4 fill-yellow-400/50 text-yellow-400" />
+      )
+    }
+    
+    // Empty stars
+    const emptyStars = 5 - Math.ceil(rating)
+    for (let i = 0; i < emptyStars; i++) {
+      stars.push(
+        <Star key={`empty-${i}`} className="w-4 h-4 text-gray-300" />
+      )
+    }
+    
+    return stars
+  }
 
   return (
     <DashboardLayout>
@@ -926,7 +1184,7 @@ export default function CoursePage() {
                       console.log('Stored value type:', typeof storedValue)
                       console.log('Stored value length:', storedValue?.length)
                       
-                      const urlToNavigate = `/dashboard/schedul?moduleId=${moduleDetails?.moduleId}`
+                      const urlToNavigate = `/dashboard/schedul?moduleId=${module?.moduleId}`
                       console.log('Navigating to URL:', urlToNavigate)
                       console.log('=== END SCHEDULE BUTTON DEBUG ===')
                       
@@ -937,6 +1195,17 @@ export default function CoursePage() {
                   >
                     <Calendar className="w-4 h-4" />
                     <span>Schedule Meeting</span>
+                  </Button>
+                )}
+                
+                {user?.role === 'STUDENT' && (
+                  <Button 
+                    onClick={() => setIsRatingModalOpen(true)}
+                    variant="outline"
+                    className="flex items-center space-x-2"
+                  >
+                    <Star className="w-4 h-4" />
+                    <span>Rate this module</span>
                   </Button>
                 )}
                 
@@ -1133,6 +1402,130 @@ export default function CoursePage() {
                       </div>
                     ))
                   )}
+
+                  {/* Schedules Section */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Schedules</CardTitle>
+                      <CardDescription>All upcoming and past schedules for this module</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {schedulesLoading ? (
+                        <div className="text-center py-4"><Loader2 className="animate-spin inline mr-2" />Loading schedules...</div>
+                      ) : schedulesError ? (
+                        <div className="text-red-500 text-center py-4">{schedulesError}</div>
+                      ) : schedules.length === 0 ? (
+                        <div className="text-center py-4">No schedules found for this module.</div>
+                      ) : (
+                        <div className="space-y-3">
+                          {schedules.map((session) => (
+                            <div key={session.schedule_id} className="border-l-4 border-primary pl-4 py-2">
+                              <h4 className="font-medium text-sm">{session.tutor}</h4>
+                              <p className="text-xs text-gray-500">{session.course}</p>
+                              <div className="flex items-center justify-between mt-2">
+                                <p className="text-xs text-gray-600">{session.Date} {session.time}</p>
+                                <Badge variant="outline" className="text-xs">{session.duration}min</Badge>
+                              </div>
+                              <Button
+                                size="sm"
+                                className="w-full mt-2 bg-primary hover:bg-primary/90"
+                                disabled={!session.active}
+                                onClick={() => {
+                                  if (session.active && session.module_id) {
+                                    window.location.href = `/meeting?module=${encodeURIComponent(session.module_id)}`;
+                                  }
+                                }}
+                              >
+                                <Video className="w-4 h-4 mr-2" />
+                                {session.active ? 'Join Now' : 'Inactive'}
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+                {/* Ratings & Feedback Section */}
+                <div>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center space-x-2">
+                        <Star className="w-5 h-5 text-yellow-400" />
+                        <span>Student Ratings & Feedback</span>
+                      </CardTitle>
+                      <CardDescription>
+                        Reviews from students who have taken this module
+                        {moduleRatings.length > 0 && (
+                          <span className="ml-2 text-sm font-medium">
+                            ({moduleRatings.length} review{moduleRatings.length !== 1 ? 's' : ''})
+                          </span>
+                        )}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {/* Loading State */}
+                        {ratingsLoading && (
+                          <div className="flex items-center justify-center py-8">
+                            <div className="flex items-center space-x-2">
+                              <Loader2 className="w-5 h-5 animate-spin" />
+                              <span>Loading ratings...</span>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Ratings List */}
+                        {!ratingsLoading && moduleRatings.length > 0 && (
+                          <>
+                            {moduleRatings.map((rating, index) => (
+                              <div key={`${rating.enrolmentId}-${index}`} className="border rounded-lg p-4 bg-gray-50 hover:bg-gray-100 transition-colors">
+                                <div className="flex items-center justify-between mb-3">
+                                  <div className="flex items-center space-x-3">
+                                    <h4 className="font-medium text-sm text-gray-900">
+                                      {rating.studentName || 'Anonymous Student'}
+                                    </h4>
+                                    <div className="flex items-center space-x-1">
+                                      {renderStars(rating.rating)}
+                                      <span className="ml-2 text-sm font-medium text-gray-700">
+                                        {rating.rating}/5
+                                      </span>
+                                    </div>
+                                  </div>
+                                  {rating.createdAt && (
+                                    <span className="text-xs text-gray-500">
+                                      {new Date(rating.createdAt).toLocaleDateString()}
+                                    </span>
+                                  )}
+                                </div>
+                                {rating.feedback && (
+                                  <p className="text-sm text-gray-700 leading-relaxed">
+                                    {rating.feedback}
+                                  </p>
+                                )}
+                                {!rating.feedback && (
+                                  <p className="text-sm text-gray-500 italic">
+                                    No written feedback provided
+                                  </p>
+                                )}
+                              </div>
+                            ))}
+                          </>
+                        )}
+
+                        {/* No Ratings State */}
+                        {!ratingsLoading && moduleRatings.length === 0 && (
+                          <div className="text-center py-12">
+                            <Star className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                            <h3 className="text-lg font-semibold mb-2 text-gray-700">No Ratings Yet</h3>
+                            <p className="text-gray-500 max-w-md mx-auto">
+                              This module hasn&apos;t received any student ratings yet. Be the first to share your experience!
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
               </div>
             </div>
@@ -1304,6 +1697,14 @@ export default function CoursePage() {
   </DialogContent>
 </Dialog>
       </div>
+      
+      {/* Rating Modal */}
+      <ModuleRatingModal
+        isOpen={isRatingModalOpen}
+        onClose={() => setIsRatingModalOpen(false)}
+        moduleTitle={moduleDetails?.name || 'Module'}
+        onSubmitRating={handleRatingSubmission}
+      />
     </DashboardLayout>
   )
 }
