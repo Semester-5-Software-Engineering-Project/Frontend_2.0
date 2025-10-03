@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useAuth, userType } from '@/contexts/AuthContext'
 import { MeetingRoom } from '../../components/MeetingRoom'
+import { getCurrentDateTime } from '@/utils/dateUtils'
 
 export default function MeetingPage() {
   const { user } = useAuth()
@@ -23,11 +24,8 @@ export default function MeetingPage() {
     const moduleId = url.searchParams.get('module')
     if (moduleId) {
       // Prepare payload for joinMeeting
-      const now = new Date();
-      const requestedDate = now.toISOString().slice(0, 10); // YYYY-MM-DD format
-      const hours = now.getHours().toString().padStart(2, '0');
-      const minutes = now.getMinutes().toString().padStart(2, '0');
-      const requestedTime = `${hours}:${minutes}`;
+      const { date: requestedDate, time } = getCurrentDateTime();
+      const requestedTime = time.slice(0, 5); // Convert HH:MM:SS to HH:MM
       const payload = {
         moduleId,
         requestedDate,

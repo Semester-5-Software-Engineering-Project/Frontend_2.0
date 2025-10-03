@@ -38,6 +38,7 @@ import { UpcomingSessionResponse } from '@/types/api'
   // Schedules state
 
 import { useToast } from '@/hooks/use-toast'
+import { getCurrentDateTime } from '@/utils/dateUtils'
 import { useAuth } from '@/contexts/AuthContext'
 import ModuleRatingModal from '@/components/ui/ratingmodal'
 import { EnrollmentApi } from '@/apis/EnrollmentApi'
@@ -85,10 +86,10 @@ export default function CoursePage() {
       setSchedulesLoading(true);
       setSchedulesError(null);
       try {
-        const now = new Date();
+        const { date, time } = getCurrentDateTime();
         const req: UpcomingSessionsRequest = {
-          date: now.toISOString().slice(0, 10),
-          time: now.toTimeString().slice(0, 8),
+          date,
+          time,
           moduleId: String(params.id),
         };
         // API expects { moduleId, date, time }

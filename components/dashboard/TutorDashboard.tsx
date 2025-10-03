@@ -21,6 +21,7 @@ import {
 import Link from 'next/link'
 import { getModulesForTutor, upcomingSchedulesByTutor } from '@/services/api'
 import { UpcomingSessionResponse, UpcomingSessionsRequest } from '@/types/api'
+import { getCurrentDateTime } from '@/utils/dateUtils'
 
 interface ApiModule {
   moduleId: string
@@ -75,11 +76,11 @@ export default function TutorDashboard() {
       setSessionsLoading(true);
       setSessionsError(null);
       try {
-        // You may want to set from_date/from_time to now, or allow filtering by module
-        const now = new Date();
+        // Get current date and time in local timezone
+        const { date, time } = getCurrentDateTime();
         const req: UpcomingSessionsRequest = {
-          date: now.toISOString().slice(0, 10),
-          time: now.toTimeString().slice(0, 8),
+          date,
+          time,
         };
         const res = await upcomingSchedulesByTutor(req);
         console.log("response from api:", res);

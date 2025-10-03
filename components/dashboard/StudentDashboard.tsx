@@ -10,6 +10,7 @@ import Link from 'next/link'
 import { getEnrollments, upcomingSchedulesByStudent } from '@/services/api'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { UpcomingSessionResponse, UpcomingSessionsRequest } from '@/types/api'
+import { getCurrentDateTime } from '@/utils/dateUtils'
 
 
 interface ApiModule {
@@ -74,10 +75,10 @@ export default function StudentDashboard() {
       setSessionsLoading(true);
       setSessionsError(null);
       try {
-        const now = new Date();
+        const { date, time } = getCurrentDateTime();
         const req: UpcomingSessionsRequest = {
-          date: now.toISOString().slice(0, 10),
-          time: now.toTimeString().slice(0, 8),
+          date,
+          time,
         };
         const res = await upcomingSchedulesByStudent(req);
         setUpcomingSessions(Array.isArray(res) ? res : [res]);
