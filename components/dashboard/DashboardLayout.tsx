@@ -75,7 +75,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="flex items-center space-x-3">
             <Avatar className="w-8 h-8">
               <AvatarImage src={user?.avatar} />
-              <AvatarFallback>{user?.name.charAt(0)}</AvatarFallback>
+              {/* <AvatarFallback>{user?.name.charAt(0)}</AvatarFallback> */}
             </Avatar>
             <div className="hidden md:block">
               <p className="text-sm font-medium">{user?.name}</p>

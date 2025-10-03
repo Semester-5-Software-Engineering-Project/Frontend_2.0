@@ -20,13 +20,17 @@ export interface UserEmbedded {
 export interface StudentProfileEntity {
 	studentId: string;
 	user: UserEmbedded;
-	name: string;        // full display name
+	firstName: string;
+	lastName: string;
 	birthday: string;    // ISO date string (YYYY-MM-DD)
 	imageUrl: string;
 	lastAccessed: string | null;
 	isActive: boolean | null;
 	phoneNumber: string;
 	bio: string;
+	address: string;
+	city: string;
+	country: string;
 	createdAt: string;
 	updatedAt: string;
 	// Forward compatibility for extra backend fields
@@ -35,11 +39,15 @@ export interface StudentProfileEntity {
 
 // DTO we send when creating/updating (omit server-managed & nested user)
 export interface StudentProfileDto {
-	name?: string;
+	firstName?: string;
+	lastName?: string;
 	birthday?: string;
 	imageUrl?: string;
 	phoneNumber?: string;
 	bio?: string;
+	address?: string;
+	city?: string;
+	country?: string;
 	isActive?: boolean; // allow client to set initial active state
 }
 
