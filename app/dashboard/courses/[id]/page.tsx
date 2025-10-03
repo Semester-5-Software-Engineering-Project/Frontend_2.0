@@ -8,10 +8,12 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Progress } from '@/components/ui/progress'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { X } from "lucide-react"
 import Cookies from "js-cookie";
+
 import { 
   BookOpen, 
   Video, 
@@ -69,6 +71,7 @@ export default function CoursePage() {
   const params = useParams()
   const router = useRouter()
   const { toast } = useToast()
+  
   
   // Debug: Log the params
   const [schedules, setSchedules] = useState<UpcomingSessionResponse[]>([]);
@@ -524,6 +527,42 @@ export default function CoursePage() {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
+  useEffect(() => {
+    const { moduleId } = params
+
+    if (typeof window === "undefined") return // SSR safety
+
+    const urlParams = new URLSearchParams(window.location.search)
+    const orderId = urlParams.get("order_id")
+
+    if (orderId) {
+      console.log("PayHere return detected with order_id:", orderId)
+
+      // Clean up URL (remove query params) - use params.id instead of undefined moduleId
+      const moduleId = params.id as string
+      const cleanUrl = `${window.location.origin}/dashboard/courses/${moduleId}`
+      console.log("Cleaning URL to:", cleanUrl)
+      window.history.replaceState({}, document.title, cleanUrl)
+
+      // Show toast
+      toast({
+        title: "Payment Processing",
+        description: "Your payment is being verified...",
+        duration: 4000,
+      })
+
+      // 🔑 Instead of hard reload, trigger a re-fetch of enrollment/payment data
+      // (for example, call your backend API again)
+      fetch(`/api/enrollments/${moduleId}?user=${user?.id}`)
+        .then(res => res.json())
+        .then(data => {
+          console.log("Updated enrollment data:", data)
+          // optionally update state here
+        })
+        .catch(err => console.error("Error fetching updated enrollment", err))
+    }
+  }, [params, params.id, toast, user])
+
   // Fetch module details on component mount
   useEffect(() => {
     const loadModule = async () => {
@@ -738,6 +777,7 @@ export default function CoursePage() {
       setIsJoiningMeeting(false)
     }
   }
+
 
   // Handle rating submission
   const handleRatingSubmission = async (ratingData: { rating: number; feedback: string }) => {
@@ -1008,7 +1048,7 @@ export default function CoursePage() {
         {/* Error State */}
         {error && !loading && (
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-6 ">
               <div className="text-center">
                 <h3 className="text-lg font-semibold text-red-600 mb-2">Error Loading Module</h3>
                 <p className="text-gray-600 mb-4">{error}</p>
@@ -1047,7 +1087,7 @@ export default function CoursePage() {
                     variant="outline"
                     className="mt-4"
                   >
-                    Back to Modules
+                    Back to Courses
                   </Button>
                 </div>
               </div>
@@ -1493,133 +1533,169 @@ export default function CoursePage() {
         )}
 
         {/* Payment Dialog */}
-        <Dialog open={showPaymentDialog} onOpenChange={() => {}}>
-          <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto" onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
-            <DialogHeader>
-              <DialogTitle>Complete Payment</DialogTitle>
-              <DialogDescription>
-                Please review your details and proceed to payment
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              {/* Course Details */}
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <h3 className="font-semibold">{course?.title}</h3>
-                <p className="text-sm text-gray-600">{course?.domain}</p>
-                <p className="text-lg font-bold text-green-600 mt-2">
-                  ${course?.fee} USD
-                </p>
-              </div>
+<Dialog open={showPaymentDialog} onOpenChange={() => {}}>
+  <DialogContent 
+    className="sm:max-w-4xl" 
+    onPointerDownOutside={(e) => e.preventDefault()} 
+    onEscapeKeyDown={(e) => e.preventDefault()}
+  >
+    {/* Custom Close Button */}
+    <DialogClose asChild>
+      <button
+        onClick={() => router.push("/dashboard/courses")}
+        className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background 
+                  transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 
+                  focus:ring-ring focus:ring-offset-2 z-50"
+      >
+        <X className="h-4 w-4" />
+        <span className="sr-only">Close</span>
+      </button>
+    </DialogClose>
 
-              {/* User Details */}
-              {editableProfile && (
-                <div className="space-y-3">
-                  <h4 className="font-medium">Billing Information</h4>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label htmlFor="firstName">First Name</Label>
-                      <Input 
-                        id="firstName" 
-                        value={editableProfile.firstName} 
-                        onChange={(e) => setEditableProfile({
-                          ...editableProfile,
-                          firstName: e.target.value
-                        })}
-                        placeholder="Enter first name"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="lastName">Last Name</Label>
-                      <Input 
-                        id="lastName" 
-                        value={editableProfile.lastName} 
-                        onChange={(e) => setEditableProfile({
-                          ...editableProfile,
-                          lastName: e.target.value
-                        })}
-                        placeholder="Enter last name"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <Label htmlFor="address">Address</Label>
-                    <Input 
-                      id="address" 
-                      value={editableProfile.address} 
-                      onChange={(e) => setEditableProfile({
-                        ...editableProfile,
-                        address: e.target.value
-                      })}
-                      placeholder="Enter your address"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label htmlFor="city">City</Label>
-                      <Input 
-                        id="city" 
-                        value={editableProfile.city} 
-                        onChange={(e) => setEditableProfile({
-                          ...editableProfile,
-                          city: e.target.value
-                        })}
-                        placeholder="Enter city"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="country">Country</Label>
-                      <Input 
-                        id="country" 
-                        value={editableProfile.country} 
-                        onChange={(e) => setEditableProfile({
-                          ...editableProfile,
-                          country: e.target.value
-                        })}
-                        placeholder="Enter country"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <Label htmlFor="phone">Phone</Label>
-                    <Input 
-                      id="phone" 
-                      value={editableProfile.phoneNumber} 
-                      onChange={(e) => setEditableProfile({
-                        ...editableProfile,
-                        phoneNumber: e.target.value
-                      })}
-                      placeholder="Enter phone number"
-                    />
-                  </div>
-                </div>
-              )}
+    <DialogHeader className="pb-4">
+      <DialogTitle className="text-xl">Complete Your Purchase</DialogTitle>
+      <DialogDescription>
+        Review your details and proceed with payment
+      </DialogDescription>
+    </DialogHeader>
 
-              <div className="flex space-x-2 pt-4">
-                <Button 
-                  onClick={startPayment}
-                  disabled={isProcessingPayment}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700"
-                >
-                  {isProcessingPayment ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    'Proceed to Payment'
-                  )}
-                </Button>
-                <Button 
-                  onClick={() => router.push('/dashboard/courses')}
-                  variant="outline"
-                  disabled={isProcessingPayment}
-                >
-                  Back to modules
-                </Button>
-              </div>
+    <div className="grid md:grid-cols-3 gap-6">
+      {/* Left Column - Course Details */}
+      <div className="md:col-span-1">
+        <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-100 h-full">
+          <p className="text-sm text-gray-600 mb-3">{course?.domain}</p>
+          <h1 className="font-semibold text-gray-900 mb-1">{course?.title}</h1>
+          <div className="mt-auto pt-2 border-t border-blue-200">
+            <p className="text-xs text-gray-500 mb-1">Total Amount</p>
+            <p className="text-2xl font-bold text-[#f0ae16]">
+              ${course?.fee}
+            </p>
+            <p className="text-xs text-gray-500">USD</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Right Column - Billing Information */}
+      {editableProfile && (
+        <div className="md:col-span-2 space-y-4">
+          <h4 className="font-semibold text-gray-900">Billing Information</h4>
+          
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label htmlFor="firstName" className="text-xs font-medium">First Name *</Label>
+              <Input 
+                id="firstName" 
+                value={editableProfile.firstName} 
+                onChange={(e) => setEditableProfile({
+                  ...editableProfile,
+                  firstName: e.target.value
+                })}
+                placeholder="John"
+                className="h-9"
+              />
             </div>
-          </DialogContent>
-        </Dialog>
+            <div>
+              <Label htmlFor="lastName" className="text-xs font-medium">Last Name *</Label>
+              <Input 
+                id="lastName" 
+                value={editableProfile.lastName} 
+                onChange={(e) => setEditableProfile({
+                  ...editableProfile,
+                  lastName: e.target.value
+                })}
+                placeholder="Doe"
+                className="h-9"
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="address" className="text-xs font-medium">Address *</Label>
+            <Input 
+              id="address" 
+              value={editableProfile.address} 
+              onChange={(e) => setEditableProfile({
+                ...editableProfile,
+                address: e.target.value
+              })}
+              placeholder="123 Main Street"
+              className="h-9"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label htmlFor="city" className="text-xs font-medium">City *</Label>
+              <Input 
+                id="city" 
+                value={editableProfile.city} 
+                onChange={(e) => setEditableProfile({
+                  ...editableProfile,
+                  city: e.target.value
+                })}
+                placeholder="New York"
+                className="h-9"
+              />
+            </div>
+            <div>
+              <Label htmlFor="country" className="text-xs font-medium">Country *</Label>
+              <Input 
+                id="country" 
+                value={editableProfile.country} 
+                onChange={(e) => setEditableProfile({
+                  ...editableProfile,
+                  country: e.target.value
+                })}
+                placeholder="United States"
+                className="h-9"
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="phone" className="text-xs font-medium">Phone Number *</Label>
+            <Input 
+              id="phone" 
+              value={editableProfile.phoneNumber} 
+              onChange={(e) => setEditableProfile({
+                ...editableProfile,
+                phoneNumber: e.target.value
+              })}
+              placeholder="+1 (555) 000-0000"
+              className="h-9"
+            />
+          </div>
+        </div>
+      )}
+    </div>
+
+    {/* Action Buttons */}
+    <div className="flex gap-3 pt-6 border-t">
+      <Button 
+        onClick={() => router.push('/dashboard/courses')}
+        variant="outline"
+        disabled={isProcessingPayment}
+        className="flex-1"
+      >
+        Cancel
+      </Button>
+      <Button 
+        onClick={startPayment}
+        disabled={isProcessingPayment}
+        className="flex-1 bg-[#f0ae16] hover:bg-[#d99e00]"
+      >
+        {isProcessingPayment ? (
+          <>
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            Processing...
+          </>
+        ) : (
+          'Proceed to Payment'
+        )}
+      </Button>
+    </div>
+  </DialogContent>
+</Dialog>
       </div>
       
       {/* Rating Modal */}

@@ -88,7 +88,18 @@ export default function FindNewModulesPage() {
 
     try {
       // Make enrollment request using cookies for authentication
-      const response = await enrollInModule({ moduleId })
+
+      const response = await axiosInstance.post(
+        '/api/enrollment/enroll',
+        { moduleId },
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          withCredentials: true
+        }
+      )
+      router.push(`/dashboard/courses/${moduleId}`)
 
       toast({
         title: "Enrollment Successful!",
