@@ -98,7 +98,7 @@ export default function FindNewModulesPage() {
           withCredentials: true
         }
       )
-
+      router.push(`/dashboard/courses/${moduleId}`)
       toast({
         title: "Enrollment Successful!",
         description: `You have successfully enrolled in the module.`,
