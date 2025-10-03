@@ -34,6 +34,9 @@ export interface TutorProfileEntity {
 	image?: string;           // image URL
 	portfolio?: string;       // portfolio URL
 	bio: string;
+	address?: string;
+	city?: string;
+	country?: string;
 	lastAccessed: string | null;
 	createdAt: string;
 	updatedAt: string;
@@ -51,6 +54,9 @@ export interface TutorProfileDto {
 	image?: string;
 	portfolio?: string;
 	bio?: string;
+	address?: string;
+	city?: string;
+	country?: string;
 	// Optional if backend allows partial updates; controller overrides tutorId from JWT
 	tutorId?: string;
 }
@@ -73,7 +79,7 @@ const normalizeTutorProfileInput = (input: TutorProfileDto | TutorProfileLegacyC
 	const out: TutorProfileDto = {};
 
 	// If already in new shape, copy recognized fields directly.
-	const newShapeKeys = ['firstName','lastName','phoneNo','gender','dob','image','portfolio','bio','tutorId'];
+	const newShapeKeys = ['firstName','lastName','phoneNo','gender','dob','image','portfolio','bio', 'address', 'city', 'country', 'tutorId'];
 	let hasNewShape = false;
 	for (const k of newShapeKeys) {
 		if ((input as any)[k] !== undefined) {

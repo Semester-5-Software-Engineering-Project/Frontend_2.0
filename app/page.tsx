@@ -6,12 +6,12 @@ import { useEffect } from 'react'
 import LandingPage from '@/components/LandingPage'
 
 export default function Home() {
-  const { user,checkAuthStatus } = useAuth()
+  const { user} = useAuth()
   const router = useRouter()
 
   useEffect(() => {
     const checkAndRedirect = async () => {
-      if (user && await checkAuthStatus()) {
+      if (user) {
         router.push('/dashboard')
       }
     }

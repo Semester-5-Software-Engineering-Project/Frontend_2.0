@@ -7,7 +7,10 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { BookOpen, Calendar, Video, Clock, Star, TrendingUp, Loader2 } from 'lucide-react'
 import Link from 'next/link'
-import axiosInstance from '@/app/utils/axiosInstance'
+import { getEnrollments, upcomingSchedulesByStudent } from '@/services/api'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { UpcomingSessionResponse, UpcomingSessionsRequest } from '@/types/api'
+
 
 interface ApiModule {
   moduleId: string
@@ -31,6 +34,10 @@ interface ApiModule {
   }
 
 export default function StudentDashboard() {
+  const [upcomingSessions, setUpcomingSessions] = useState<UpcomingSessionResponse[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [sessionsError, setSessionsError] = useState<string | null>(null);
+  const [showAllSchedules, setShowAllSchedules] = useState(false);
   const [courses, setCourses] = useState<ApiModule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,8 +47,8 @@ export default function StudentDashboard() {
       try {
         setIsLoading(true);
         setError(null);
-        const response = await axiosInstance.get('/api/enrollment/get-enrollments');
-        setCourses(response.data || []); // Ensure we always have an array
+        const enrollments = await getEnrollments();
+        setCourses(enrollments || []); // Ensure we always have an array
       } catch (error: any) {
         console.error('Error fetching courses:', error);
         // Handle 401 gracefully for new students with no enrollments
@@ -62,6 +69,26 @@ export default function StudentDashboard() {
     }
     fetchCourses();
   }, [])
+    useEffect(() => {
+    const fetchUpcomingSessions = async () => {
+      setSessionsLoading(true);
+      setSessionsError(null);
+      try {
+        const now = new Date();
+        const req: UpcomingSessionsRequest = {
+          date: now.toISOString().slice(0, 10),
+          time: now.toTimeString().slice(0, 8),
+        };
+        const res = await upcomingSchedulesByStudent(req);
+        setUpcomingSessions(Array.isArray(res) ? res : [res]);
+      } catch (err) {
+        setSessionsError('Failed to load upcoming sessions.');
+      } finally {
+        setSessionsLoading(false);
+      }
+    };
+    fetchUpcomingSessions();
+  }, []);
   const enrolledCourses = [
     {
       id: 1,
@@ -113,22 +140,7 @@ export default function StudentDashboard() {
     }
   ]
 
-  const upcomingSessions = [
-    {
-      id: 1,
-      course: 'Advanced Mathematics',
-      tutor: 'Dr. Sarah Johnson',
-      time: '2024-01-15T10:00:00',
-      duration: 60
-    },
-    {
-      id: 2,
-      course: 'Physics Fundamentals',
-      tutor: 'Prof. Michael Chen',
-      time: '2024-01-16T14:00:00',
-      duration: 90
-    }
-  ]
+
 
   return (
     <div className="p-6 space-y-6">
@@ -325,26 +337,87 @@ export default function StudentDashboard() {
               <CardTitle className="text-lg">Upcoming Sessions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {upcomingSessions.map((session) => (
-                <div key={session.id} className="border-l-4 border-green-500 pl-4 py-2">
-                  <h4 className="font-medium text-sm">{session.course}</h4>
-                  <p className="text-xs text-gray-500">{session.tutor}</p>
-                  <div className="flex items-center justify-between mt-2">
-                    <p className="text-xs text-gray-600">
-                      {new Date(session.time).toLocaleDateString()} at{' '}
-                      {new Date(session.time).toLocaleTimeString()}
-                    </p>
-                    <Badge variant="outline" className="text-xs">
-                      {session.duration}min
-                    </Badge>
-                  </div>
-                </div>
-              ))}
-              <Link href="/dashboard/schedule">
-                <Button variant="outline" size="sm" className="w-full">
-                  View All Sessions
-                </Button>
-              </Link>
+              {sessionsLoading ? (
+                <div className="text-center py-4"><Loader2 className="animate-spin inline mr-2" />Loading...</div>
+              ) : sessionsError ? (
+                <div className="text-red-500 text-center py-4">{sessionsError}</div>
+              ) : (
+                upcomingSessions
+                  .filter((session) => session.active)
+                  .map((session) => (
+                    <div key={session.schedule_id} className="border-l-4 border-green-500 pl-4 py-2">
+                      <h4 className="font-medium text-sm">{session.course}</h4>
+                      <p className="text-xs text-gray-500">{session.tutor}</p>
+                      <div className="flex items-center justify-between mt-2">
+                        <p className="text-xs text-gray-600">
+                          {session.Date} {session.time}
+                        </p>
+                        <Badge variant="outline" className="text-xs">
+                          {session.duration}min
+                        </Badge>
+                      </div>
+                      <Button
+                        size="sm"
+                        className="w-full mt-2 bg-primary hover:bg-primary/90"
+                        disabled={!session.active}
+                        onClick={() => {
+                          if (session.active && session.module_id) {
+                            window.location.href = `/meeting?module=${encodeURIComponent(session.module_id)}`;
+                          }
+                        }}
+                      >
+                        <Video className="w-4 h-4 mr-2" />
+                        {session.active ? 'Join Now' : 'Inactive'}
+                      </Button>
+                    </div>
+                  ))
+              )}
+              <Button variant="outline" size="sm" className="w-full" onClick={() => setShowAllSchedules(true)}>
+                View All Sessions
+              </Button>
+
+              {/* Modal for all sessions */}
+              <Dialog open={showAllSchedules} onOpenChange={setShowAllSchedules}>
+                <DialogContent className="max-w-lg">
+                  <DialogHeader>
+                    <DialogTitle>All Sessions</DialogTitle>
+                    <DialogDescription>All upcoming and past sessions</DialogDescription>
+                  </DialogHeader>
+                  {sessionsLoading ? (
+                    <div className="text-center py-4"><Loader2 className="animate-spin inline mr-2" />Loading...</div>
+                  ) : sessionsError ? (
+                    <div className="text-red-500 text-center py-4">{sessionsError}</div>
+                  ) : upcomingSessions.length === 0 ? (
+                    <div className="text-center py-4">No sessions found.</div>
+                  ) : (
+                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                      {upcomingSessions.map((session) => (
+                        <div key={session.schedule_id} className="border-l-4 border-green-500 pl-4 py-2">
+                          <h4 className="font-medium text-sm">{session.course}</h4>
+                          <p className="text-xs text-gray-500">{session.tutor}</p>
+                          <div className="flex items-center justify-between mt-2">
+                            <p className="text-xs text-gray-600">{session.Date} {session.time}</p>
+                            <Badge variant="outline" className="text-xs">{session.duration}min</Badge>
+                          </div>
+                          <Button
+                            size="sm"
+                            className="w-full mt-2 bg-primary hover:bg-primary/90"
+                            disabled={!session.active}
+                            onClick={() => {
+                              if (session.active && session.module_id) {
+                                window.location.href = `/meeting?module=${encodeURIComponent(session.module_id)}`;
+                              }
+                            }}
+                          >
+                            <Video className="w-4 h-4 mr-2" />
+                            {session.active ? 'Join Now' : 'Inactive'}
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </DialogContent>
+              </Dialog>
             </CardContent>
           </Card>
 

@@ -108,7 +108,7 @@ export default function ModuleCreation({
       domain: initialData?.domain || '',
       fee: initialData?.fee || 0,
       duration: initialData?.duration || 60,
-      status: initialData?.status || 'Draft',
+      status: initialData?.status || 'Active',
     },
   });
 
