@@ -1,4 +1,5 @@
 import axiosInstance from '@/app/utils/axiosInstance';
+import Cookies from "js-cookie";
 
 // --- Types (aligned with backend RatingCreateDto) ----------
 export interface RatingCreateDto {
@@ -28,9 +29,11 @@ export interface RatingGetDto {
  * @returns Promise with the creation response message
  */
 export const createRating = async (ratingData: RatingCreateDto): Promise<string> => {
+    const token = Cookies.get('jwt_token')
     try {
         const response = await axiosInstance.post<string>('/api/ratings/create', ratingData, {
             headers: {
+                'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json',
             },
         });
@@ -58,10 +61,12 @@ export const createRating = async (ratingData: RatingCreateDto): Promise<string>
  * @returns Promise with array of ratings for the module
  */
 export const getRatingsByModuleId = async (moduleId: string): Promise<RatingGetDto[]> => {
+    const token = Cookies.get('jwt_token')
     try {
         const response = await axiosInstance.get<RatingGetDto[]>('/api/ratings/module', {
             params: { moduleId },
             headers: {
+                'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json',
             },
         });
