@@ -356,16 +356,13 @@ export const createSchedule = async (data: CreateScheduleRequest): Promise<Creat
 };
 
 export const upcomingSchedulesByTutor = async (req_data: UpcomingSessionsRequest): Promise<UpcomingSessionResponse> => {
-  const response = await axiosInstance.post<UpcomingSessionResponse>("/api/schedules/upcoming-by-tutor", {
-    req_data
-  });
+  const response = await axiosInstance.post<UpcomingSessionResponse>("/api/schedules/upcoming-by-tutor", req_data
+  );
   return response.data;
 };
 
 export const upcomingSchedulesByStudent = async (req_data: UpcomingSessionsRequest): Promise<UpcomingSessionResponse> => {
-  const response = await axiosInstance.post<UpcomingSessionResponse>("/api/schedules/upcoming-by-student", {
-    body: req_data
-  });
+  const response = await axiosInstance.post<UpcomingSessionResponse>("/api/schedules/upcoming-by-student", req_data);
   return response.data;
 };
 
