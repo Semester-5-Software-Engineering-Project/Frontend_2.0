@@ -12,6 +12,7 @@ import { useRouter } from 'next/navigation'
 import { useToast } from '@/hooks/use-toast'
 import { enrollInModule } from '@/services/api'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
+import axiosInstance from '@/app/utils/axiosInstance'
 
 export default function FindNewModulesPage() {
   const [searchQuery, setSearchQuery] = useState('')
