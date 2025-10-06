@@ -18,7 +18,8 @@ import {
   CreditCard,
   Star,
   Search,
-  Bot
+  Bot,
+  Wallet
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -45,6 +46,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { name: 'Upload Materials', href: '/dashboard/upload', icon: Upload },
     { name: 'Schedule', href: '/dashboard/schedule', icon: Calendar },
     { name: 'Video Sessions', href: '/dashboard/sessions', icon: Video },
+    { name: 'My Wallet', href: '/dashboard/wallet', icon: Wallet },
     { name: 'Reviews', href: '/dashboard/reviews', icon: Star },
     { name: 'Profile', href: '/dashboard/profile', icon: User },
   ]
