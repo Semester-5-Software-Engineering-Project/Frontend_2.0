@@ -8,57 +8,60 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
-import { 
-  Wallet, 
-  TrendingUp, 
-  Download, 
-  Plus,
-  DollarSign,
-  Calendar,
-  Clock,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  ArrowUpRight,
-  ArrowDownLeft,
-  Loader2
-} from 'lucide-react'
+import { Wallet, Download, DollarSign, AlertCircle, Loader2, ChevronLeft, ChevronRight, Calendar, Clock } from 'lucide-react'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
 import { useAuth } from '@/contexts/AuthContext'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { ShieldAlert } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import axiosInstance from '@/app/utils/axiosInstance'
 
-// Mock data - replace with actual API calls
-interface Transaction {
-  id: string
-  type: 'credit' | 'debit'
-  amount: number
-  description: string
-  status: 'completed' | 'pending' | 'failed'
-  date: string
-  reference?: string
+interface WalletResponse {
+  availableBalance: number
 }
 
-interface WalletData {
-  balance: number
-  totalEarnings: number
-  pendingWithdrawals: number
-  transactions: Transaction[]
+interface Withdrawal {
+  withdrawalId: string
+  tutorId: string
+  tutorName: string
+  amount: number
+  status: 'PENDING' | 'APPROVED' | 'REJECTED'
+  method: string
+  accountName: string
+  bankName: string
+  accountNumber: string
+  notes: string
+  createdAt: string
+  processedAt: string | null
+}
+
+interface WithdrawalsResponse {
+  withdrawals: Withdrawal[]
+  totalCount: number
+  currentPage: number
+  totalPages: number
 }
 
 export default function WalletPage() {
   const { user } = useAuth()
   const { toast } = useToast()
   
-  const [walletData, setWalletData] = useState<WalletData>({
-    balance: 0,
-    totalEarnings: 0,
-    pendingWithdrawals: 0,
-    transactions: []
-  })
+  // Debug user state
+  useEffect(() => {
+    console.log('WalletPage - Current user:', user)
+    console.log('WalletPage - User ID:', user?.id)
+    console.log('WalletPage - User role:', user?.role)
+  }, [user])
+  
+  const [availableBalance, setAvailableBalance] = useState<number>(0)
+  const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([])
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalWithdrawals, setTotalWithdrawals] = useState(0)
   
   const [loading, setLoading] = useState(true)
+  const [withdrawalsLoading, setWithdrawalsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [showWithdrawDialog, setShowWithdrawDialog] = useState(false)
   const [isProcessingWithdraw, setIsProcessingWithdraw] = useState(false)
   const [withdrawalData, setWithdrawalData] = useState({
@@ -66,70 +69,82 @@ export default function WalletPage() {
     bankName: '',
     accountNumber: '',
     accountHolderName: '',
-    routingNumber: '',
     notes: ''
   })
 
-  // Mock data for demonstration
+  // Fetch real wallet data
   useEffect(() => {
-    const mockData: WalletData = {
-      balance: 1250.75,
-      totalEarnings: 3500.00,
-      pendingWithdrawals: 500.00,
-      transactions: [
-        {
-          id: '1',
-          type: 'credit',
-          amount: 150.00,
-          description: 'Payment for Mathematics Course - John Doe',
-          status: 'completed',
-          date: '2025-10-05T10:30:00Z',
-          reference: 'PAY-001'
-        },
-        {
-          id: '2',
-          type: 'debit',
-          amount: 200.00,
-          description: 'Withdrawal to Bank Account',
-          status: 'pending',
-          date: '2025-10-04T15:45:00Z',
-          reference: 'WTH-002'
-        },
-        {
-          id: '3',
-          type: 'credit',
-          amount: 300.00,
-          description: 'Payment for Physics Course - Jane Smith',
-          status: 'completed',
-          date: '2025-10-03T09:15:00Z',
-          reference: 'PAY-003'
-        },
-        {
-          id: '4',
-          type: 'debit',
-          amount: 100.00,
-          description: 'Withdrawal to Bank Account',
-          status: 'failed',
-          date: '2025-10-02T14:20:00Z',
-          reference: 'WTH-004'
-        },
-        {
-          id: '5',
-          type: 'credit',
-          amount: 225.50,
-          description: 'Payment for Chemistry Course - Mike Johnson',
-          status: 'completed',
-          date: '2025-10-01T11:00:00Z',
-          reference: 'PAY-005'
-        }
-      ]
-    }
-    
-    setTimeout(() => {
-      setWalletData(mockData)
+  const fetchWallet = async () => {
+    try {
+      const res = await axiosInstance.get<WalletResponse>(`/api/wallet/mywallet`)
+      setAvailableBalance(res.data.availableBalance || 0)
+      console.log("Wallet balance : " + res.data.availableBalance)
+    } catch (e: any) {
+      console.error('Failed to fetch wallet:', e)
+      setError(e?.response?.data?.message || 'Failed to load wallet')
+      setAvailableBalance(0)
+    } finally {
       setLoading(false)
-    }, 1000)
+    }
+  }
+
+  fetchWallet()
+}, [user?.id])
+
+  // Fetch withdrawals with pagination
+  const fetchWithdrawals = async (page: number = 1) => {
+    setWithdrawalsLoading(true)
+    try {
+      console.log(`Fetching withdrawals for page ${page}...`)
+      const res = await axiosInstance.get(`/api/wallet/withdrawals?page=${page - 1}&size=10`)
+      console.log('Withdrawals response:', res.data)
+      
+      // Handle different response formats
+      let withdrawalsData = []
+      let totalCount = 0
+      let totalPages = 1
+      let currentPageNum = page
+      
+      if (Array.isArray(res.data)) {
+        // If response is directly an array
+        withdrawalsData = res.data
+        totalCount = res.data.length
+        totalPages = Math.ceil(totalCount / 10)
+      } else if (res.data.withdrawals) {
+        // If response has withdrawals property
+        withdrawalsData = res.data.withdrawals
+        totalCount = res.data.totalCount || res.data.withdrawals.length
+        totalPages = res.data.totalPages || Math.ceil(totalCount / 10)
+        currentPageNum = (res.data.currentPage || (page - 1)) + 1
+      } else if (res.data.content) {
+        // If using Spring Boot pagination format
+        withdrawalsData = res.data.content
+        totalCount = res.data.totalElements || res.data.content.length
+        totalPages = res.data.totalPages || Math.ceil(totalCount / 10)
+        currentPageNum = (res.data.number || (page - 1)) + 1
+      }
+      
+      console.log('Processed withdrawals:', withdrawalsData)
+      console.log('Total count:', totalCount)
+      
+      setWithdrawals(withdrawalsData)
+      setCurrentPage(currentPageNum)
+      setTotalPages(totalPages)
+      setTotalWithdrawals(totalCount)
+    } catch (e: any) {
+      console.error('Failed to fetch withdrawals:', e)
+      console.error('Error response:', e.response?.data)
+      setWithdrawals([])
+    } finally {
+      setWithdrawalsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    console.log('Component mounted, fetching withdrawals...')
+    fetchWithdrawals(1) // Always fetch withdrawals on page load
   }, [])
+
 
   const handleWithdrawRequest = async () => {
     if (!withdrawalData.amount || !withdrawalData.bankName || !withdrawalData.accountNumber || !withdrawalData.accountHolderName) {
@@ -151,7 +166,7 @@ export default function WalletPage() {
       return
     }
 
-    if (amount > walletData.balance) {
+    if (amount > availableBalance) {
       toast({
         title: "Error",
         description: "Insufficient balance for this withdrawal",
@@ -163,45 +178,52 @@ export default function WalletPage() {
     setIsProcessingWithdraw(true)
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
-      // Mock successful withdrawal request
-      const newTransaction: Transaction = {
-        id: Date.now().toString(),
-        type: 'debit',
-        amount: amount,
-        description: `Withdrawal to ${withdrawalData.bankName}`,
-        status: 'pending',
-        date: new Date().toISOString(),
-        reference: `WTH-${Date.now()}`
+      // Build DTO matching backend WithdrawalDto
+      const payload = {
+        amount,
+        method: 'BANK_TRANSFER',
+        accountName: withdrawalData.accountHolderName,
+        bankName: withdrawalData.bankName,
+        accountNumber: withdrawalData.accountNumber,
+        notes: withdrawalData.notes || null,
       }
-      
-      setWalletData(prev => ({
-        ...prev,
-        pendingWithdrawals: prev.pendingWithdrawals + amount,
-        transactions: [newTransaction, ...prev.transactions]
-      }))
-      
+
+      const res = await axiosInstance.post('/api/wallet/withdraw', payload)
+
+      // Use server message if provided, else default success text
+      const serverMessage = (res?.data && typeof res.data === 'string') ? res.data : 'Withdrawal request submitted.'
+
+      // Append transaction locally (optimistic update)
+      // Refresh wallet balance after successful request
+      try {
+        const refreshed = await axiosInstance.get<WalletResponse>(`/api/wallet/mywallet`)
+        setAvailableBalance(refreshed.data.availableBalance || availableBalance)
+        console.log('Wallet balance refreshed after withdrawal request.')
+        
+        // Refresh withdrawals list to show the new request
+        fetchWithdrawals(1)
+        setCurrentPage(1)
+      } catch {}
+
       setWithdrawalData({
         amount: '',
         bankName: '',
         accountNumber: '',
         accountHolderName: '',
-        routingNumber: '',
         notes: ''
       })
-      
+
       setShowWithdrawDialog(false)
-      
+
       toast({
         title: "Success",
-        description: "Withdrawal request submitted successfully. It will be processed within 2-3 business days.",
+        description: serverMessage || "Withdrawal request submitted successfully. It will be processed within 2-3 business days.",
       })
-    } catch (error) {
+    } catch (error: any) {
+      const apiMessage = error?.response?.data?.message || error?.response?.data || 'Failed to submit withdrawal request. Please try again.'
       toast({
         title: "Error",
-        description: "Failed to submit withdrawal request. Please try again.",
+        description: apiMessage,
         variant: "destructive",
       })
     } finally {
@@ -209,27 +231,15 @@ export default function WalletPage() {
     }
   }
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <CheckCircle className="w-4 h-4 text-green-500" />
-      case 'pending':
-        return <AlertCircle className="w-4 h-4 text-yellow-500" />
-      case 'failed':
-        return <XCircle className="w-4 h-4 text-red-500" />
-      default:
-        return <Clock className="w-4 h-4 text-gray-500" />
-    }
-  }
-
+  // Helper functions for withdrawal display
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'completed':
-        return <Badge className="bg-green-100 text-green-800 border-green-200">Completed</Badge>
-      case 'pending':
+      case 'PENDING':
         return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Pending</Badge>
-      case 'failed':
-        return <Badge className="bg-red-100 text-red-800 border-red-200">Failed</Badge>
+      case 'APPROVED':
+        return <Badge className="bg-green-100 text-green-800 border-green-200">Approved</Badge>
+      case 'REJECTED':
+        return <Badge className="bg-red-100 text-red-800 border-red-200">Rejected</Badge>
       default:
         return <Badge variant="secondary">Unknown</Badge>
     }
@@ -244,6 +254,13 @@ export default function WalletPage() {
       minute: '2-digit'
     })
   }
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+    fetchWithdrawals(page)
+  }
+
+  // Removed transaction/status helpers because UI simplified
 
   if (user?.role !== 'TUTOR') {
     return (
@@ -275,113 +292,151 @@ export default function WalletPage() {
           </Button>
         </div>
 
-        {loading ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="flex items-center space-x-2">
-              <Loader2 className="w-6 h-6 animate-spin" />
-              <span>Loading wallet data...</span>
-            </div>
+        {loading && (
+          <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+            <Loader2 className="w-4 h-4 animate-spin" /> <span>Loading balance...</span>
           </div>
-        ) : (
-          <>
-            {/* Wallet Overview Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card className="border-2 border-primary/20">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Available Balance</CardTitle>
-                  <Wallet className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-primary">${walletData.balance.toFixed(2)}</div>
-                  <p className="text-xs text-muted-foreground">Available for withdrawal</p>
-                </CardContent>
-              </Card>
+        )}
+        {error && !loading && (
+          <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md p-3 max-w-md">
+            {error}
+          </div>
+        )}
+        {!loading && !error && (
+          <Card className="border-2 border-primary/20 max-w-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Wallet className="h-4 w-4 text-primary" /> Available Balance
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-primary">${availableBalance.toFixed(2)}</div>
+              <p className="text-xs text-muted-foreground mt-1">Funds you can withdraw now</p>
+            </CardContent>
+          </Card>
+        )}
 
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Earnings</CardTitle>
-                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">${walletData.totalEarnings.toFixed(2)}</div>
-                  <p className="text-xs text-muted-foreground">All time earnings</p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Pending Withdrawals</CardTitle>
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-yellow-600">${walletData.pendingWithdrawals.toFixed(2)}</div>
-                  <p className="text-xs text-muted-foreground">Being processed</p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Transaction History */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Transaction History</CardTitle>
-                <CardDescription>Your recent payments and withdrawals</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {walletData.transactions.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Wallet className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
-                    <p>No transactions yet</p>
+        {/* Withdrawal History */}
+        {!loading && !error && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="w-5 h-5" />
+                Withdrawal History
+              </CardTitle>
+              <CardDescription>
+                Your recent withdrawal requests ({totalWithdrawals} total)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {withdrawalsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="flex items-center space-x-2">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>Loading withdrawals...</span>
                   </div>
-                ) : (
-                  <div className="space-y-4">
-                    {walletData.transactions.map((transaction) => (
-                      <div key={transaction.id} className="flex items-center justify-between p-4 border rounded-lg">
+                </div>
+              ) : withdrawals.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Wallet className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
+                  <p>No withdrawal requests yet</p>
+                  <p className="text-xs mt-1">Your withdrawal history will appear here</p>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-3">
+                    {withdrawals.map((withdrawal, index) => (
+                      <div key={withdrawal.withdrawalId} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
                         <div className="flex items-center space-x-4">
                           <div className="flex-shrink-0">
-                            {transaction.type === 'credit' ? (
-                              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                                <ArrowDownLeft className="w-5 h-5 text-green-600" />
-                              </div>
-                            ) : (
-                              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                                <ArrowUpRight className="w-5 h-5 text-blue-600" />
-                              </div>
-                            )}
+                            <div className="w-10 h-10 bg-[#F6BC0E] rounded-full flex items-center justify-center">
+                              <Download className="w-5 h-5 text-white" />
+                            </div>
                           </div>
                           <div className="flex-1">
-                            <h4 className="font-medium">{transaction.description}</h4>
-                            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                            <div className="flex items-center gap-3">
+                              <h4 className="font-medium">Withdrawal #{(currentPage - 1) * 10 + index + 1}</h4>
+                              {getStatusBadge(withdrawal.status)}
+                            </div>
+                            <div className="flex items-center space-x-2 text-sm text-muted-foreground mt-1">
                               <Calendar className="w-3 h-3" />
-                              <span>{formatDate(transaction.date)}</span>
-                              {transaction.reference && (
-                                <>
-                                  <span>•</span>
-                                  <span>Ref: {transaction.reference}</span>
-                                </>
-                              )}
+                              <span>{formatDate(withdrawal.createdAt)}</span>
+                              <span>•</span>
+                              <span>{withdrawal.bankName}</span>
+                              <span>•</span>
+                              <span>****{withdrawal.accountNumber.slice(-4)}</span>
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center space-x-4">
-                          <div className="text-right">
-                            <div className={`font-semibold ${
-                              transaction.type === 'credit' ? 'text-green-600' : 'text-blue-600'
-                            }`}>
-                              {transaction.type === 'credit' ? '+' : '-'}${transaction.amount.toFixed(2)}
-                            </div>
-                            <div className="flex items-center space-x-1">
-                              {getStatusIcon(transaction.status)}
-                              {getStatusBadge(transaction.status)}
-                            </div>
+                        <div className="text-right">
+                          <div className="font-semibold text-[#F6BC0E]">
+                            ${withdrawal.amount.toFixed(2)}
                           </div>
                         </div>
                       </div>
                     ))}
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          </>
+
+                  {/* Pagination */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between mt-6 pt-4 border-t">
+                      <div className="text-sm text-muted-foreground">
+                        Showing {withdrawals.length} of {totalWithdrawals} withdrawals
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePageChange(currentPage - 1)}
+                          disabled={currentPage === 1}
+                          className="h-8 w-8 p-0"
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        
+                        <div className="flex items-center space-x-1">
+                          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                            let pageNum;
+                            if (totalPages <= 5) {
+                              pageNum = i + 1;
+                            } else if (currentPage <= 3) {
+                              pageNum = i + 1;
+                            } else if (currentPage >= totalPages - 2) {
+                              pageNum = totalPages - 4 + i;
+                            } else {
+                              pageNum = currentPage - 2 + i;
+                            }
+                            
+                            return (
+                              <Button
+                                key={pageNum}
+                                variant={currentPage === pageNum ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => handlePageChange(pageNum)}
+                                className="h-8 w-8 p-0"
+                              >
+                                {pageNum}
+                              </Button>
+                            );
+                          })}
+                        </div>
+
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePageChange(currentPage + 1)}
+                          disabled={currentPage === totalPages}
+                          className="h-8 w-8 p-0"
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
         )}
 
         {/* Withdrawal Dialog */}
@@ -406,7 +461,7 @@ export default function WalletPage() {
                     <Wallet className="w-4 h-4 text-primary" />
                     <span className="text-sm font-medium">Available Balance</span>
                   </div>
-                  <div className="text-2xl font-bold text-primary">${walletData.balance.toFixed(2)}</div>
+                  <div className="text-2xl font-bold text-primary">${availableBalance.toFixed(2)}</div>
                   <p className="text-xs text-muted-foreground mt-1">Ready for withdrawal</p>
                 </div>
 
@@ -422,13 +477,13 @@ export default function WalletPage() {
                       value={withdrawalData.amount}
                       onChange={(e) => setWithdrawalData({...withdrawalData, amount: e.target.value})}
                       min="0"
-                      max={walletData.balance}
+                      max={availableBalance}
                       step="0.01"
                       className="pl-10 text-lg font-medium"
                     />
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Maximum: ${walletData.balance.toFixed(2)}
+                    Maximum: ${availableBalance.toFixed(2)}
                   </p>
                 </div>
 
@@ -440,7 +495,7 @@ export default function WalletPage() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => setWithdrawalData({...withdrawalData, amount: (walletData.balance * 0.25).toFixed(2)})}
+                      onClick={() => setWithdrawalData({...withdrawalData, amount: (availableBalance * 0.25).toFixed(2)})}
                       className="text-xs"
                     >
                       25%
@@ -449,7 +504,7 @@ export default function WalletPage() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => setWithdrawalData({...withdrawalData, amount: (walletData.balance * 0.5).toFixed(2)})}
+                      onClick={() => setWithdrawalData({...withdrawalData, amount: (availableBalance * 0.5).toFixed(2)})}
                       className="text-xs"
                     >
                       50%
@@ -458,7 +513,7 @@ export default function WalletPage() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => setWithdrawalData({...withdrawalData, amount: (walletData.balance * 0.75).toFixed(2)})}
+                      onClick={() => setWithdrawalData({...withdrawalData, amount: (availableBalance * 0.75).toFixed(2)})}
                       className="text-xs"
                     >
                       75%
@@ -467,7 +522,7 @@ export default function WalletPage() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => setWithdrawalData({...withdrawalData, amount: walletData.balance.toFixed(2)})}
+                      onClick={() => setWithdrawalData({...withdrawalData, amount: availableBalance.toFixed(2)})}
                       className="text-xs"
                     >
                       Max
@@ -513,17 +568,6 @@ export default function WalletPage() {
                       value={withdrawalData.accountNumber}
                       onChange={(e) => setWithdrawalData({...withdrawalData, accountNumber: e.target.value})}
                       placeholder="1234567890"
-                      className="text-sm"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <Label htmlFor="routingNumber" className="text-sm font-medium">Routing Number</Label>
-                    <Input
-                      id="routingNumber"
-                      value={withdrawalData.routingNumber}
-                      onChange={(e) => setWithdrawalData({...withdrawalData, routingNumber: e.target.value})}
-                      placeholder="021000021"
                       className="text-sm"
                     />
                   </div>
