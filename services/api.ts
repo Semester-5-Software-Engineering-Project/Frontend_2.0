@@ -181,6 +181,14 @@ export const getAllModulesPublic = async (): Promise<Module[]> => {
   return response.data;
 };
 
+// Get recommended modules by domain (backend picks based on user + domain)
+export const getRecommendedModules = async (domain: string): Promise<Module[]> => {
+  const response = await axiosInstance.get<Module[]>("/api/modules/recommendedmodules", {
+    params: { domain },
+  });
+  return response.data;
+};
+
 // =====================================================================
 // ENROLLMENT API
 // =====================================================================
@@ -424,6 +432,7 @@ export const api = {
     delete: deleteModule,
     search: searchModules,
     getAllPublic: getAllModulesPublic,
+    getRecommended: getRecommendedModules,
   },
   
   // Enrollment

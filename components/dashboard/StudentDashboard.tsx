@@ -1,16 +1,21 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import Image from 'next/image'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import { BookOpen, Calendar, Video, Clock, Star, TrendingUp, Loader2 } from 'lucide-react'
+import { BookOpen, Calendar, Video, Clock, Star, TrendingUp, Loader2, Eye } from 'lucide-react'
 import Link from 'next/link'
-import { getEnrollments, upcomingSchedulesByStudent } from '@/services/api'
+import { getEnrollments, upcomingSchedulesByStudent, api } from '@/services/api'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { UpcomingSessionResponse, UpcomingSessionsRequest } from '@/types/api'
+import { UpcomingSessionResponse, UpcomingSessionsRequest, Module as ModuleType } from '@/types/api'
 import { getCurrentDateTime } from '@/utils/dateUtils'
+import { useStudentProfile } from '@/contexts/StudentProfileContex'
+import { useAuth } from '@/contexts/AuthContext'
+import { TutorProfileApi } from '@/apis/TutorProfile'
+import { ModuleDescriptionApi } from '@/apis/ModuleDescriptionApi'
 
 
 interface ApiModule {
@@ -42,6 +47,24 @@ export default function StudentDashboard() {
   const [courses, setCourses] = useState<ApiModule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { profile } = useStudentProfile();
+  const { user } = useAuth();
+  const displayName = profile?.firstName?.trim() || user?.name || 'there';
+  const [tutorNames, setTutorNames] = useState<Record<string, string>>({});
+  const [recLoading, setRecLoading] = useState(false);
+  const [recError, setRecError] = useState<string | null>(null);
+  const [recommended, setRecommended] = useState<ModuleType[]>([]);
+  
+  // Description dialog state
+  const [descriptionDialog, setDescriptionDialog] = useState({
+    isOpen: false,
+    moduleId: '',
+    moduleName: '',
+    domain: '',
+    fee: 0,
+    description: '',
+    loading: false
+  });
   
   useEffect(() => {
     const fetchCourses = async () => {
@@ -70,6 +93,84 @@ export default function StudentDashboard() {
     }
     fetchCourses();
   }, [])
+
+  // Fetch recommended modules from a random enrolled domain
+  useEffect(() => {
+    const run = async () => {
+      if (!courses || courses.length === 0) {
+        console.log('[Recommendations] No enrollments found; skipping recommendation fetch.');
+        setRecommended([]);
+        return;
+      }
+      setRecLoading(true);
+      setRecError(null);
+      try {
+        const domains = Array.from(new Set(courses.map(c => c.domain).filter(Boolean)));
+        if (domains.length === 0) {
+          console.log('[Recommendations] No domains found in enrollments; skipping.');
+          setRecommended([]);
+          return;
+        }
+        const randomDomain = domains[Math.floor(Math.random() * domains.length)];
+        console.log('[Recommendations] Selected domain:', randomDomain, 'from', domains);
+        const rec = await api.modules.getRecommended(randomDomain);
+        console.log('[Recommendations] API result:', rec);
+        setRecommended(rec || []);
+      } catch (e) {
+        console.error('[Recommendations] Failed to load recommendations:', e);
+        setRecError('Failed to load recommendations.');
+        setRecommended([]);
+      } finally {
+        setRecLoading(false);
+      }
+    };
+    run();
+  }, [courses]);
+  
+  // Fetch tutor names for enrolled courses
+  useEffect(() => {
+    const fetchTutorNames = async () => {
+      const uniqueTutorIds = Array.from(new Set(courses.map(c => c.tutorId).filter(Boolean)));
+      if (uniqueTutorIds.length === 0) return;
+      try {
+        const entries = await Promise.all(uniqueTutorIds.map(async (id) => {
+          try {
+            const name = await TutorProfileApi.getTutorNameById(id);
+            return [id, name] as const;
+          } catch {
+            return [id, 'Unknown Tutor'] as const;
+          }
+        }));
+        setTutorNames(prev => ({ ...prev, ...Object.fromEntries(entries) }));
+      } catch {
+        // ignore batch error; individual fetches handled
+      }
+    };
+    fetchTutorNames();
+  }, [courses]);
+
+  // Fetch tutor names for recommended modules as well
+  useEffect(() => {
+    const fetchTutorNamesForRecommended = async () => {
+      const uniqueTutorIds = Array.from(new Set(recommended.map(c => c.tutorId).filter(Boolean))) as string[];
+      const missing = uniqueTutorIds.filter((id) => !(id in tutorNames));
+      if (missing.length === 0) return;
+      try {
+        const entries = await Promise.all(missing.map(async (id) => {
+          try {
+            const name = await TutorProfileApi.getTutorNameById(id);
+            return [id, name] as const;
+          } catch {
+            return [id, 'Unknown Tutor'] as const;
+          }
+        }));
+        setTutorNames(prev => ({ ...prev, ...Object.fromEntries(entries) }));
+      } catch {
+        // ignore batch error
+      }
+    };
+    fetchTutorNamesForRecommended();
+  }, [recommended, tutorNames]);
     useEffect(() => {
     const fetchUpcomingSessions = async () => {
       setSessionsLoading(true);
@@ -120,28 +221,36 @@ export default function StudentDashboard() {
     }
   ]
 
-  const recommendedCourses = [
-    {
-      id: 4,
-      title: 'Computer Science Basics',
-      tutor: 'Dr. James Wilson',
-      price: 50,
-      rating: 4.9,
-      students: 156,
-      image: 'https://images.unsplash.com/photo-1517077304055-6e89abbf09b0?w=300&h=200&fit=crop'
-    },
-    {
-      id: 5,
-      title: 'English Literature',
-      tutor: 'Prof. Lisa Anderson',
-      price: 40,
-      rating: 4.8,
-      students: 89,
-      image: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=300&h=200&fit=crop'
+  // recommended modules will be displayed from `recommended`
+
+  const openDescription = async (moduleId: string, moduleName: string, domain: string, fee: number) => {
+    setDescriptionDialog({
+      isOpen: true,
+      moduleId,
+      moduleName,
+      domain,
+      fee,
+      description: '',
+      loading: true
+    });
+
+    try {
+      const descriptionData = await ModuleDescriptionApi.getByModuleId(moduleId);
+      const descriptionText = descriptionData?.descriptionPoints?.join('\n• ') || 'No description available for this module.';
+      setDescriptionDialog(prev => ({
+        ...prev,
+        description: descriptionData?.descriptionPoints?.length ? `• ${descriptionText}` : 'No description available for this module.',
+        loading: false
+      }));
+    } catch (error) {
+      console.error('Error fetching description:', error);
+      setDescriptionDialog(prev => ({
+        ...prev,
+        description: 'No description available for this module.',
+        loading: false
+      }));
     }
-  ]
-
-
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -149,7 +258,7 @@ export default function StudentDashboard() {
       <div className="bg-gray-800 rounded-2xl p-8 text-white shadow-lg">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold mb-2">👋 Welcome back, Student!</h1>
+            <h1 className="text-3xl font-bold mb-2">👋 Welcome back, {displayName}!</h1>
             <p className="text-white/90 text-lg">Here&apos;s what&apos;s happening with your learning today.</p>
           </div>
         </div>
@@ -295,16 +404,18 @@ export default function StudentDashboard() {
                 courses.map((course) => (
                   <div key={course.moduleId} className="border border-gray-200 rounded-xl p-5 hover:shadow-lg hover:border-[#FBBF24] transition-all bg-white">
                     <div className="flex items-start space-x-4">
-                      <img 
-                        src={course.domain ? getDomainImage(course.domain) : 'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=300&h=200&fit=crop'} 
+                      <Image
+                        src={course.domain ? getDomainImage(course.domain) : 'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=300&h=200&fit=crop'}
                         alt={course.name}
-                        className="w-24 h-20 rounded-lg object-cover shadow-sm"
+                        width={150}
+                        height={120}
+                        className="w-48 h-36 rounded-lg object-cover shadow-sm"
                       />
                       <div className="flex-1">
                         <div className="flex items-start justify-between">
                           <div>
                             <h3 className="font-bold text-gray-900 text-lg">{course.name}</h3>
-                            <p className="text-sm text-gray-500 mt-1">by {course.tutorId}</p>
+                            <p className="text-sm text-gray-500 mt-1">by {tutorNames[course.tutorId] || '...'}</p>
                             <div className="flex items-center space-x-2 mt-2">
                               <Star className="w-4 h-4 text-[#FBBF24] fill-current" />
                               <span className="text-sm font-semibold text-gray-700">{course.averageRatings}</span>
@@ -419,38 +530,110 @@ export default function StudentDashboard() {
             </CardContent>
           </Card>
 
-          {/* Recommended Courses */}
+          {/* Recommended Courses (based on a random domain from your enrollments) */}
           <Card className="border-none shadow-md">
             <CardHeader className="border-b bg-gray-50">
               <CardTitle className="text-lg text-gray-900">Recommended Courses</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 p-6">
-              {recommendedCourses.map((course) => (
-                <div key={course.id} className="border border-gray-200 rounded-xl p-4 hover:shadow-lg hover:border-[#FBBF24] transition-all bg-white">
-                  <img 
-                    src={course.image} 
-                    alt={course.title}
-                    className="w-full h-28 rounded-lg object-cover mb-3 shadow-sm"
-                  />
-                  <h4 className="font-semibold text-sm text-gray-900">{course.title}</h4>
-                  <p className="text-xs text-gray-500 mt-1">by {course.tutor}</p>
-                  <div className="flex items-center justify-between mt-3">
-                    <div className="flex items-center space-x-1">
-                      <Star className="w-3 h-3 text-[#FBBF24] fill-current" />
-                      <span className="text-xs font-semibold text-gray-700">{course.rating}</span>
-                      <span className="text-xs text-gray-400">({course.students})</span>
+              {recLoading ? (
+                <div className="text-center py-4"><Loader2 className="animate-spin inline mr-2" />Loading...</div>
+              ) : recError ? (
+                <div className="text-red-500 text-center py-4">{recError}</div>
+              ) : recommended.length === 0 ? (
+                <div className="text-center py-4 text-gray-600">No recommendations yet.</div>
+              ) : (
+                recommended.filter((course) => !!course.moduleId).map((course) => (
+                  <div key={course.moduleId} className="border border-gray-200 rounded-xl p-4 hover:shadow-lg hover:border-[#FBBF24] transition-all bg-white">
+                    <div className="w-full h-28 relative mb-3">
+                      <Image
+                        src={getDomainImage(course.domain)}
+                        alt={course.name}
+                        fill
+                        className="rounded-lg object-cover shadow-sm"
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      />
                     </div>
-                    <span className="text-sm font-bold text-[#FBBF24]">${course.price}</span>
+                    <h4 className="font-semibold text-sm text-gray-900">{course.name}</h4>
+                    <p className="text-xs text-gray-500 mt-1">by {(course.tutorId ? tutorNames[course.tutorId] : undefined) || '...'}</p>
+                    <div className="flex items-center justify-between mt-3">
+                      <div className="flex items-center space-x-1">
+                        <Star className="w-3 h-3 text-[#FBBF24] fill-current" />
+                        <span className="text-xs font-semibold text-gray-700">{course.averageRatings ?? '-'}</span>
+                      </div>
+                      <span className="text-sm font-bold text-[#FBBF24]">${course.fee}</span>
+                    </div>
+                    <div className="flex gap-2 mt-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 border-gray-300 hover:bg-yellow-50 text-xs"
+                        onClick={() => openDescription(course.moduleId, course.name, course.domain, course.fee)}
+                      >
+                        <Eye className="h-3 w-3 mr-1" />
+                        See Description
+                      </Button>
+                      <Link href={`/dashboard/courses/${course.moduleId}`} className="flex-1"> 
+                        <Button size="sm" className="w-full bg-[#FBBF24] hover:bg-[#F59E0B] text-black font-semibold text-xs">
+                          Enroll Now
+                        </Button>
+                      </Link>
+                    </div>
                   </div>
-                  <Button size="sm" className="w-full mt-3 bg-[#FBBF24] hover:bg-[#F59E0B] text-black font-semibold">
-                    Enroll Now
-                  </Button>
-                </div>
-              ))}
+                ))
+              )}
             </CardContent>
           </Card>
         </div>
       </div>
+
+      {/* Description Dialog */}
+      <Dialog open={descriptionDialog.isOpen} onOpenChange={(open) => setDescriptionDialog(prev => ({ ...prev, isOpen: open }))}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+          <DialogHeader className="space-y-4">
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-[#FBBF24] to-[#F59E0B] opacity-10 rounded-lg"></div>
+              <div className="relative p-6 bg-gradient-to-r from-[#FBBF24]/5 to-[#F59E0B]/5 rounded-lg border border-[#FBBF24]/20">
+                <DialogTitle className="text-2xl font-bold text-gray-900 mb-2">
+                  {descriptionDialog.moduleName}
+                </DialogTitle>
+                <div className="flex flex-wrap items-center gap-4 text-sm">
+                  <div className="flex items-center">
+                    <span className="font-semibold text-[#FBBF24] mr-2">Domain:</span>
+                    <span className="text-gray-700">{descriptionDialog.domain}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="font-semibold text-[#FBBF24] mr-2">Price:</span>
+                    <span className="text-gray-700 font-bold">${descriptionDialog.fee}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </DialogHeader>
+          
+          <div className="flex-1 overflow-y-auto px-1">
+            <div className="bg-white rounded-lg border border-gray-100 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <BookOpen className="h-5 w-5 mr-2 text-[#FBBF24]" />
+                Course Description
+              </h3>
+              
+              {descriptionDialog.loading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-[#FBBF24] mr-2" />
+                  <span className="text-gray-600">Loading description...</span>
+                </div>
+              ) : (
+                <div className="prose prose-gray max-w-none">
+                  <div className="whitespace-pre-line text-gray-700 leading-relaxed">
+                    {descriptionDialog.description}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

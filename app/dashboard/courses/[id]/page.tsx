@@ -47,6 +47,7 @@ import ModuleRatingModal from '@/components/ui/ratingmodal'
 import { EnrollmentApi } from '@/apis/EnrollmentApi'
 import RatingApi, { RatingGetDto } from '@/apis/RatingApi'
 import axiosInstance from '@/app/utils/axiosInstance'
+import ModuleDescriptionApi, { ModuleDescriptionDto } from '@/apis/ModuleDescriptionApi'
 
 // TypeScript interfaces for module data
 interface LocalModule extends ApiModule {
@@ -196,6 +197,15 @@ export default function CoursePage() {
   const [showPaymentDialog, setShowPaymentDialog] = useState(false)
   const [isProcessingPayment, setIsProcessingPayment] = useState(false)
   const [editableProfile, setEditableProfile] = useState<UserProfile | null>(null)
+  
+  // Module Description state
+  const [showDescriptionDialog, setShowDescriptionDialog] = useState(false)
+  const [moduleDescription, setModuleDescription] = useState<ModuleDescriptionDto | null>(null)
+  const [descriptionExists, setDescriptionExists] = useState(false)
+  const [descriptionPoints, setDescriptionPoints] = useState<string[]>([''])
+  const [isLoadingDescription, setIsLoadingDescription] = useState(false)
+  const [isSavingDescription, setIsSavingDescription] = useState(false)
+  
   // Upload materials state
   const [showUploadDialog, setShowUploadDialog] = useState(false)
   const [uploadMaterials, setUploadMaterials] = useState<any[]>([])
@@ -712,6 +722,22 @@ export default function CoursePage() {
     loadMaterials()
   }, [params.id])
 
+  // Check if module description exists when module is loaded
+  useEffect(() => {
+    const checkDescriptionExists = async () => {
+      if (!params.id || user?.role !== 'TUTOR') return
+      
+      try {
+        const exists = await ModuleDescriptionApi.exists(String(params.id))
+        setDescriptionExists(exists)
+      } catch (error) {
+        console.error('Error checking description existence:', error)
+      }
+    }
+
+    checkDescriptionExists()
+  }, [params.id, user?.role])
+
   const scrollToMaterial = (materialId: string) => {
     const materialElement = materialRefs.current[materialId]
     if (materialElement) {
@@ -827,6 +853,156 @@ export default function CoursePage() {
         description: error.message || "Failed to submit rating. Please try again.",
         variant: "destructive",
       })
+    }
+  }
+
+  // Module Description Functions
+  const fetchModuleDescription = async (moduleId: string) => {
+    setIsLoadingDescription(true)
+    try {
+      const exists = await ModuleDescriptionApi.exists(moduleId)
+      setDescriptionExists(exists)
+      
+      if (exists) {
+        const description = await ModuleDescriptionApi.getByModuleId(moduleId)
+        setModuleDescription(description)
+        setDescriptionPoints(description.descriptionPoints.length > 0 ? description.descriptionPoints : [''])
+      } else {
+        setDescriptionPoints([''])
+      }
+    } catch (error: any) {
+      console.error('Error fetching module description:', error)
+      setDescriptionPoints([''])
+    } finally {
+      setIsLoadingDescription(false)
+    }
+  }
+
+  const handleOpenDescriptionDialog = async () => {
+    if (!params.id) return
+    setShowDescriptionDialog(true)
+    await fetchModuleDescription(String(params.id))
+  }
+
+  const handleAddDescriptionPoint = () => {
+    setDescriptionPoints([...descriptionPoints, ''])
+  }
+
+  const handleRemoveDescriptionPoint = (index: number) => {
+    if (descriptionPoints.length === 1) {
+      toast({
+        title: "Warning",
+        description: "At least one description point is required",
+        variant: "destructive",
+      })
+      return
+    }
+    const newPoints = descriptionPoints.filter((_, i) => i !== index)
+    setDescriptionPoints(newPoints)
+  }
+
+  const handleDescriptionPointChange = (index: number, value: string) => {
+    const newPoints = [...descriptionPoints]
+    newPoints[index] = value
+    setDescriptionPoints(newPoints)
+  }
+
+  const handleSaveDescription = async () => {
+    if (!params.id || !moduleDetails) {
+      toast({
+        title: "Error",
+        description: "Module information is missing",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Filter out empty points
+    const filteredPoints = descriptionPoints.filter(point => point.trim() !== '')
+    
+    if (filteredPoints.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please add at least one description point",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsSavingDescription(true)
+    try {
+      const dto: ModuleDescriptionDto = {
+        moduleId: String(params.id),
+        name: moduleDetails.name,
+        domain: moduleDetails.domain,
+        price: moduleDetails.fee,
+        tutorName: user?.name || '',
+        descriptionPoints: filteredPoints
+      }
+
+      if (descriptionExists) {
+        await ModuleDescriptionApi.update(String(params.id), dto)
+        toast({
+          title: "Success",
+          description: "Module description updated successfully!",
+        })
+      } else {
+        await ModuleDescriptionApi.create(dto)
+        toast({
+          title: "Success",
+          description: "Module description created successfully!",
+        })
+        setDescriptionExists(true)
+      }
+
+      await fetchModuleDescription(String(params.id))
+      setShowDescriptionDialog(false)
+    } catch (error: any) {
+      console.error('Error saving module description:', error)
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save module description",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSavingDescription(false)
+    }
+  }
+
+  // When the dialog opens, fetch and prefill existing description points
+  useEffect(() => {
+    if (showDescriptionDialog && params.id) {
+      fetchModuleDescription(String(params.id))
+    }
+  }, [showDescriptionDialog, params.id])
+
+  const handleDeleteDescription = async () => {
+    if (!params.id) return
+
+    if (!confirm('Are you sure you want to delete this module description? This action cannot be undone.')) {
+      return
+    }
+
+    setIsSavingDescription(true)
+    try {
+      await ModuleDescriptionApi.delete(String(params.id))
+      toast({
+        title: "Success",
+        description: "Module description deleted successfully!",
+      })
+      setDescriptionExists(false)
+      setModuleDescription(null)
+      setDescriptionPoints([''])
+      setShowDescriptionDialog(false)
+    } catch (error: any) {
+      console.error('Error deleting module description:', error)
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete module description",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSavingDescription(false)
     }
   }
 
@@ -1100,16 +1276,16 @@ export default function CoursePage() {
                 )}
 
                 {/* Toggle Button for Collapsed Sidebar */}
-                <div className={`fixed top-4 left-4 z-100 transition-all duration-300 ease-in-out ${
+                <div className={`fixed top-20 left-4 z-50 transition-all duration-300 ease-in-out ${
                   sidebarCollapsed ? 'translate-x-0' : '-translate-x-full'
                 }`}>
                   <Button
                     variant="default"
                     size="sm"
                     onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                    className="rounded-full w-12 h-12 -pr-20 shadow-lg absolute top-12 -left-9 bg-[#f0ae16] hover:bg-[#d99e00] opacity-50"
+                    className="rounded-full w-10 h-10 shadow-lg bg-[#FBBF24] hover:bg-[#F59E0B] text-black"
                   >
-                    <ChevronRight className="w-6 h-6"/>
+                    <ChevronRight className="w-5 h-5"/>
                   </Button>
                 </div>
               </>
@@ -1233,8 +1409,22 @@ export default function CoursePage() {
               {/* Module Information */}
               <Card className="border-none shadow-md">
                 <CardHeader className="border-b bg-gradient-to-r from-gray-50 to-white">
-                  <CardTitle className="text-xl text-gray-900">Module Information</CardTitle>
-                  <CardDescription className="text-gray-600">Details about this learning module</CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-xl text-gray-900">Module Information</CardTitle>
+                      <CardDescription className="text-gray-600">Details about this learning module</CardDescription>
+                    </div>
+                    {user?.role === 'TUTOR' && descriptionExists && (
+                      <Button 
+                        onClick={handleDeleteDescription}
+                        variant="outline"
+                        className="flex items-center space-x-2 border-red-300 text-red-600 hover:bg-red-50"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        <span>Delete Description</span>
+                      </Button>
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent className="p-6">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -1270,11 +1460,11 @@ export default function CoursePage() {
                         <CardTitle className="text-lg font-bold text-gray-900">Module Materials</CardTitle>
                         <Button
                           variant="ghost"
-                          size="lg"
-                          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                          className="p-1 h-6 w-6 hover:bg-yellow-100"
+                          size="sm"
+                          onClick={() => setSidebarCollapsed(true)}
+                          className="p-2 h-8 w-8 hover:bg-yellow-100 rounded-full"
                         >
-                          <ChevronLeft className="w-4 h-4" />
+                          <ChevronLeft className="w-5 h-5" />
                         </Button>
                       </div>
                     </CardHeader>
@@ -1866,6 +2056,151 @@ export default function CoursePage() {
               </Card>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Module Description Dialog */}
+      <Dialog open={showDescriptionDialog} onOpenChange={setShowDescriptionDialog}>
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto border-none shadow-2xl">
+          <DialogHeader className="pb-4">
+            <DialogTitle className="text-2xl font-bold text-gray-900">
+              {descriptionExists ? 'Edit Module Description' : 'Create Module Description'}
+            </DialogTitle>
+            <DialogDescription className="text-gray-600">
+              Add detailed description points for this module. Each point will be displayed separately.
+            </DialogDescription>
+          </DialogHeader>
+
+          {isLoadingDescription ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="flex flex-col items-center space-y-3">
+                <Loader2 className="w-10 h-10 animate-spin text-[#FBBF24]" />
+                <span className="text-gray-600">Loading description...</span>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Description Points */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label className="text-base font-bold text-gray-900">Description Points</Label>
+                  <Button
+                    onClick={handleAddDescriptionPoint}
+                    variant="outline"
+                    size="sm"
+                    className="border-[#FBBF24] text-gray-700 hover:bg-yellow-50"
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Add Point
+                  </Button>
+                </div>
+
+                <div className="space-y-3">
+                  {descriptionPoints.map((point, index) => (
+                    <div key={index} className="flex items-start space-x-3">
+                      <div className="flex-shrink-0 w-8 h-8 bg-[#FBBF24] rounded-full flex items-center justify-center text-black font-bold mt-2">
+                        {index + 1}
+                      </div>
+                      <Textarea
+                        value={point}
+                        onChange={(e) => handleDescriptionPointChange(index, e.target.value)}
+                        placeholder={`Enter description point ${index + 1}...`}
+                        className="flex-1 w-full max-w-full border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24] min-h-[80px] resize-y overflow-wrap break-words"
+                        style={{ resize: 'vertical' }}
+                        rows={3}
+                      />
+                      {descriptionPoints.length > 1 && (
+                        <Button
+                          onClick={() => handleRemoveDescriptionPoint(index)}
+                          variant="ghost"
+                          size="sm"
+                          className="hover:bg-red-50 mt-2 flex-shrink-0"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-500" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {descriptionPoints.length === 0 && (
+                  <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                    <p className="text-gray-500">No description points added yet. Click &quot;Add Point&quot; to start.</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Preview Section */}
+              <Card className="border-none shadow-lg bg-gradient-to-br from-yellow-50 to-white">
+                <CardHeader className="bg-gradient-to-r from-[#FBBF24] to-[#F59E0B] text-black rounded-t-xl">
+                  <CardTitle className="text-lg font-bold">Preview</CardTitle>
+                  <CardDescription className="text-black/80">
+                    How your description will appear to students
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="p-6">
+                  {descriptionPoints.filter(p => p.trim() !== '').length === 0 ? (
+                    <div className="text-center py-8">
+                      <p className="text-gray-500">No description points to preview</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {descriptionPoints
+                        .filter(point => point.trim() !== '')
+                        .map((point, index) => (
+                          <div key={index} className="flex items-start space-x-3 p-3 bg-white rounded-lg border border-gray-200">
+                            <div className="flex-shrink-0 w-6 h-6 bg-[#FBBF24] rounded-full flex items-center justify-center text-black font-bold text-sm">
+                              {index + 1}
+                            </div>
+                            <p className="flex-1 text-gray-700 leading-relaxed">{point}</p>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Action Buttons */}
+              <div className="flex gap-4 pt-4 border-t border-gray-200">
+                {descriptionExists && (
+                  <Button
+                    onClick={handleDeleteDescription}
+                    variant="outline"
+                    disabled={isSavingDescription}
+                    className="border-red-300 text-red-600 hover:bg-red-50"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete
+                  </Button>
+                )}
+                <Button
+                  onClick={() => setShowDescriptionDialog(false)}
+                  variant="outline"
+                  disabled={isSavingDescription}
+                  className="flex-1 h-12 font-semibold border-gray-300 hover:bg-gray-100"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSaveDescription}
+                  disabled={isSavingDescription || descriptionPoints.filter(p => p.trim() !== '').length === 0}
+                  className="flex-1 h-12 bg-[#FBBF24] hover:bg-[#F59E0B] text-black font-bold text-base"
+                >
+                  {isSavingDescription ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-5 h-5 mr-2" />
+                      {descriptionExists ? 'Update Description' : 'Create Description'}
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
       

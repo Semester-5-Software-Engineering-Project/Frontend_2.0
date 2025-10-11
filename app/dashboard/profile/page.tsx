@@ -16,7 +16,8 @@ import { useTutorProfile } from '@/contexts/TutorProfileContex'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
-import { Save, Edit, Star, BookOpen, Award, Key, Upload, AlertCircle } from 'lucide-react'
+import { Save, Edit, Star, BookOpen, Award, Key, Upload, AlertCircle, Loader2 } from 'lucide-react'
+import { UploadApi } from '@/apis/uploadApi'
 
 export default function Profile() {
   const { user } = useAuth()
@@ -35,6 +36,7 @@ export default function Profile() {
     newPassword: '',
     confirmPassword: ''
   })
+  const [imageUploading, setImageUploading] = useState(false)
   const [profileData, setProfileData] = useState({
   // Common
   name: '',
@@ -174,6 +176,14 @@ export default function Profile() {
         }
         await studentCtx.refresh()
       }
+      
+      // Notify header about potential profile image changes
+      if (profileData.imageUrl) {
+        window.dispatchEvent(new CustomEvent('profileImageUpdated', {
+          detail: { imageUrl: profileData.imageUrl }
+        }))
+      }
+      
       setIsEditing(false)
     } catch (e: any) {
       toast.error(e.message || 'Save failed')
@@ -343,7 +353,13 @@ export default function Profile() {
                 <AvatarFallback className="text-2xl font-bold bg-[#FBBF24] text-black">
                   {profileData.name?.charAt(0) || user?.name?.charAt(0) || '?'}
                 </AvatarFallback>
-                {isEditing && (
+                {imageUploading && (
+                  <div className="absolute inset-0 rounded-full bg-black/70 flex flex-col items-center justify-center text-white text-xs font-semibold">
+                    <Loader2 className="w-6 h-6 animate-spin mb-1" />
+                    Uploading...
+                  </div>
+                )}
+                {isEditing && !imageUploading && (
                   <label className="absolute inset-0 rounded-full bg-black/70 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-white text-xs font-semibold cursor-pointer transition-all">
                     <Upload className="w-6 h-6 mb-1" />
                     Upload Photo
@@ -354,37 +370,32 @@ export default function Profile() {
                       onChange={async (e) => {
                         const file = e.target.files?.[0]
                         if (!file) return
-                        if (file.size > 3 * 1024 * 1024) { // 3MB limit
-                          toast.error('Image must be under 3MB')
-                          return
-                        }
                         
                         try {
-                          // Create FormData to send the file
-                          const formData = new FormData()
-                          formData.append('file', file)
+                          setImageUploading(true)
                           
-                          // Upload to backend
-                          const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/materials/upload/image`, {
-                            method: 'POST',
-                            body: formData,
-                            credentials: 'include'
-                          })
+                          // Show file info
+                          const fileInfo = UploadApi.getFileInfo(file)
+                          toast.info(`Uploading ${fileInfo.name} (${fileInfo.sizeFormatted})...`)
                           
-                          if (!response.ok) {
-                            const errorText = await response.text()
-                            console.error('Upload failed:', response.status, response.statusText, errorText)
-                            throw new Error(`Upload failed: ${response.status} - ${errorText || response.statusText}`)
-                          }
+                          // Upload using the dedicated API
+                          const imageUrl = await UploadApi.uploadProfileImage(file)
                           
-                          const imageUrl = await response.text()
-                          console.log('Upload successful, URL:', imageUrl)
+                          // Update profile data with the new image URL
                           setProfileData(p => ({ ...p, imageUrl: imageUrl }))
-                          toast.success('Image uploaded successfully')
+                          toast.success('Profile image uploaded successfully!')
+                          
+                          // Notify other components (like header) about the image update
+                          window.dispatchEvent(new CustomEvent('profileImageUpdated', {
+                            detail: { imageUrl }
+                          }))
+                          
+                          console.log('Upload successful, URL:', imageUrl)
                         } catch (error: any) {
-                          console.error('Upload error:', error)
-                          toast.error(error.message || 'Failed to upload image')
+                          console.error('Profile image upload error:', error)
+                          toast.error(error.message || 'Failed to upload profile image')
                         } finally {
+                          setImageUploading(false)
                           e.target.value = '' // reset input so same file can be re-selected
                         }
                       }}

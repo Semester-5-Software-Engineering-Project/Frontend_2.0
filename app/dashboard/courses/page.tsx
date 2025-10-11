@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useCallback } from 'react'
+import Image from 'next/image'
 import { useAuth } from '@/contexts/AuthContext'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -30,6 +32,8 @@ import DashboardLayout from '@/components/dashboard/DashboardLayout'
 import ModuleCreation from '@/components/ui/modulecreation'
 import { getModulesForTutor, getEnrollments } from '@/services/api'
 import { useToast } from '@/hooks/use-toast'
+import { TutorProfileApi } from '@/apis/TutorProfile'
+import ModuleDescriptionApi, { ModuleDescriptionDto } from '@/apis/ModuleDescriptionApi'
 
 // TypeScript interfaces for API response
 interface ApiModule {
@@ -47,6 +51,7 @@ interface ApiModule {
 interface EnrolledCourse {
   id: string
   title: string
+  tutorId?: string
   tutor: string
   domain: string
   rating: number
@@ -78,6 +83,16 @@ export default function CoursesPage() {
   const [courses, setCourses] = useState<Course[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [tutorNames, setTutorNames] = useState<Record<string, string>>({})
+  // Description dialog state
+  const [descOpen, setDescOpen] = useState(false)
+  const [descLoading, setDescLoading] = useState(false)
+  const [descError, setDescError] = useState<string | null>(null)
+  const [descPoints, setDescPoints] = useState<string[]>([])
+  const [descTitle, setDescTitle] = useState<string>('Module Description')
+  const [descTutor, setDescTutor] = useState<string>('')
+  const [descDomain, setDescDomain] = useState<string>('')
+  const [descPrice, setDescPrice] = useState<number>(0)
 
   // Helper function to format duration from minutes to readable format
   const formatDuration = (minutes: number): string => {
@@ -107,7 +122,7 @@ export default function CoursesPage() {
   }
 
   // Convert API module to frontend course
-  const convertApiModuleToCourse = (apiModule: ApiModule): Course => {
+  const convertApiModuleToCourse = useCallback((apiModule: ApiModule): Course => {
     const baseData = {
       id: apiModule.moduleId,
       title: apiModule.name,
@@ -122,6 +137,7 @@ export default function CoursesPage() {
     if (user?.role === 'STUDENT') {
       return {
         ...baseData,
+        tutorId: apiModule.tutorId,
         tutor: 'Loading...', // We'll need to fetch tutor info separately if needed
       } as EnrolledCourse
     } else {
@@ -129,10 +145,10 @@ export default function CoursesPage() {
         ...baseData,
       } as TeachingCourse
     }
-  }
+  }, [user?.role])
 
   // Fetch modules for tutors
-  const fetchTutorModules = async (): Promise<Course[]> => {
+  const fetchTutorModules = useCallback(async (): Promise<Course[]> => {
     try {
       const apiModules = await getModulesForTutor()
       // console.log('Tutor modules API response:', apiModules)
@@ -141,10 +157,10 @@ export default function CoursesPage() {
       console.error('Error fetching tutor modules:', error)
       throw new Error(error.response?.data || 'Failed to fetch tutor modules')
     }
-  }
+  }, [convertApiModuleToCourse])
 
   // Fetch enrollments for students
-  const fetchStudentEnrollments = async (): Promise<Course[]> => {
+  const fetchStudentEnrollments = useCallback(async (): Promise<Course[]> => {
     try {
       console.log('Fetching student enrollments...')
       const enrollments = await getEnrollments()
@@ -183,7 +199,7 @@ export default function CoursesPage() {
       }
       throw new Error(error.response?.data || 'Failed to fetch enrollments')
     }
-  }
+  }, [convertApiModuleToCourse])
 
   // Debug function to test enrollment API (for development)
   const debugEnrollmentAPI = async () => {
@@ -249,7 +265,41 @@ export default function CoursesPage() {
     }
 
     fetchCourses()
-  }, [user, toast])
+  }, [user, toast, fetchStudentEnrollments, fetchTutorModules])
+
+  // Resolve tutor names for enrolled courses using tutorId
+  useEffect(() => {
+    const loadTutorNames = async () => {
+      if (!courses || courses.length === 0) return
+      if (user?.role !== 'STUDENT') return
+      const ids = Array.from(
+        new Set(
+          courses
+            .filter((c): c is EnrolledCourse => 'tutor' in c)
+            .map((c) => (c as EnrolledCourse).tutorId)
+            .filter((v): v is string => Boolean(v))
+        )
+      )
+      const missing = ids.filter((id) => !(id in tutorNames))
+      if (missing.length === 0) return
+      try {
+        const entries = await Promise.all(
+          missing.map(async (id) => {
+            try {
+              const name = await TutorProfileApi.getTutorNameById(id)
+              return [id, name] as const
+            } catch (e) {
+              return [id, 'Unknown Tutor'] as const
+            }
+          })
+        )
+        setTutorNames((prev) => ({ ...prev, ...Object.fromEntries(entries) }))
+      } catch (e) {
+        // ignore batch error
+      }
+    }
+    loadTutorNames()
+  }, [courses, tutorNames, user])
 
   // Type guard functions
   const isEnrolledCourse = (course: Course): course is EnrolledCourse => {
@@ -261,9 +311,12 @@ export default function CoursesPage() {
   }
 
   const filteredCourses = courses.filter(course => {
+    const searchTutorName = isEnrolledCourse(course)
+      ? ((course.tutorId && tutorNames[course.tutorId]) || course.tutor || '')
+      : ''
     const matchesSearch = course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          course.domain.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (isEnrolledCourse(course) ? course.tutor.toLowerCase().includes(searchTerm.toLowerCase()) : false)
+                         (isEnrolledCourse(course) ? searchTutorName.toLowerCase().includes(searchTerm.toLowerCase()) : false)
     const matchesFilter = filterStatus === 'all' || course.status === filterStatus
     return matchesSearch && matchesFilter
   })
@@ -292,6 +345,31 @@ export default function CoursesPage() {
 
   const handleModuleCreationCancel = () => {
     setIsModuleCreationOpen(false)
+  }
+
+  // Open description dialog and fetch points
+  const openDescription = async (moduleId: string, title: string, domain: string, price: number) => {
+    setDescTitle(title)
+    setDescDomain(domain)
+    setDescPrice(price)
+    setDescOpen(true)
+    setDescLoading(true)
+    setDescError(null)
+    setDescPoints([])
+    try {
+      const exists = await ModuleDescriptionApi.exists(moduleId)
+      if (!exists) {
+        setDescPoints([])
+        return
+      }
+      const dto: ModuleDescriptionDto = await ModuleDescriptionApi.getByModuleId(moduleId)
+      setDescPoints(dto.descriptionPoints || [])
+      setDescTutor(dto.tutorName || '')
+    } catch (e: any) {
+      setDescError(e.message || 'Failed to load description')
+    } finally {
+      setDescLoading(false)
+    }
   }
 
   return (
@@ -501,11 +579,16 @@ export default function CoursesPage() {
             {filteredCourses.map((course) => (
               <Card key={course.id} className="border-none shadow-md hover:shadow-xl hover:border-[#FBBF24] transition-all overflow-hidden group">
                 <div className="relative overflow-hidden">
-                  <img 
-                    src={course.image} 
-                    alt={course.title}
-                    className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
+                  <div className="relative h-48">
+                    <Image
+                      src={course.image}
+                      alt={course.title}
+                      fill
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      className="object-cover group-hover:scale-105 transition-transform duration-300"
+                      priority={false}
+                    />
+                  </div>
                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
                   <Badge 
                     className={`absolute top-4 right-4 ${getStatusColor(course.status)} shadow-md`}
@@ -522,7 +605,9 @@ export default function CoursesPage() {
                         {course.domain}
                       </Badge>
                       <p className="text-sm text-gray-600 mt-2">
-                        {isEnrolledCourse(course) ? `by ${course.tutor}` : `Fee: $${course.fee}`}
+                        {isEnrolledCourse(course)
+                          ? `by ${((course.tutorId && tutorNames[course.tutorId]) || course.tutor || '...')}`
+                          : `Fee: $${course.fee}`}
                       </p>
                     </div>
 
@@ -542,6 +627,13 @@ export default function CoursesPage() {
                           {user?.role === 'STUDENT' ? 'Continue Learning' : 'Manage Module'}
                         </Button>
                       </Link>
+                      <Button
+                        variant="outline"
+                        className="border-gray-300 hover:bg-yellow-50"
+                        onClick={() => openDescription(course.id, course.title, course.domain, course.fee)}
+                      >
+                        <Eye className="w-4 h-4 mr-2" /> See Description
+                      </Button>
                       {user?.role === 'TUTOR' && (
                         <Button variant="outline" size="sm" className="border-gray-300 hover:bg-gray-50">
                           <MoreHorizontal className="w-4 h-4" />
@@ -582,6 +674,99 @@ export default function CoursesPage() {
             </CardContent>
           </Card>
         )}
+      {/* Description Dialog */}
+      <Dialog open={descOpen} onOpenChange={setDescOpen}>
+        <DialogContent className="sm:max-w-4xl max-h-[85vh] overflow-y-auto border-none shadow-2xl">
+          <DialogHeader className="pb-0">
+            <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-[#FBBF24] to-[#F59E0B] p-6 text-black">
+              <div className="absolute inset-0 bg-black/5 rounded-xl"></div>
+              <div className="relative z-10">
+                <DialogTitle className="text-2xl font-bold mb-2">{descTitle}</DialogTitle>
+                <div className="flex flex-wrap items-center gap-3">
+                  <Badge className="bg-black/10 text-black font-semibold border-black/20 hover:bg-black/15">
+                    {descDomain}
+                  </Badge>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-black/30 rounded-full"></div>
+                    <span className="text-lg font-bold">${descPrice}</span>
+                  </div>
+                  {descTutor && (
+                    <>
+                      <div className="w-2 h-2 bg-black/30 rounded-full"></div>
+                      <span className="font-medium">By {descTutor}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          </DialogHeader>
+          {descLoading ? (
+            <div className="py-16 text-center">
+              <div className="relative">
+                <div className="w-16 h-16 bg-gradient-to-r from-[#FBBF24] to-[#F59E0B] rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                  <Loader2 className="w-8 h-8 animate-spin text-black" />
+                </div>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Loading Description</h3>
+              <p className="text-gray-600">Please wait while we fetch the module details...</p>
+            </div>
+          ) : descError ? (
+            <div className="py-12 text-center">
+              <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <BookOpen className="w-8 h-8 text-red-500" />
+              </div>
+              <h3 className="text-lg font-semibold text-red-600 mb-2">Error Loading Description</h3>
+              <p className="text-red-500">{descError}</p>
+            </div>
+          ) : ( 
+            <div className="space-y-6 pt-4">
+              {descPoints.length === 0 ? (
+                <div className="text-center py-16">
+                  <div className="w-20 h-20 bg-yellow-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <BookOpen className="w-10 h-10 text-[#FBBF24]" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">No Description Available</h3>
+                  <p className="text-gray-600 max-w-md mx-auto">
+                    This module doesn&apos;t have a detailed description yet. Check back later or contact the tutor for more information.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="border-l-4 border-[#FBBF24] pl-4 mb-6">
+                    <h3 className="text-lg font-bold text-gray-900 mb-1">Module Overview</h3>
+                    <p className="text-gray-600 text-sm">
+                      Detailed breakdown of what you&apos;ll learn in this module
+                    </p>
+                  </div>
+                  <div className="space-y-3">
+                    {descPoints.map((p, idx) => (
+                      <div key={idx} className="group flex items-start space-x-4 p-4 bg-gradient-to-r from-white to-yellow-50 border border-gray-200 rounded-xl hover:shadow-md hover:border-[#FBBF24] transition-all">
+                        <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-r from-[#FBBF24] to-[#F59E0B] rounded-full flex items-center justify-center text-black font-bold text-sm shadow-md">
+                          {idx + 1}
+                        </div>
+                        <div className="flex-1 pt-1">
+                          <p className="text-gray-800 leading-relaxed break-words whitespace-pre-wrap group-hover:text-gray-900 transition-colors">
+                            {p}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-8 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <Star className="w-5 h-5 text-blue-600" />
+                      <h4 className="font-semibold text-blue-900">Ready to Start Learning?</h4>
+                    </div>
+                    <p className="text-blue-700 text-sm">
+                      This module contains {descPoints.length} key learning point{descPoints.length !== 1 ? 's' : ''} designed to help you master the subject.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
       </div>
     </DashboardLayout>
   )

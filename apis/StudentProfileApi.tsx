@@ -114,6 +114,17 @@ export const StudentProfileApi = {
 			throw parseError(e);
 		}
 	},
+
+	/** Get student profile image URL */
+	async getImageUrl(): Promise<string | null> {
+		try {
+			const res = await axiosInstance.get('/api/student-profile/image');
+			return res.data?.imageUrl || null;
+		} catch (e) {
+			console.error('Error fetching student image URL:', e);
+			return null;
+		}
+	},
 };
 
 export default StudentProfileApi;

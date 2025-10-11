@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth, userType } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -23,11 +23,14 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import StudentProfileApi from '@/apis/StudentProfileApi'
+import { TutorProfileApi } from '@/apis/TutorProfile'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false)
+  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null)
   const pathname = usePathname()
 
   const studentNavItems = [
@@ -53,6 +56,46 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   ]
 
   const navItems = user?.role === userType.STUDENT ? studentNavItems : tutorNavItems
+
+  // Fetch profile image URL when user changes
+  useEffect(() => {
+    const fetchProfileImage = async () => {
+      if (!user) {
+        setProfileImageUrl(null)
+        return
+      }
+
+      try {
+        let imageUrl: string | null = null
+        
+        if (user.role === userType.STUDENT) {
+          imageUrl = await StudentProfileApi.getImageUrl()
+        } else if (user.role === userType.TUTOR) {
+          imageUrl = await TutorProfileApi.getImageUrl()
+        }
+        
+        setProfileImageUrl(imageUrl)
+      } catch (error) {
+        console.error('Error fetching profile image:', error)
+        setProfileImageUrl(null)
+      }
+    }
+
+    fetchProfileImage()
+  }, [user])
+
+  // Listen for profile image updates from other components
+  useEffect(() => {
+    const handleProfileImageUpdate = (event: CustomEvent<{ imageUrl: string }>) => {
+      setProfileImageUrl(event.detail.imageUrl)
+    }
+
+    window.addEventListener('profileImageUpdated', handleProfileImageUpdate as EventListener)
+    
+    return () => {
+      window.removeEventListener('profileImageUpdated', handleProfileImageUpdate as EventListener)
+    }
+  }, [])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -89,7 +132,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-3 bg-gray-50 rounded-lg px-3 py-2">
             <Avatar className="w-9 h-9 ring-2 ring-[#FBBF24]">
-              <AvatarImage src={user?.avatar} />
+              <AvatarImage src={profileImageUrl || user?.avatar || undefined} />
               <AvatarFallback className="bg-[#FBBF24] text-white font-semibold">
                 {user?.name?.charAt(0).toUpperCase() || 'U'}
               </AvatarFallback>
@@ -120,8 +163,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           fixed inset-y-0 left-0 top-[73px] z-40 w-64 bg-white border-r border-gray-200 
           transition-all duration-300 ease-in-out shadow-lg lg:shadow-none
         `}>
-          <div className="p-6 h-full overflow-y-auto">
-            <nav className="space-y-1">
+          <div className="p-6 h-full overflow-y-auto flex flex-col">
+            <nav className="space-y-1 flex-1">
               {navItems.map((item) => {
                 const isActive = pathname === item.href
                 return (
@@ -144,6 +187,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 )
               })}
             </nav>
+            
+            {/* Logout Button */}
+            <div className="mt-auto pt-4 border-t border-gray-200">
+              <Button
+                variant="ghost"
+                onClick={logout}
+                className={`
+                  w-full flex items-center ${desktopSidebarCollapsed ? 'lg:justify-center' : 'space-x-3'} px-4 py-3 rounded-lg text-sm font-medium transition-all
+                  text-gray-600 hover:bg-red-50 hover:text-red-600
+                `}
+                title={desktopSidebarCollapsed ? 'Logout' : ''}
+              >
+                <LogOut className="w-5 h-5 text-gray-500 flex-shrink-0" />
+                <span className={`${desktopSidebarCollapsed ? 'lg:hidden' : ''}`}>Logout</span>
+              </Button>
+            </div>
           </div>
         </aside>
 

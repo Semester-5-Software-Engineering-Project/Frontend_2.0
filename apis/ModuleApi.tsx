@@ -69,6 +69,16 @@ export const ModuleApi = {
 		}
 	},
 
+	/** Get random recommended modules for the current user */
+	async getRandomRecommendedModules(): Promise<ModuleDto[]> {
+		try {
+			const res = await axiosInstance.get('/api/modules/randomrecommendedmodules');
+			return res.data as ModuleDto[];
+		} catch (e) {
+			throw parseError(e);
+		}
+	},
+
 	/** Get modules by domain ID */
 	async getModulesByDomainId(domainId: number): Promise<ModuleDto[]> {
 		try {
