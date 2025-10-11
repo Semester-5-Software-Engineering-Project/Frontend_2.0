@@ -11,7 +11,10 @@ import { Progress } from '@/components/ui/progress'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { X } from "lucide-react"
+import { Textarea } from '@/components/ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { X, Upload, Plus, Save, Trash2 } from "lucide-react"
 import Cookies from "js-cookie";
 
 import { 
@@ -32,7 +35,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
-import { getModulesForTutor, getEnrollments, getAllModulesPublic, getMaterials, joinMeeting, upcomingSchedulesByModule } from '@/services/api'
+import { getModulesForTutor, getEnrollments, getAllModulesPublic, getMaterials, joinMeeting, upcomingSchedulesByModule, uploadMaterial } from '@/services/api'
 // Schedules section state
 import { UpcomingSessionResponse } from '@/types/api'
   // Schedules state
@@ -193,6 +196,16 @@ export default function CoursePage() {
   const [showPaymentDialog, setShowPaymentDialog] = useState(false)
   const [isProcessingPayment, setIsProcessingPayment] = useState(false)
   const [editableProfile, setEditableProfile] = useState<UserProfile | null>(null)
+  // Upload materials state
+  const [showUploadDialog, setShowUploadDialog] = useState(false)
+  const [uploadMaterials, setUploadMaterials] = useState<any[]>([])
+  const [newMaterial, setNewMaterial] = useState({
+    type: 'Document',
+    title: '',
+    description: '',
+    url: '',
+    file: null as File | null
+  })
   const materialRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
 
   // Helper function to convert ISO 8601 duration to readable format
@@ -265,18 +278,18 @@ export default function CoursePage() {
         console.log('Fetching modules for tutor...')
         const modules = await getModulesForTutor()
         console.log('Tutor modules response:', modules)
-        const module = modules.find((m: any) => m.moduleId === moduleId)
-        console.log('Found module for tutor:', module)
-        // if (!module) {
+        const foundModule = modules.find((m: any) => m.moduleId === moduleId)
+        console.log('Found module for tutor:', foundModule)
+        // if (!foundModule) {
         // response = await axiosInstance.get('/api/modules/get-modulesfortutor')
         // console.log('Tutor modules response:', response.data)
         // const modules = response.data
         // const foundModule = modules.find((m: any) => m.moduleId === moduleId)
         // console.log('Found module for tutor:', foundModule)
-        if (!module) {
+        if (!foundModule) {
           throw new Error(`Module ${moduleId} not found in tutor's modules`)
         }
-        return module as LocalModule
+        return foundModule as LocalModule
         
       } else {
         // For students, first try enrolled modules
@@ -817,6 +830,121 @@ export default function CoursePage() {
     }
   }
 
+  // Upload Materials Functions
+  const handleAddMaterial = () => {
+    if (!newMaterial.title.trim()) {
+      toast({
+        title: "Error",
+        description: 'Please enter a title for the material',
+        variant: "destructive",
+      })
+      return
+    }
+
+    const material = {
+      id: Date.now(),
+      ...newMaterial,
+      uploadDate: new Date().toISOString()
+    }
+
+    setUploadMaterials([...uploadMaterials, material])
+    setNewMaterial({
+      type: 'Document',
+      title: '',
+      description: '',
+      url: '',
+      file: null
+    })
+    toast({
+      title: "Success",
+      description: 'Material added successfully!',
+    })
+  }
+
+  const handleRemoveMaterial = (id: number) => {
+    setUploadMaterials(uploadMaterials.filter(m => m.id !== id))
+    toast({
+      title: "Success",
+      description: 'Material removed',
+    })
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setNewMaterial({ ...newMaterial, file })
+    }
+  }
+
+  const handleSaveAllMaterials = async () => {
+    if (!params.id) {
+      toast({
+        title: "Error",
+        description: "Module ID not found",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      for (const material of uploadMaterials) {
+        const formData = new FormData()
+        formData.append('module_id', String(params.id))
+        formData.append('title', material.title)
+        formData.append('description', material.description || '')
+        formData.append('type', material.type)
+
+        if (material.type === 'Link') {
+          formData.append('link', material.url || '')
+        } else if (material.file) {
+          formData.append('file', material.file)
+        }
+
+        console.log(
+          'Uploading material:',
+          formData.get('title'),
+          formData.get('type'),
+          formData.get('module_id'),
+          formData.get('link') 
+        )
+
+        await uploadMaterial(formData)
+      }
+
+      toast({
+        title: "Success",
+        description: 'All materials uploaded successfully!',
+      })
+      setUploadMaterials([])
+      setShowUploadDialog(false)
+      // Refresh materials list
+      if (params.id) {
+        const refreshedMaterials = await getMaterials(String(params.id))
+        setLectureMaterials(refreshedMaterials || [])
+      }
+    } catch (err) {
+      console.error(err)
+      toast({
+        title: "Error",
+        description: 'Failed to upload materials',
+        variant: "destructive",
+      })
+    }
+  }
+
+  const getIconForMaterialType = (type: string) => {
+    switch (type) {
+      case 'Document':
+        return <FileText className="w-5 h-5 text-red-500" />
+      case 'Video':
+        return <Video className="w-5 h-5 text-blue-500" />
+      case 'Link':
+        return <LinkIcon className="w-5 h-5 text-green-500" />
+      default:
+        return <FileText className="w-5 h-5 text-gray-500" />
+    }
+  }
+
   // Debug function to test the meeting API
   // const debugMeetingAPI = async () => {
   //   console.log('=== DEBUG: Testing Meeting API ===')
@@ -1146,7 +1274,7 @@ export default function CoursePage() {
                     variant="default"
                     size="sm"
                     onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                    className="rounded-full w-12 h-12 -pr-20 shadow-lg absolute top-12 -left-9 bg-green-500 opacity-50"
+                    className="rounded-full w-12 h-12 -pr-20 shadow-lg absolute top-12 -left-9 bg-[#f0ae16] hover:bg-[#d99e00] opacity-50"
                   >
                     <ChevronRight className="w-6 h-6"/>
                   </Button>
@@ -1167,36 +1295,46 @@ export default function CoursePage() {
               
               <div className="flex items-center space-x-2">
                 {user?.role === 'TUTOR' && (
-                  <Button 
-                    onClick={() => {
-                      console.log('=== SCHEDULE BUTTON CLICKED ===')
-                      console.log('Original params.id:', params.id)
-                      console.log('params.id type:', typeof params.id)
-                      console.log('params.id length:', params.id?.length)
-                      console.log('Converting to string:', String(params.id))
-                      
-                      const moduleIdToStore = String(params.id)
-                      console.log('About to store in localStorage:', moduleIdToStore)
-                      localStorage.setItem('scheduleModuleId', moduleIdToStore)
-                      
-                      // Verify what was actually stored
-                      const storedValue = localStorage.getItem('scheduleModuleId')
-                      console.log('Verified stored value:', storedValue)
-                      console.log('Stored value type:', typeof storedValue)
-                      console.log('Stored value length:', storedValue?.length)
-                      
-                      const urlToNavigate = `/dashboard/schedul?moduleId=${module?.moduleId}`
-                      console.log('Navigating to URL:', urlToNavigate)
-                      console.log('=== END SCHEDULE BUTTON DEBUG ===')
-                      
-                      router.push(urlToNavigate)
-                    }}
-                    variant="outline"
-                    className="flex items-center space-x-2"
-                  >
-                    <Calendar className="w-4 h-4" />
-                    <span>Schedule Meeting</span>
-                  </Button>
+                  <>
+                    <Button 
+                      onClick={() => setShowUploadDialog(true)}
+                      variant="outline"
+                      className="flex items-center space-x-2"
+                    >
+                      <Upload className="w-4 h-4" />
+                      <span>Upload Materials</span>
+                    </Button>
+                    <Button 
+                      onClick={() => {
+                        console.log('=== SCHEDULE BUTTON CLICKED ===')
+                        console.log('Original params.id:', params.id)
+                        console.log('params.id type:', typeof params.id)
+                        console.log('params.id length:', params.id?.length)
+                        console.log('Converting to string:', String(params.id))
+                        
+                        const moduleIdToStore = String(params.id)
+                        console.log('About to store in localStorage:', moduleIdToStore)
+                        localStorage.setItem('scheduleModuleId', moduleIdToStore)
+                        
+                        // Verify what was actually stored
+                        const storedValue = localStorage.getItem('scheduleModuleId')
+                        console.log('Verified stored value:', storedValue)
+                        console.log('Stored value type:', typeof storedValue)
+                        console.log('Stored value length:', storedValue?.length)
+                        
+                        const urlToNavigate = `/dashboard/schedul?moduleId=${module?.moduleId}`
+                        console.log('Navigating to URL:', urlToNavigate)
+                        console.log('=== END SCHEDULE BUTTON DEBUG ===')
+                        
+                        router.push(urlToNavigate)
+                      }}
+                      variant="outline"
+                      className="flex items-center space-x-2"
+                    >
+                      <Calendar className="w-4 h-4" />
+                      <span>Schedule Meeting</span>
+                    </Button>
+                  </>
                 )}
                 
                 {user?.role === 'STUDENT' && (
@@ -1698,6 +1836,139 @@ export default function CoursePage() {
   </DialogContent>
 </Dialog>
       </div>
+      
+      {/* Upload Materials Dialog */}
+      <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
+        <DialogContent className="sm:max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Upload Course Materials</DialogTitle>
+            <DialogDescription>
+              Add documents, videos, or links for this module
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Upload Form */}
+            <div className="lg:col-span-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Add New Material</CardTitle>
+                  <CardDescription>Upload documents, videos, or add links</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Material Type */}
+                  <div className="space-y-2">
+                    <Label>Material Type</Label>
+                    <Tabs 
+                      value={newMaterial.type} 
+                      onValueChange={(value) => setNewMaterial({...newMaterial, type: value})}
+                    >
+                      <TabsList className="grid w-full grid-cols-3">
+                        <TabsTrigger value="Document">Document</TabsTrigger>
+                        <TabsTrigger value="Video">Video</TabsTrigger>
+                        <TabsTrigger value="Link">Link</TabsTrigger>
+                      </TabsList>
+
+                      <TabsContent value="Document">
+                        <Label>Upload Document</Label>
+                        <Input type="file" accept=".pdf,.doc,.docx,.ppt,.pptx" onChange={handleFileChange} />
+                      </TabsContent>
+
+                      <TabsContent value="Video">
+                        <Label>Upload Video</Label>
+                        <Input type="file" accept=".mp4,.mov,.avi,.wmv" onChange={handleFileChange} />
+                      </TabsContent>
+
+                      <TabsContent value="Link">
+                        <Label>External Link</Label>
+                        <Input 
+                          type="url" 
+                          placeholder="https://example.com"
+                          value={newMaterial.url}
+                          onChange={(e) => setNewMaterial({...newMaterial, url: e.target.value})}
+                        />
+                      </TabsContent>
+                    </Tabs>
+                  </div>
+
+                  {/* Material Details */}
+                  <div className="space-y-2">
+                    <Label htmlFor="title">Material Title</Label>
+                    <Input 
+                      id="title"
+                      value={newMaterial.title}
+                      onChange={(e) => setNewMaterial({...newMaterial, title: e.target.value})}
+                      placeholder="Enter material title"
+                    />
+                    <Label>Description</Label>
+                    <Textarea 
+                      value={newMaterial.description}
+                      onChange={(e) => setNewMaterial({...newMaterial, description: e.target.value})}
+                      placeholder="Enter material description"
+                    />
+                  </div>
+
+                  <Button onClick={handleAddMaterial} className="w-full bg-[#f0ae16] hover:bg-[#d99e00]">
+                    <Plus className="w-4 h-4 mr-2" /> Add Material
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Preview */}
+            <div className="space-y-6">
+              <Card>
+                <CardHeader><CardTitle>Upload Summary</CardTitle></CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex justify-between">
+                    <span>Materials Added</span>
+                    <Badge>{uploadMaterials.length}</Badge>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Current Module</span>
+                    <span className="text-sm truncate">{moduleDetails?.name || 'Loading...'}</span>
+                  </div>
+                  <Button 
+                    onClick={handleSaveAllMaterials}
+                    disabled={uploadMaterials.length === 0}
+                    className="w-full bg-[#f0ae16] hover:bg-[#d99e00]"
+                  >
+                    <Save className="w-4 h-4 mr-2" /> Save Materials
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Recent Materials */}
+              <Card>
+                <CardHeader><CardTitle>Added Materials</CardTitle></CardHeader>
+                <CardContent>
+                  {uploadMaterials.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <Upload className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                      <p>No materials added yet</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {uploadMaterials.map((m) => (
+                        <div key={m.id} className="flex items-center space-x-3 p-3 border rounded-lg">
+                          {getIconForMaterialType(m.type)}
+                          <div className="flex-1">
+                            <h4 className="font-medium text-sm">{m.title}</h4>
+                            <p className="text-xs text-gray-500 capitalize">{m.type}</p>
+                          </div>
+                          <Button size="sm" variant="ghost" onClick={() => handleRemoveMaterial(m.id)}>
+                            <Trash2 className="w-4 h-4 text-red-500" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
       
       {/* Rating Modal */}
       <ModuleRatingModal

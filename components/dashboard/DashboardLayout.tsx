@@ -17,7 +17,9 @@ import {
   Upload,
   CreditCard,
   Star,
-  Search
+  Search,
+  Bot,
+  Wallet
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -34,6 +36,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     // Students can see module/courses but not create or manage schedules
     { name: 'Video Sessions', href: '/dashboard/sessions', icon: Video },
     { name: 'Payments', href: '/dashboard/payments', icon: CreditCard },
+    { name: 'Ask AI', href: '/dashboard/ask-ai', icon: Bot },
     { name: 'Profile', href: '/dashboard/profile', icon: User },
   ]
 
@@ -43,6 +46,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { name: 'Upload Materials', href: '/dashboard/upload', icon: Upload },
     { name: 'Schedule', href: '/dashboard/schedule', icon: Calendar },
     { name: 'Video Sessions', href: '/dashboard/sessions', icon: Video },
+    { name: 'My Wallet', href: '/dashboard/wallet', icon: Wallet },
     { name: 'Reviews', href: '/dashboard/reviews', icon: Star },
     { name: 'Profile', href: '/dashboard/profile', icon: User },
   ]
