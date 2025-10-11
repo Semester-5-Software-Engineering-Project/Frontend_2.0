@@ -91,11 +91,11 @@ export default function Schedule() {
   if (user?.role !== userType.TUTOR) {
     return (
       <DashboardLayout>
-        <div className="p-6">
-          <Alert variant="destructive" className="max-w-2xl">
-            <ShieldAlert className="h-4 w-4" />
-            <AlertTitle>Access Restricted</AlertTitle>
-            <AlertDescription>
+        <div className="p-6 max-w-2xl mx-auto mt-12">
+          <Alert variant="destructive" className="border-2 border-red-200 shadow-md">
+            <ShieldAlert className="h-5 w-5" />
+            <AlertTitle className="font-bold text-lg">Access Restricted</AlertTitle>
+            <AlertDescription className="font-medium">
               Scheduling is available to tutors only.
             </AlertDescription>
           </Alert>
@@ -108,18 +108,19 @@ export default function Schedule() {
   if (!moduleId) {
     return (
       <DashboardLayout>
-        <div className="p-6">
-          <Alert variant="destructive" className="max-w-2xl">
-            <ShieldAlert className="h-4 w-4" />
-            <AlertTitle>Invalid Request</AlertTitle>
-            <AlertDescription>
+        <div className="p-6 max-w-2xl mx-auto mt-12">
+          <Alert variant="destructive" className="border-2 border-red-200 shadow-md">
+            <ShieldAlert className="h-5 w-5" />
+            <AlertTitle className="font-bold text-lg">Invalid Request</AlertTitle>
+            <AlertDescription className="font-medium">
               No module selected for scheduling. Please go back and select a module.
             </AlertDescription>
           </Alert>
-          <div className="mt-4 space-x-2">
+          <div className="mt-6 flex items-center space-x-4">
             <Button 
               onClick={() => router.push('/dashboard/courses')}
               variant="outline"
+              className="border-gray-300 hover:bg-gray-50 font-semibold"
             >
               <ChevronLeft className="w-4 h-4 mr-2" />
               Back to Modules
@@ -133,7 +134,7 @@ export default function Schedule() {
                     setModuleId(urlModuleId)
                   }
                 }}
-                variant="default"
+                className="bg-[#FBBF24] hover:bg-[#F59E0B] text-black font-semibold"
               >
                 Try Again
               </Button>
@@ -245,48 +246,60 @@ export default function Schedule() {
   return (
     <DashboardLayout>
       <div className="p-6 space-y-6">
-        <div className="flex items-center space-x-4">
-          <Button 
-            onClick={() => router.push(`/dashboard/courses/${moduleId}`)}
-            variant="outline"
-            className="flex items-center space-x-2"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            <span>Back to Module</span>
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold">Schedule Meeting</h1>
-            <p className="text-gray-600">Create a new meeting schedule for Module {moduleId}</p>
+        {/* Header */}
+        <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
+          <div className="flex items-center space-x-4">
+            <Button 
+              onClick={() => router.push(`/dashboard/courses/${moduleId}`)}
+              variant="outline"
+              className="border-gray-300 hover:bg-gray-50"
+            >
+              <ChevronLeft className="w-4 h-4 mr-2" />
+              Back to Module
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Schedule Meeting</h1>
+              <p className="text-gray-600 mt-1">Create a new meeting schedule for your module</p>
+            </div>
           </div>
         </div>
 
         <div className="max-w-2xl">
           {submitStatus.type && (
-            <Alert variant={submitStatus.type === 'success' ? 'default' : 'destructive'} className="mb-6">
+            <Alert 
+              variant={submitStatus.type === 'success' ? 'default' : 'destructive'} 
+              className={`mb-6 border-2 ${
+                submitStatus.type === 'success' 
+                  ? 'border-green-200 bg-green-50' 
+                  : 'border-red-200'
+              }`}
+            >
               {submitStatus.type === 'success' ? (
-                <CheckCircle className="h-4 w-4" />
+                <CheckCircle className="h-5 w-5 text-green-600" />
               ) : (
-                <XCircle className="h-4 w-4" />
+                <XCircle className="h-5 w-5" />
               )}
-              <AlertTitle>
+              <AlertTitle className="font-bold">
                 {submitStatus.type === 'success' ? 'Success' : 'Error'}
               </AlertTitle>
-              <AlertDescription>{submitStatus.message}</AlertDescription>
+              <AlertDescription className="font-medium">{submitStatus.message}</AlertDescription>
             </Alert>
           )}
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Meeting Details</CardTitle>
-              <CardDescription>
+          <Card className="border-none shadow-md">
+            <CardHeader className="border-b border-gray-200 bg-gray-50">
+              <CardTitle className="text-xl font-bold text-gray-900">Meeting Details</CardTitle>
+              <CardDescription className="text-gray-600">
                 Set up the date, time, and recurrence for your meeting
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* DateTime Picker */}
                 <div className="space-y-2">
-                  <Label htmlFor="datetime">Meeting Date & Time</Label>
+                  <Label htmlFor="datetime" className="text-sm font-semibold text-gray-900">
+                    Meeting Date & Time
+                  </Label>
                   <DateTimePicker
                     id="datetime"
                     value={formData.dateTime}
@@ -297,18 +310,20 @@ export default function Schedule() {
                     required
                     className="w-full"
                   />
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-gray-600">
                     Select both date and time for your meeting. Times around midnight (00:00) are handled correctly.
                   </p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="duration">Duration (minutes)</Label>
+                  <Label htmlFor="duration" className="text-sm font-semibold text-gray-900">
+                    Duration (minutes)
+                  </Label>
                   <Select
                     value={formData.duration.toString()}
                     onValueChange={(value) => handleInputChange('duration', parseInt(value))}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]">
                       <SelectValue placeholder="Select duration" />
                     </SelectTrigger>
                     <SelectContent>
@@ -322,7 +337,9 @@ export default function Schedule() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="recurrence">Recurrence Type</Label>
+                  <Label htmlFor="recurrence" className="text-sm font-semibold text-gray-900">
+                    Recurrence Type
+                  </Label>
                   <Select
                     value={formData.recurrenceType}
                     onValueChange={(value: 'specific' | 'daily' | 'weekly') => {
@@ -332,7 +349,7 @@ export default function Schedule() {
                       }
                     }}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]">
                       <SelectValue placeholder="Select recurrence" />
                     </SelectTrigger>
                     <SelectContent>
@@ -345,12 +362,14 @@ export default function Schedule() {
 
                 {formData.recurrenceType === 'weekly' && (
                   <div className="space-y-2">
-                    <Label htmlFor="weekDay">Day of Week</Label>
+                    <Label htmlFor="weekDay" className="text-sm font-semibold text-gray-900">
+                      Day of Week
+                    </Label>
                     <Select
                       value={formData.weekDay?.toString() || ''}
                       onValueChange={(value) => handleInputChange('weekDay', parseInt(value))}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]">
                         <SelectValue placeholder="Select day of week" />
                       </SelectTrigger>
                       <SelectContent>
@@ -366,14 +385,14 @@ export default function Schedule() {
                   </div>
                 )}
 
-                <div className="flex items-center space-x-4 pt-4">
+                <div className="flex items-center space-x-4 pt-6 border-t border-gray-200">
                   <Button
                     type="submit"
                     disabled={!isFormValid || isSubmitting}
-                    className="flex items-center space-x-2"
+                    className="bg-[#FBBF24] hover:bg-[#F59E0B] text-black font-semibold shadow-md"
                   >
-                    <CalendarIcon className="w-4 h-4" />
-                    <span>{isSubmitting ? 'Scheduling...' : 'Schedule Meeting'}</span>
+                    <CalendarIcon className="w-4 h-4 mr-2" />
+                    {isSubmitting ? 'Scheduling...' : 'Schedule Meeting'}
                   </Button>
                   
                   <Button
@@ -381,6 +400,7 @@ export default function Schedule() {
                     variant="outline"
                     onClick={() => router.push(`/dashboard/courses/${moduleId}`)}
                     disabled={isSubmitting}
+                    className="border-gray-300 hover:bg-gray-50 font-semibold"
                   >
                     Cancel
                   </Button>

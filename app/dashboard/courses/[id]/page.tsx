@@ -47,6 +47,7 @@ import ModuleRatingModal from '@/components/ui/ratingmodal'
 import { EnrollmentApi } from '@/apis/EnrollmentApi'
 import RatingApi, { RatingGetDto } from '@/apis/RatingApi'
 import axiosInstance from '@/app/utils/axiosInstance'
+import ModuleDescriptionApi, { ModuleDescriptionDto } from '@/apis/ModuleDescriptionApi'
 
 // TypeScript interfaces for module data
 interface LocalModule extends ApiModule {
@@ -196,6 +197,15 @@ export default function CoursePage() {
   const [showPaymentDialog, setShowPaymentDialog] = useState(false)
   const [isProcessingPayment, setIsProcessingPayment] = useState(false)
   const [editableProfile, setEditableProfile] = useState<UserProfile | null>(null)
+  
+  // Module Description state
+  const [showDescriptionDialog, setShowDescriptionDialog] = useState(false)
+  const [moduleDescription, setModuleDescription] = useState<ModuleDescriptionDto | null>(null)
+  const [descriptionExists, setDescriptionExists] = useState(false)
+  const [descriptionPoints, setDescriptionPoints] = useState<string[]>([''])
+  const [isLoadingDescription, setIsLoadingDescription] = useState(false)
+  const [isSavingDescription, setIsSavingDescription] = useState(false)
+  
   // Upload materials state
   const [showUploadDialog, setShowUploadDialog] = useState(false)
   const [uploadMaterials, setUploadMaterials] = useState<any[]>([])
@@ -712,6 +722,22 @@ export default function CoursePage() {
     loadMaterials()
   }, [params.id])
 
+  // Check if module description exists when module is loaded
+  useEffect(() => {
+    const checkDescriptionExists = async () => {
+      if (!params.id || user?.role !== 'TUTOR') return
+      
+      try {
+        const exists = await ModuleDescriptionApi.exists(String(params.id))
+        setDescriptionExists(exists)
+      } catch (error) {
+        console.error('Error checking description existence:', error)
+      }
+    }
+
+    checkDescriptionExists()
+  }, [params.id, user?.role])
+
   const scrollToMaterial = (materialId: string) => {
     const materialElement = materialRefs.current[materialId]
     if (materialElement) {
@@ -830,6 +856,156 @@ export default function CoursePage() {
     }
   }
 
+  // Module Description Functions
+  const fetchModuleDescription = async (moduleId: string) => {
+    setIsLoadingDescription(true)
+    try {
+      const exists = await ModuleDescriptionApi.exists(moduleId)
+      setDescriptionExists(exists)
+      
+      if (exists) {
+        const description = await ModuleDescriptionApi.getByModuleId(moduleId)
+        setModuleDescription(description)
+        setDescriptionPoints(description.descriptionPoints.length > 0 ? description.descriptionPoints : [''])
+      } else {
+        setDescriptionPoints([''])
+      }
+    } catch (error: any) {
+      console.error('Error fetching module description:', error)
+      setDescriptionPoints([''])
+    } finally {
+      setIsLoadingDescription(false)
+    }
+  }
+
+  const handleOpenDescriptionDialog = async () => {
+    if (!params.id) return
+    setShowDescriptionDialog(true)
+    await fetchModuleDescription(String(params.id))
+  }
+
+  const handleAddDescriptionPoint = () => {
+    setDescriptionPoints([...descriptionPoints, ''])
+  }
+
+  const handleRemoveDescriptionPoint = (index: number) => {
+    if (descriptionPoints.length === 1) {
+      toast({
+        title: "Warning",
+        description: "At least one description point is required",
+        variant: "destructive",
+      })
+      return
+    }
+    const newPoints = descriptionPoints.filter((_, i) => i !== index)
+    setDescriptionPoints(newPoints)
+  }
+
+  const handleDescriptionPointChange = (index: number, value: string) => {
+    const newPoints = [...descriptionPoints]
+    newPoints[index] = value
+    setDescriptionPoints(newPoints)
+  }
+
+  const handleSaveDescription = async () => {
+    if (!params.id || !moduleDetails) {
+      toast({
+        title: "Error",
+        description: "Module information is missing",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Filter out empty points
+    const filteredPoints = descriptionPoints.filter(point => point.trim() !== '')
+    
+    if (filteredPoints.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please add at least one description point",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsSavingDescription(true)
+    try {
+      const dto: ModuleDescriptionDto = {
+        moduleId: String(params.id),
+        name: moduleDetails.name,
+        domain: moduleDetails.domain,
+        price: moduleDetails.fee,
+        tutorName: user?.name || '',
+        descriptionPoints: filteredPoints
+      }
+
+      if (descriptionExists) {
+        await ModuleDescriptionApi.update(String(params.id), dto)
+        toast({
+          title: "Success",
+          description: "Module description updated successfully!",
+        })
+      } else {
+        await ModuleDescriptionApi.create(dto)
+        toast({
+          title: "Success",
+          description: "Module description created successfully!",
+        })
+        setDescriptionExists(true)
+      }
+
+      await fetchModuleDescription(String(params.id))
+      setShowDescriptionDialog(false)
+    } catch (error: any) {
+      console.error('Error saving module description:', error)
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save module description",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSavingDescription(false)
+    }
+  }
+
+  // When the dialog opens, fetch and prefill existing description points
+  useEffect(() => {
+    if (showDescriptionDialog && params.id) {
+      fetchModuleDescription(String(params.id))
+    }
+  }, [showDescriptionDialog, params.id])
+
+  const handleDeleteDescription = async () => {
+    if (!params.id) return
+
+    if (!confirm('Are you sure you want to delete this module description? This action cannot be undone.')) {
+      return
+    }
+
+    setIsSavingDescription(true)
+    try {
+      await ModuleDescriptionApi.delete(String(params.id))
+      toast({
+        title: "Success",
+        description: "Module description deleted successfully!",
+      })
+      setDescriptionExists(false)
+      setModuleDescription(null)
+      setDescriptionPoints([''])
+      setShowDescriptionDialog(false)
+    } catch (error: any) {
+      console.error('Error deleting module description:', error)
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete module description",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSavingDescription(false)
+    }
+  }
+
   // Upload Materials Functions
   const handleAddMaterial = () => {
     if (!newMaterial.title.trim()) {
@@ -945,191 +1121,7 @@ export default function CoursePage() {
     }
   }
 
-  // Debug function to test the meeting API
-  // const debugMeetingAPI = async () => {
-  //   console.log('=== DEBUG: Testing Meeting API ===')
-  //   console.log('Module ID:', params.id)
-  //   console.log('User from auth context:', user)
-  //   console.log('Axios base URL:', axiosInstance.defaults.baseURL)
-  //   console.log('Cookies:', document.cookie)
-    
-  //   // Extract JWT token from cookies
-  //   const extractJWTFromCookies = () => {
-  //     const cookies = document.cookie.split(';')
-  //     for (let cookie of cookies) {
-  //       const [name, value] = cookie.trim().split('=')
-  //       if (name === 'jwt_token') {
-  //         return value
-  //       }
-  //     }
-  //     return null
-  //   }
-
-  //   const jwtToken = extractJWTFromCookies()
-  //   console.log('JWT Token found:', !!jwtToken)
-  //   if (jwtToken) {
-  //     console.log('JWT Token preview:', jwtToken.substring(0, 50) + '...')
-  //   }
-    
-  //   const payload = {
-  //     moduleId: params.id,
-  //     requestedDate: "2025-09-16",
-  //     requestedTime: "17:59:00",
-  //   }
-    
-  //   // Test 1: With Bearer token (like Postman)
-  //   if (jwtToken) {
-  //     try {
-  //       console.log('TEST 1: Using Bearer token authentication (like Postman)')
-        
-  //       const response = await axiosInstance.post('/api/meeting/join', payload, {
-  //         headers: {
-  //           'Content-Type': 'application/json',
-  //           'Authorization': `Bearer ${jwtToken}`,
-  //         },
-  //         withCredentials: false, // Don't send cookies when using Bearer token
-  //       })
-        
-  //       console.log('TEST 1 SUCCESS! Response:', response)
-  //       console.log('Response data:', response.data)
-  //       console.log('Response status:', response.status)
-  //       return // If this works, we're done
-        
-  //     } catch (error: any) {
-  //       console.error('TEST 1 FAILED:', error.response?.status, error.response?.data)
-  //     }
-  //   }
-    
-  //   // Test 2: With cookies only (original method)
-  //   try {
-  //     console.log('TEST 2: Using cookie authentication only')
-      
-  //     const response = await axiosInstance.post('/api/meeting/join', payload, {
-  //       headers: {
-  //         'Content-Type': 'application/json',
-  //       },
-  //       withCredentials: true,
-  //     })
-      
-  //     console.log('TEST 2 SUCCESS! Response:', response)
-  //     console.log('Response data:', response.data)
-  //     console.log('Response status:', response.status)
-      
-  //   } catch (error: any) {
-  //     console.error('TEST 2 FAILED:', error.response?.status, error.response?.data)
-      
-  //     // Try to get more details about the error
-  //     if (error.response?.data) {
-  //       try {
-  //         const errorData = typeof error.response.data === 'string' 
-  //           ? error.response.data 
-  //           : JSON.stringify(error.response.data, null, 2)
-  //         console.error('Formatted error data:', errorData)
-  //       } catch (e) {
-  //         console.error('Could not format error data:', e)
-  //       }
-  //     }
-  //   }
-    
-  //   console.log('=== END DEBUG ===')
-  // }
-
-  // // Debug function to test different request variations
-  // const testDifferentRequestFormats = async () => {
-  //   if (!params.id) {
-  //     console.error('No module ID available')
-  //     return
-  //   }
-
-  //   const basePayload = {
-  //     moduleId: params.id,
-  //     requestedDate: "2025-09-16",
-  //     requestedTime: "17:59:00",
-  //   }
-
-  //   console.log('=== TESTING DIFFERENT REQUEST FORMATS ===')
-
-  //   // Test 1: Exactly as current
-  //   try {
-  //     console.log('Test 1: Current format')
-  //     const response1 = await axiosInstance.post('/api/meeting/join', basePayload, {
-  //       headers: { 'Content-Type': 'application/json' },
-  //       withCredentials: true,
-  //     })
-  //     console.log('Test 1 SUCCESS:', response1.data)
-  //   } catch (error: any) {
-  //     console.log('Test 1 FAILED:', error.response?.status, error.response?.data)
-  //   }
-
-  //   // Test 2: Try with snake_case
-  //   try {
-  //     console.log('Test 2: Snake case format')
-  //     const snakeCasePayload = {
-  //       module_id: params.id,
-  //       requested_date: "2025-09-16",
-  //       requested_time: "17:59:00",
-  //     }
-  //     const response2 = await axiosInstance.post('/api/meeting/join', snakeCasePayload, {
-  //       headers: { 'Content-Type': 'application/json' },
-  //       withCredentials: true,
-  //     })
-  //     console.log('Test 2 SUCCESS:', response2.data)
-  //   } catch (error: any) {
-  //     console.log('Test 2 FAILED:', error.response?.status, error.response?.data)
-  //   }
-
-  //   // Test 3: Try without explicit headers
-  //   try {
-  //     console.log('Test 3: No explicit headers')
-  //     const response3 = await axiosInstance.post('/api/meeting/join', basePayload)
-  //     console.log('Test 3 SUCCESS:', response3.data)
-  //   } catch (error: any) {
-  //     console.log('Test 3 FAILED:', error.response?.status, error.response?.data)
-  //   }
-
-  //   // Test 4: Try with raw fetch instead of axios
-  //   try {
-  //     console.log('Test 4: Raw fetch instead of axios')
-  //     const response4 = await fetch('http://localhost:8080/api/meeting/join', {
-  //       method: 'POST',
-  //       headers: {
-  //         'Content-Type': 'application/json',
-  //         'Accept': 'application/json',
-  //       },
-  //       credentials: 'include',
-  //       body: JSON.stringify(basePayload)
-  //     })
-      
-  //     if (response4.ok) {
-  //       const data = await response4.json()
-  //       console.log('Test 4 SUCCESS:', data)
-  //     } else {
-  //       const errorText = await response4.text()
-  //       console.log('Test 4 FAILED:', response4.status, errorText)
-  //     }
-  //   } catch (error: any) {
-  //     console.log('Test 4 ERROR:', error)
-  //   }
-
-  //   // Test 5: Try with different date format
-  //   try {
-  //     console.log('Test 5: ISO date format')
-  //     const isoPayload = {
-  //       moduleId: params.id,
-  //       requestedDate: "2025-09-16T17:59:00.000Z",
-  //     }
-  //     const response5 = await axiosInstance.post('/api/meeting/join', isoPayload, {
-  //       headers: { 'Content-Type': 'application/json' },
-  //       withCredentials: true,
-  //     })
-  //     console.log('Test 5 SUCCESS:', response5.data)
-  //   } catch (error: any) {
-  //     console.log('Test 5 FAILED:', error.response?.status, error.response?.data)
-  //   }
-
-  //   console.log('=== END TESTING ===')
-  // }
-
+ 
   // Helper function to render stars for rating display
   const renderStars = (rating: number) => {
     const stars = []
@@ -1167,20 +1159,23 @@ export default function CoursePage() {
         {/* Loading State */}
         {loading && (
           <div className="flex items-center justify-center h-64">
-            <div className="flex items-center space-x-2">
-              <Loader2 className="w-6 h-6 animate-spin" />
-              <span>Loading module details...</span>
+            <div className="flex flex-col items-center space-y-4">
+              <Loader2 className="w-16 h-16 text-[#FBBF24] animate-spin" />
+              <span className="text-lg font-semibold text-gray-900">Loading module details...</span>
             </div>
           </div>
         )}
 
         {/* Error State */}
         {error && !loading && (
-          <Card>
-            <CardContent className="p-6 ">
+          <Card className="border-none shadow-md">
+            <CardContent className="p-8">
               <div className="text-center">
-                <h3 className="text-lg font-semibold text-red-600 mb-2">Error Loading Module</h3>
-                <p className="text-gray-600 mb-4">{error}</p>
+                <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <h3 className="text-2xl font-bold text-red-600">❌</h3>
+                </div>
+                <h3 className="text-xl font-bold text-red-600 mb-3">Error Loading Module</h3>
+                <p className="text-gray-700 mb-6 max-w-2xl mx-auto">{error}</p>
                 
                 {/* Debug Info */}
                 <div className="text-left bg-gray-100 p-4 rounded-lg mb-4">
@@ -1193,28 +1188,42 @@ export default function CoursePage() {
                 
                 {/* Helpful suggestions for students */}
                 {user?.role === 'STUDENT' && error.includes('not found in student\'s enrollments') && (
-                  <div className="text-left bg-blue-50 border border-blue-200 p-4 rounded-lg mb-4">
-                    <h4 className="font-semibold mb-2 text-blue-800">💡 Possible Solutions:</h4>
-                    <ul className="text-sm text-blue-700 space-y-1">
-                      <li>• You might not be enrolled in this module yet</li>
-                      <li>• The module ID in the URL might be incorrect</li>
-                      <li>• Try going back to the main courses page and clicking the module from there</li>
-                      <li>• Contact your tutor or administrator for enrollment assistance</li>
+                  <div className="text-left bg-yellow-50 border-2 border-[#FBBF24] p-6 rounded-xl mb-6 max-w-2xl mx-auto">
+                    <h4 className="font-bold mb-3 text-gray-900 flex items-center">
+                      💡 <span className="ml-2">Possible Solutions:</span>
+                    </h4>
+                    <ul className="text-sm text-gray-700 space-y-2">
+                      <li className="flex items-start">
+                        <span className="mr-2">•</span>
+                        <span>You might not be enrolled in this module yet</span>
+                      </li>
+                      <li className="flex items-start">
+                        <span className="mr-2">•</span>
+                        <span>The module ID in the URL might be incorrect</span>
+                      </li>
+                      <li className="flex items-start">
+                        <span className="mr-2">•</span>
+                        <span>Try going back to the main courses page and clicking the module from there</span>
+                      </li>
+                      <li className="flex items-start">
+                        <span className="mr-2">•</span>
+                        <span>Contact your tutor or administrator for enrollment assistance</span>
+                      </li>
                     </ul>
                   </div>
                 )}
                 
-                <div className="flex space-x-2 justify-center">
+                <div className="flex space-x-3 justify-center">
                   <Button 
                     onClick={() => window.location.reload()} 
-                    className="mt-4"
+                    className="mt-4 bg-red-600 hover:bg-red-700 text-white font-semibold"
                   >
                     Try Again
                   </Button>
                   <Button 
                     onClick={() => router.push('/dashboard/courses')}
                     variant="outline"
-                    className="mt-4"
+                    className="mt-4 border-gray-300 hover:bg-gray-50"
                   >
                     Back to Courses
                   </Button>
@@ -1229,28 +1238,28 @@ export default function CoursePage() {
           <>
             {/* Payment Status Check for Students */}
             {user?.role === 'STUDENT' && enrollment && !enrollment.isPaid ? (
-              <Card className="mx-auto max-w-md">
-                <CardHeader className="text-center">
-                  <CardTitle className="text-xl text-red-600">Payment Required</CardTitle>
-                  <CardDescription>
-                    Sorry, you need to pay for this course to view the content.
+              <Card className="mx-auto max-w-md border-none shadow-lg">
+                <CardHeader className="text-center bg-gradient-to-r from-yellow-50 to-white border-b">
+                  <CardTitle className="text-2xl text-[#FBBF24] font-bold">💳 Payment Required</CardTitle>
+                  <CardDescription className="text-gray-700 mt-2">
+                    You need to pay for this course to view the content.
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="text-center">
-                  <div className="space-y-4">
-                    <div className="p-4 bg-gray-50 rounded-lg">
-                      <h3 className="font-semibold">{course.title}</h3>
-                      <p className="text-sm text-gray-600">{course.domain}</p>
-                      <p className="text-lg font-bold text-green-600 mt-2">
-                        ${course.fee} USD
+                <CardContent className="text-center p-6">
+                  <div className="space-y-6">
+                    <div className="p-6 bg-gradient-to-r from-gray-50 to-white rounded-xl border-2 border-[#FBBF24]">
+                      <h3 className="font-bold text-lg text-gray-900">{course.title}</h3>
+                      <p className="text-sm text-gray-600 mt-1">{course.domain}</p>
+                      <p className="text-3xl font-bold text-[#FBBF24] mt-4">
+                        ${course.fee} <span className="text-sm text-gray-500">USD</span>
                       </p>
                     </div>
                     <Button 
                       onClick={() => setShowPaymentDialog(true)}
-                      className="w-full bg-blue-600 hover:bg-blue-700"
+                      className="w-full bg-[#FBBF24] hover:bg-[#F59E0B] text-black font-bold"
                       size="lg"
                     >
-                      Pay for Course
+                      💳 Pay for Course
                     </Button>
                   </div>
                 </CardContent>
@@ -1267,16 +1276,16 @@ export default function CoursePage() {
                 )}
 
                 {/* Toggle Button for Collapsed Sidebar */}
-                <div className={`fixed top-4 left-4 z-100 transition-all duration-300 ease-in-out ${
+                <div className={`fixed top-20 left-4 z-50 transition-all duration-300 ease-in-out ${
                   sidebarCollapsed ? 'translate-x-0' : '-translate-x-full'
                 }`}>
                   <Button
                     variant="default"
                     size="sm"
                     onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                    className="rounded-full w-12 h-12 -pr-20 shadow-lg absolute top-12 -left-9 bg-[#f0ae16] hover:bg-[#d99e00] opacity-50"
+                    className="rounded-full w-10 h-10 shadow-lg bg-[#FBBF24] hover:bg-[#F59E0B] text-black"
                   >
-                    <ChevronRight className="w-6 h-6"/>
+                    <ChevronRight className="w-5 h-5"/>
                   </Button>
                 </div>
               </>
@@ -1287,19 +1296,19 @@ export default function CoursePage() {
               <Button 
                 onClick={() => router.push('/dashboard/courses')}
                 variant="outline"
-                className="flex items-center space-x-2"
+                className="flex items-center space-x-2 border-gray-300 hover:bg-gray-50"
               >
                 <ChevronLeft className="w-4 h-4" />
                 <span>Back to Modules</span>
               </Button>
               
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 flex-wrap">
                 {user?.role === 'TUTOR' && (
                   <>
                     <Button 
                       onClick={() => setShowUploadDialog(true)}
                       variant="outline"
-                      className="flex items-center space-x-2"
+                      className="flex items-center space-x-2 border-gray-300 hover:bg-yellow-50"
                     >
                       <Upload className="w-4 h-4" />
                       <span>Upload Materials</span>
@@ -1329,7 +1338,7 @@ export default function CoursePage() {
                         router.push(urlToNavigate)
                       }}
                       variant="outline"
-                      className="flex items-center space-x-2"
+                      className="flex items-center space-x-2 border-gray-300 hover:bg-yellow-50"
                     >
                       <Calendar className="w-4 h-4" />
                       <span>Schedule Meeting</span>
@@ -1341,17 +1350,17 @@ export default function CoursePage() {
                   <Button 
                     onClick={() => setIsRatingModalOpen(true)}
                     variant="outline"
-                    className="flex items-center space-x-2"
+                    className="flex items-center space-x-2 border-[#FBBF24] text-gray-700 hover:bg-yellow-50"
                   >
-                    <Star className="w-4 h-4" />
-                    <span>Rate this module</span>
+                    <Star className="w-4 h-4 text-[#FBBF24]" />
+                    <span>Rate Module</span>
                   </Button>
                 )}
                 
                 <Button 
                   onClick={handleJoinMeeting}
                   disabled={isJoiningMeeting}
-                  className="flex items-center space-x-2"
+                  className="flex items-center space-x-2 bg-[#FBBF24] hover:bg-[#F59E0B] text-black font-semibold"
                 >
                   <VideoIcon className="w-4 h-4" />
                   <span>{isJoiningMeeting ? 'Joining...' : 'Join Meeting'}</span>
@@ -1365,32 +1374,32 @@ export default function CoursePage() {
             }`}>
 
               {/* Course Header */}
-              <div className="relative">
+              <div className="relative overflow-hidden rounded-2xl shadow-lg">
                 <img 
                   src={course.image} 
                   alt={course.title}
-                  className="w-full h-64 object-cover rounded-xl"
+                  className="w-full h-72 object-cover"
                 />
-                <div className="absolute inset-0 bg-black bg-opacity-40 rounded-xl flex items-end">
-                  <div className="p-6 text-white">
-                    <h1 className="text-4xl font-bold mb-2">{course.title}</h1>
-                    <p className="text-xl text-gray-200 mb-4">{course.description}</p>
-                    <div className="flex items-center space-x-6">
-                      <div className="flex items-center space-x-2">
-                        <Star className="w-5 h-5 text-yellow-400 fill-current" />
-                        <span>{course.rating.toFixed(1)}</span>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex items-end">
+                  <div className="p-8 text-white w-full">
+                    <h1 className="text-4xl font-bold mb-3">{course.title}</h1>
+                    <p className="text-lg text-gray-200 mb-4">{course.description}</p>
+                    <div className="flex items-center space-x-6 flex-wrap">
+                      <div className="flex items-center space-x-2 bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full">
+                        <Star className="w-5 h-5 text-[#FBBF24] fill-current" />
+                        <span className="font-semibold">{course.rating.toFixed(1)}</span>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Badge variant="outline" className="text-white border-white">
+                        <Badge variant="outline" className="text-white border-white bg-white/20 backdrop-blur-sm">
                           {course.domain}
                         </Badge>
                       </div>
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-2 bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full">
                         <Clock className="w-5 h-5" />
                         <span>{course.duration}</span>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-lg font-semibold">${course.fee}</span>
+                      <div className="flex items-center space-x-2 bg-[#FBBF24]/90 backdrop-blur-sm px-4 py-1 rounded-full">
+                        <span className="text-lg font-bold text-black">${course.fee}</span>
                       </div>
                     </div>
                   </div>
@@ -1398,26 +1407,43 @@ export default function CoursePage() {
               </div>
 
               {/* Module Information */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Module Information</CardTitle>
-                  <CardDescription>Details about this learning module</CardDescription>
+              <Card className="border-none shadow-md">
+                <CardHeader className="border-b bg-gradient-to-r from-gray-50 to-white">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-xl text-gray-900">Module Information</CardTitle>
+                      <CardDescription className="text-gray-600">Details about this learning module</CardDescription>
+                    </div>
+                    {user?.role === 'TUTOR' && descriptionExists && (
+                      <Button 
+                        onClick={handleDeleteDescription}
+                        variant="outline"
+                        className="flex items-center space-x-2 border-red-300 text-red-600 hover:bg-red-50"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        <span>Delete Description</span>
+                      </Button>
+                    )}
+                  </div>
                 </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <CardContent className="p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="space-y-2">
-                      <h4 className="font-medium text-sm text-gray-500">Status</h4>
-                      <Badge variant={course.status === 'active' ? 'default' : 'secondary'}>
+                      <h4 className="font-semibold text-sm text-gray-500 uppercase tracking-wide">Status</h4>
+                      <Badge 
+                        variant={course.status === 'active' ? 'default' : 'secondary'}
+                        className={course.status === 'active' ? 'bg-green-100 text-green-700 border-green-300 font-semibold' : 'bg-gray-100 text-gray-700 font-semibold'}
+                      >
                         {course.status.charAt(0).toUpperCase() + course.status.slice(1)}
                       </Badge>
                     </div>
                     <div className="space-y-2">
-                      <h4 className="font-medium text-sm text-gray-500">Domain</h4>
-                      <p className="font-medium">{course.domain}</p>
+                      <h4 className="font-semibold text-sm text-gray-500 uppercase tracking-wide">Domain</h4>
+                      <p className="font-bold text-gray-900">{course.domain}</p>
                     </div>
                     <div className="space-y-2">
-                      <h4 className="font-medium text-sm text-gray-500">Duration</h4>
-                      <p className="font-medium">{course.duration}</p>
+                      <h4 className="font-semibold text-sm text-gray-500 uppercase tracking-wide">Duration</h4>
+                      <p className="font-bold text-gray-900">{course.duration}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -1428,52 +1454,62 @@ export default function CoursePage() {
                 <div className={`fixed top-0 left-0 h-full z-50 transition-all duration-300 ease-in-out ${
                   sidebarCollapsed ? '-translate-x-full' : 'translate-x-0'
                 }`}>
-                  <Card className="h-full w-80 lg:w-80 md:w-72 sm:w-64 rounded-none border-r border-b border-l-0 border-t-0 shadow-lg">
-                    <CardHeader className="pb-3">
+                  <Card className="h-full w-80 lg:w-80 md:w-72 sm:w-64 rounded-none border-r border-b border-l-0 border-t-0 shadow-xl">
+                    <CardHeader className="pb-3 border-b bg-gradient-to-r from-yellow-50 to-white">
                       <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg">Module Materials</CardTitle>
+                        <CardTitle className="text-lg font-bold text-gray-900">Module Materials</CardTitle>
                         <Button
                           variant="ghost"
-                          size="lg"
-                          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                          className="p-1 h-6 w-6"
+                          size="sm"
+                          onClick={() => setSidebarCollapsed(true)}
+                          className="p-2 h-8 w-8 hover:bg-yellow-100 rounded-full"
                         >
-                          <ChevronLeft className="w-4 h-4" />
+                          <ChevronLeft className="w-5 h-5" />
                         </Button>
                       </div>
                     </CardHeader>
                     <CardContent className="overflow-y-auto h-[calc(100vh-80px)] p-0">
                       {lectureMaterials.length === 0 ? (
-                        <div className="p-4 text-center text-gray-500">
-                          <BookOpen className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                          <p className="text-sm">No materials available yet</p>
+                        <div className="p-6 text-center text-gray-500">
+                          <div className="w-16 h-16 bg-yellow-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <BookOpen className="w-8 h-8 text-[#FBBF24]" />
+                          </div>
+                          <p className="text-sm font-medium">No materials available yet</p>
                         </div>
                       ) : (
                         lectureMaterials.map((material) => (
                           <button
                             key={material.id || material.material_id}
                             onClick={() => handleMaterialClick(material.id || material.material_id)}
-                            className="w-full text-left p-4 hover:bg-gray-50 transition-colors flex items-center justify-between"
+                            className="w-full text-left p-4 hover:bg-yellow-50 transition-colors flex items-center justify-between border-b border-gray-100"
                           >
                             <div className="flex items-center space-x-3">
                               {material.type === 'Document' && (
-                                <FileText className="w-4 h-4 text-red-500" />
+                                <div className="w-8 h-8 bg-red-50 rounded-lg flex items-center justify-center">
+                                  <FileText className="w-4 h-4 text-red-500" />
+                                </div>
                               )}
                               {material.type === 'Link' && (
-                                <LinkIcon className="w-4 h-4 text-green-500" />
+                                <div className="w-8 h-8 bg-green-50 rounded-lg flex items-center justify-center">
+                                  <LinkIcon className="w-4 h-4 text-green-500" />
+                                </div>
                               )}
                               {material.type === 'Video' && (
-                                <Video className="w-4 h-4 text-blue-500" />
+                                <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
+                                  <Video className="w-4 h-4 text-blue-500" />
+                                </div>
                               )}
                               {material.type !== 'Document' && material.type !== 'Link' && material.type !== 'Video' && (
-                                <FileText className="w-4 h-4 text-gray-500" />
+                                <div className="w-8 h-8 bg-gray-50 rounded-lg flex items-center justify-center">
+                                  <FileText className="w-4 h-4 text-gray-500" />
+                                </div>
                               )}
                               <div>
-                                <h4 className="font-medium text-sm">{material.title}</h4>
+                                <h4 className="font-semibold text-sm text-gray-900">{material.title}</h4>
                                 <p className="text-xs text-gray-500">
-                                  {material.type === 'Document' && 'PDF'}
+                                  {material.type === 'Document' && 'PDF Document'}
                                   {material.type === 'Link' && 'External Resource'}
-                                  {material.type === 'Video' && 'Video'}
+                                  {material.type === 'Video' && 'Video Content'}
                                 </p>
                               </div>
                             </div>
@@ -1488,10 +1524,12 @@ export default function CoursePage() {
                 {/* Main Content Area for Materials */}
                 <div className="space-y-4">
                   {lectureMaterials.length === 0 ? (
-                    <Card>
-                      <CardContent className="p-8 text-center">
-                        <BookOpen className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                        <h3 className="text-lg font-semibold mb-2">No Materials Yet</h3>
+                    <Card className="border-none shadow-md">
+                      <CardContent className="p-12 text-center">
+                        <div className="w-20 h-20 bg-yellow-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <BookOpen className="w-10 h-10 text-[#FBBF24]" />
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">No Materials Yet</h3>
                         <p className="text-gray-600">
                           Materials for this module will appear here when they become available.
                         </p>
@@ -1503,28 +1541,40 @@ export default function CoursePage() {
                         key={material.id || material.material_id}
                         ref={(el) => (materialRefs.current[material.id || material.material_id] = el)}
                         id={`material-${material.id || material.material_id}`}
-                        className="flex items-center space-x-4 p-3 border rounded-lg hover:bg-gray-50 transition-colors"
+                        className="flex items-center space-x-4 p-4 border border-gray-200 rounded-xl hover:shadow-md hover:border-[#FBBF24] transition-all bg-white"
                       >
-                        {material.type === 'Document' && getIconForMaterial('document')}
-                        {material.type === 'Link' && getIconForMaterial('link')}
-                        {material.type === 'Video' && getIconForMaterial('video')}
+                        {material.type === 'Document' && (
+                          <div className="w-12 h-12 bg-red-50 rounded-xl flex items-center justify-center">
+                            <FileText className="w-6 h-6 text-red-500" />
+                          </div>
+                        )}
+                        {material.type === 'Link' && (
+                          <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center">
+                            <LinkIcon className="w-6 h-6 text-green-500" />
+                          </div>
+                        )}
+                        {material.type === 'Video' && (
+                          <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center">
+                            <Video className="w-6 h-6 text-blue-500" />
+                          </div>
+                        )}
                         <div className="flex-1">
-                          <h4 className="font-medium text-sm">{material.title}</h4>
-                          <p className="text-xs text-gray-500">
-                            {material.type === 'Document' && 'PDF'}
+                          <h4 className="font-bold text-sm text-gray-900">{material.title}</h4>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {material.type === 'Document' && 'PDF Document'}
                             {material.type === 'Link' && 'External Resource'}
                             {material.type === 'Video' && 'Video Content'}
                           </p>
                         </div>
                         <div className="flex items-center space-x-2">
                           {material.type === 'Video' && (
-                            <Button size="sm" variant="outline">
+                            <Button size="sm" variant="outline" className="border-blue-300 text-blue-700 hover:bg-blue-50">
                               <Play className="w-4 h-4 mr-1" />
                               Watch
                             </Button>
                           )}
                           {material.type === 'Link' && (
-                            <Button size="sm" variant="outline" asChild>
+                            <Button size="sm" variant="outline" className="border-green-300 text-green-700 hover:bg-green-50" asChild>
                               <a href={material.url} target="_blank" rel="noopener noreferrer">
                                 <LinkIcon className="w-4 h-4 mr-1" />
                                 Open
@@ -1532,7 +1582,7 @@ export default function CoursePage() {
                             </Button>
                           )}
                           {material.type === 'Document' && (
-                            <Button size="sm" variant="outline" onClick={() => handleDownload(material.id || material.material_id)}>
+                            <Button size="sm" className="bg-[#FBBF24] hover:bg-[#F59E0B] text-black font-semibold" onClick={() => handleDownload(material.id || material.material_id)}>
                               <Download className="w-4 h-4 mr-1" />
                               Download
                             </Button>
@@ -1543,31 +1593,48 @@ export default function CoursePage() {
                   )}
 
                   {/* Schedules Section */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Schedules</CardTitle>
-                      <CardDescription>All upcoming and past schedules for this module</CardDescription>
+                  <Card className="border-none shadow-lg">
+                    <CardHeader className="bg-gradient-to-r from-[#FBBF24] to-[#F59E0B] text-black rounded-t-xl">
+                      <CardTitle className="text-2xl font-bold">Schedules</CardTitle>
+                      <CardDescription className="text-black/80">All upcoming and past schedules for this module</CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="p-6">
                       {schedulesLoading ? (
-                        <div className="text-center py-4"><Loader2 className="animate-spin inline mr-2" />Loading schedules...</div>
+                        <div className="text-center py-8">
+                          <Loader2 className="animate-spin inline w-8 h-8 text-[#FBBF24] mb-2" />
+                          <p className="text-gray-600">Loading schedules...</p>
+                        </div>
                       ) : schedulesError ? (
-                        <div className="text-red-500 text-center py-4">{schedulesError}</div>
+                        <div className="text-red-500 text-center py-8 bg-red-50 rounded-lg p-4">
+                          <p className="font-semibold">{schedulesError}</p>
+                        </div>
                       ) : schedules.length === 0 ? (
-                        <div className="text-center py-4">No schedules found for this module.</div>
+                        <div className="text-center py-12">
+                          <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <Calendar className="w-10 h-10 text-gray-400" />
+                          </div>
+                          <p className="text-gray-600 font-medium">No schedules found for this module.</p>
+                        </div>
                       ) : (
-                        <div className="space-y-3">
+                        <div className="space-y-4">
                           {schedules.map((session) => (
-                            <div key={session.schedule_id} className="border-l-4 border-primary pl-4 py-2">
-                              <h4 className="font-medium text-sm">{session.tutor}</h4>
-                              <p className="text-xs text-gray-500">{session.course}</p>
-                              <div className="flex items-center justify-between mt-2">
-                                <p className="text-xs text-gray-600">{session.Date} {session.time}</p>
-                                <Badge variant="outline" className="text-xs">{session.duration}min</Badge>
+                            <div key={session.schedule_id} className="border-l-4 border-[#FBBF24] pl-6 py-3 bg-yellow-50 rounded-r-lg hover:shadow-md transition-shadow">
+                              <h4 className="font-bold text-base text-gray-900">{session.tutor}</h4>
+                              <p className="text-sm text-gray-600 mt-1">{session.course}</p>
+                              <div className="flex items-center justify-between mt-3">
+                                <div className="flex items-center gap-2">
+                                  <Clock className="w-4 h-4 text-gray-500" />
+                                  <p className="text-sm text-gray-700 font-medium">{session.Date} {session.time}</p>
+                                </div>
+                                <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-xs font-semibold">{session.duration}min</Badge>
                               </div>
                               <Button
                                 size="sm"
-                                className="w-full mt-2 bg-primary hover:bg-primary/90"
+                                className={`w-full mt-3 font-semibold ${
+                                  session.active 
+                                    ? 'bg-[#FBBF24] hover:bg-[#F59E0B] text-black' 
+                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                }`}
                                 disabled={!session.active}
                                 onClick={() => {
                                   if (session.active && session.module_id) {
@@ -1587,29 +1654,29 @@ export default function CoursePage() {
                 </div>
                 {/* Ratings & Feedback Section */}
                 <div>
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center space-x-2">
-                        <Star className="w-5 h-5 text-yellow-400" />
+                  <Card className="border-none shadow-lg">
+                    <CardHeader className="bg-gradient-to-r from-[#FBBF24] to-[#F59E0B] text-black rounded-t-xl">
+                      <CardTitle className="flex items-center space-x-2 text-2xl font-bold">
+                        <Star className="w-6 h-6 fill-black" />
                         <span>Student Ratings & Feedback</span>
                       </CardTitle>
-                      <CardDescription>
+                      <CardDescription className="text-black/80">
                         Reviews from students who have taken this module
                         {moduleRatings.length > 0 && (
-                          <span className="ml-2 text-sm font-medium">
+                          <span className="ml-2 text-sm font-bold">
                             ({moduleRatings.length} review{moduleRatings.length !== 1 ? 's' : ''})
                           </span>
                         )}
                       </CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="p-6">
                       <div className="space-y-4">
                         {/* Loading State */}
                         {ratingsLoading && (
-                          <div className="flex items-center justify-center py-8">
-                            <div className="flex items-center space-x-2">
-                              <Loader2 className="w-5 h-5 animate-spin" />
-                              <span>Loading ratings...</span>
+                          <div className="flex items-center justify-center py-12">
+                            <div className="flex flex-col items-center space-y-3">
+                              <Loader2 className="w-10 h-10 animate-spin text-[#FBBF24]" />
+                              <span className="text-gray-600">Loading ratings...</span>
                             </div>
                           </div>
                         )}
@@ -1618,32 +1685,39 @@ export default function CoursePage() {
                         {!ratingsLoading && moduleRatings.length > 0 && (
                           <>
                             {moduleRatings.map((rating, index) => (
-                              <div key={`${rating.enrolmentId}-${index}`} className="border rounded-lg p-4 bg-gray-50 hover:bg-gray-100 transition-colors">
-                                <div className="flex items-center justify-between mb-3">
-                                  <div className="flex items-center space-x-3">
-                                    <h4 className="font-medium text-sm text-gray-900">
-                                      {rating.studentName || 'Anonymous Student'}
-                                    </h4>
-                                    <div className="flex items-center space-x-1">
-                                      {renderStars(rating.rating)}
-                                      <span className="ml-2 text-sm font-medium text-gray-700">
-                                        {rating.rating}/5
+                              <div key={`${rating.enrolmentId}-${index}`} className="border border-gray-200 rounded-xl p-6 bg-white hover:shadow-lg hover:border-[#FBBF24] transition-all">
+                                <div className="flex items-center justify-between mb-4">
+                                  <div className="flex items-center space-x-4">
+                                    <div className="w-12 h-12 bg-gradient-to-br from-[#FBBF24] to-[#F59E0B] rounded-full flex items-center justify-center">
+                                      <span className="text-black font-bold text-lg">
+                                        {(rating.studentName || 'A').charAt(0).toUpperCase()}
                                       </span>
+                                    </div>
+                                    <div>
+                                      <h4 className="font-bold text-base text-gray-900">
+                                        {rating.studentName || 'Anonymous Student'}
+                                      </h4>
+                                      <div className="flex items-center space-x-1 mt-1">
+                                        {renderStars(rating.rating)}
+                                        <span className="ml-2 text-sm font-bold text-[#FBBF24]">
+                                          {rating.rating}/5
+                                        </span>
+                                      </div>
                                     </div>
                                   </div>
                                   {rating.createdAt && (
-                                    <span className="text-xs text-gray-500">
+                                    <Badge className="bg-gray-100 text-gray-600 border-gray-200">
                                       {new Date(rating.createdAt).toLocaleDateString()}
-                                    </span>
+                                    </Badge>
                                   )}
                                 </div>
                                 {rating.feedback && (
-                                  <p className="text-sm text-gray-700 leading-relaxed">
-                                    {rating.feedback}
+                                  <p className="text-sm text-gray-700 leading-relaxed bg-gray-50 p-4 rounded-lg">
+                                    &quot;{rating.feedback}&quot;
                                   </p>
                                 )}
                                 {!rating.feedback && (
-                                  <p className="text-sm text-gray-500 italic">
+                                  <p className="text-sm text-gray-400 italic">
                                     No written feedback provided
                                   </p>
                                 )}
@@ -1654,10 +1728,12 @@ export default function CoursePage() {
 
                         {/* No Ratings State */}
                         {!ratingsLoading && moduleRatings.length === 0 && (
-                          <div className="text-center py-12">
-                            <Star className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                            <h3 className="text-lg font-semibold mb-2 text-gray-700">No Ratings Yet</h3>
-                            <p className="text-gray-500 max-w-md mx-auto">
+                          <div className="text-center py-16">
+                            <div className="w-24 h-24 bg-yellow-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                              <Star className="w-12 h-12 text-[#FBBF24]" />
+                            </div>
+                            <h3 className="text-xl font-bold mb-2 text-gray-900">No Ratings Yet</h3>
+                            <p className="text-gray-600 max-w-md mx-auto">
                               This module hasn&apos;t received any student ratings yet. Be the first to share your experience!
                             </p>
                           </div>
@@ -1674,7 +1750,7 @@ export default function CoursePage() {
         {/* Payment Dialog */}
 <Dialog open={showPaymentDialog} onOpenChange={() => {}}>
   <DialogContent 
-    className="sm:max-w-4xl" 
+    className="sm:max-w-4xl border-none shadow-2xl" 
     onPointerDownOutside={(e) => e.preventDefault()} 
     onEscapeKeyDown={(e) => e.preventDefault()}
   >
@@ -1682,18 +1758,17 @@ export default function CoursePage() {
     <DialogClose asChild>
       <button
         onClick={() => router.push("/dashboard/courses")}
-        className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background 
-                  transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 
-                  focus:ring-ring focus:ring-offset-2 z-50"
+        className="absolute right-4 top-4 rounded-full bg-gray-100 p-2 opacity-70 
+                  transition-all hover:opacity-100 hover:bg-gray-200 focus:outline-none z-50"
       >
         <X className="h-4 w-4" />
         <span className="sr-only">Close</span>
       </button>
     </DialogClose>
 
-    <DialogHeader className="pb-4">
-      <DialogTitle className="text-xl">Complete Your Purchase</DialogTitle>
-      <DialogDescription>
+    <DialogHeader className="pb-6">
+      <DialogTitle className="text-2xl font-bold text-gray-900">Complete Your Purchase</DialogTitle>
+      <DialogDescription className="text-gray-600">
         Review your details and proceed with payment
       </DialogDescription>
     </DialogHeader>
@@ -1701,27 +1776,27 @@ export default function CoursePage() {
     <div className="grid md:grid-cols-3 gap-6">
       {/* Left Column - Course Details */}
       <div className="md:col-span-1">
-        <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-100 h-full">
-          <p className="text-sm text-gray-600 mb-3">{course?.domain}</p>
-          <h1 className="font-semibold text-gray-900 mb-1">{course?.title}</h1>
-          <div className="mt-auto pt-2 border-t border-blue-200">
-            <p className="text-xs text-gray-500 mb-1">Total Amount</p>
-            <p className="text-2xl font-bold text-[#f0ae16]">
+        <div className="p-6 bg-gradient-to-br from-[#FBBF24] to-[#F59E0B] rounded-xl h-full shadow-lg">
+          <p className="text-sm text-black/70 mb-3 font-medium uppercase tracking-wide">{course?.domain}</p>
+          <h1 className="font-bold text-xl text-black mb-6">{course?.title}</h1>
+          <div className="mt-auto pt-4 border-t border-black/20">
+            <p className="text-xs text-black/70 mb-1 uppercase tracking-wide">Total Amount</p>
+            <p className="text-4xl font-bold text-black">
               ${course?.fee}
             </p>
-            <p className="text-xs text-gray-500">USD</p>
+            <p className="text-sm text-black/70 mt-1">USD</p>
           </div>
         </div>
       </div>
 
       {/* Right Column - Billing Information */}
       {editableProfile && (
-        <div className="md:col-span-2 space-y-4">
-          <h4 className="font-semibold text-gray-900">Billing Information</h4>
+        <div className="md:col-span-2 space-y-5">
+          <h4 className="font-bold text-lg text-gray-900">Billing Information</h4>
           
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="firstName" className="text-xs font-medium">First Name *</Label>
+              <Label htmlFor="firstName" className="text-sm font-semibold text-gray-700">First Name *</Label>
               <Input 
                 id="firstName" 
                 value={editableProfile.firstName} 
@@ -1730,11 +1805,11 @@ export default function CoursePage() {
                   firstName: e.target.value
                 })}
                 placeholder="John"
-                className="h-9"
+                className="h-11 mt-1 border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]"
               />
             </div>
             <div>
-              <Label htmlFor="lastName" className="text-xs font-medium">Last Name *</Label>
+              <Label htmlFor="lastName" className="text-sm font-semibold text-gray-700">Last Name *</Label>
               <Input 
                 id="lastName" 
                 value={editableProfile.lastName} 
@@ -1743,13 +1818,13 @@ export default function CoursePage() {
                   lastName: e.target.value
                 })}
                 placeholder="Doe"
-                className="h-9"
+                className="h-11 mt-1 border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]"
               />
             </div>
           </div>
 
           <div>
-            <Label htmlFor="address" className="text-xs font-medium">Address *</Label>
+            <Label htmlFor="address" className="text-sm font-semibold text-gray-700">Address *</Label>
             <Input 
               id="address" 
               value={editableProfile.address} 
@@ -1758,13 +1833,13 @@ export default function CoursePage() {
                 address: e.target.value
               })}
               placeholder="123 Main Street"
-              className="h-9"
+              className="h-11 mt-1 border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="city" className="text-xs font-medium">City *</Label>
+              <Label htmlFor="city" className="text-sm font-semibold text-gray-700">City *</Label>
               <Input 
                 id="city" 
                 value={editableProfile.city} 
@@ -1773,11 +1848,11 @@ export default function CoursePage() {
                   city: e.target.value
                 })}
                 placeholder="New York"
-                className="h-9"
+                className="h-11 mt-1 border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]"
               />
             </div>
             <div>
-              <Label htmlFor="country" className="text-xs font-medium">Country *</Label>
+              <Label htmlFor="country" className="text-sm font-semibold text-gray-700">Country *</Label>
               <Input 
                 id="country" 
                 value={editableProfile.country} 
@@ -1786,13 +1861,13 @@ export default function CoursePage() {
                   country: e.target.value
                 })}
                 placeholder="United States"
-                className="h-9"
+                className="h-11 mt-1 border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]"
               />
             </div>
           </div>
 
           <div>
-            <Label htmlFor="phone" className="text-xs font-medium">Phone Number *</Label>
+            <Label htmlFor="phone" className="text-sm font-semibold text-gray-700">Phone Number *</Label>
             <Input 
               id="phone" 
               value={editableProfile.phoneNumber} 
@@ -1801,7 +1876,7 @@ export default function CoursePage() {
                 phoneNumber: e.target.value
               })}
               placeholder="+1 (555) 000-0000"
-              className="h-9"
+              className="h-11 mt-1 border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]"
             />
           </div>
         </div>
@@ -1809,23 +1884,23 @@ export default function CoursePage() {
     </div>
 
     {/* Action Buttons */}
-    <div className="flex gap-3 pt-6 border-t">
+    <div className="flex gap-4 pt-6 border-t border-gray-200">
       <Button 
         onClick={() => router.push('/dashboard/courses')}
         variant="outline"
         disabled={isProcessingPayment}
-        className="flex-1"
+        className="flex-1 h-12 font-semibold border-gray-300 hover:bg-gray-100"
       >
         Cancel
       </Button>
       <Button 
         onClick={startPayment}
         disabled={isProcessingPayment}
-        className="flex-1 bg-[#f0ae16] hover:bg-[#d99e00]"
+        className="flex-1 h-12 bg-[#FBBF24] hover:bg-[#F59E0B] text-black font-bold text-base"
       >
         {isProcessingPayment ? (
           <>
-            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
             Processing...
           </>
         ) : (
@@ -1839,10 +1914,10 @@ export default function CoursePage() {
       
       {/* Upload Materials Dialog */}
       <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
-        <DialogContent className="sm:max-w-6xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Upload Course Materials</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="sm:max-w-6xl max-h-[90vh] overflow-y-auto border-none shadow-2xl">
+          <DialogHeader className="pb-4">
+            <DialogTitle className="text-2xl font-bold text-gray-900">Upload Course Materials</DialogTitle>
+            <DialogDescription className="text-gray-600">
               Add documents, videos, or links for this module
             </DialogDescription>
           </DialogHeader>
@@ -1850,66 +1925,74 @@ export default function CoursePage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Upload Form */}
             <div className="lg:col-span-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Add New Material</CardTitle>
-                  <CardDescription>Upload documents, videos, or add links</CardDescription>
+              <Card className="border-none shadow-lg">
+                <CardHeader className="bg-gradient-to-r from-[#FBBF24] to-[#F59E0B] text-black rounded-t-xl">
+                  <CardTitle className="text-xl font-bold">Add New Material</CardTitle>
+                  <CardDescription className="text-black/80">Upload documents, videos, or add links</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="space-y-6 p-6">
                   {/* Material Type */}
-                  <div className="space-y-2">
-                    <Label>Material Type</Label>
+                  <div className="space-y-3">
+                    <Label className="text-sm font-bold text-gray-700">Material Type</Label>
                     <Tabs 
                       value={newMaterial.type} 
                       onValueChange={(value) => setNewMaterial({...newMaterial, type: value})}
                     >
-                      <TabsList className="grid w-full grid-cols-3">
-                        <TabsTrigger value="Document">Document</TabsTrigger>
-                        <TabsTrigger value="Video">Video</TabsTrigger>
-                        <TabsTrigger value="Link">Link</TabsTrigger>
+                      <TabsList className="grid w-full grid-cols-3 bg-gray-100 p-1">
+                        <TabsTrigger value="Document" className="data-[state=active]:bg-[#FBBF24] data-[state=active]:text-black font-semibold">Document</TabsTrigger>
+                        <TabsTrigger value="Video" className="data-[state=active]:bg-[#FBBF24] data-[state=active]:text-black font-semibold">Video</TabsTrigger>
+                        <TabsTrigger value="Link" className="data-[state=active]:bg-[#FBBF24] data-[state=active]:text-black font-semibold">Link</TabsTrigger>
                       </TabsList>
 
-                      <TabsContent value="Document">
-                        <Label>Upload Document</Label>
-                        <Input type="file" accept=".pdf,.doc,.docx,.ppt,.pptx" onChange={handleFileChange} />
+                      <TabsContent value="Document" className="mt-4">
+                        <Label className="text-sm font-semibold text-gray-700">Upload Document</Label>
+                        <Input type="file" accept=".pdf,.doc,.docx,.ppt,.pptx" onChange={handleFileChange} className="mt-2 h-11 border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]" />
                       </TabsContent>
 
-                      <TabsContent value="Video">
-                        <Label>Upload Video</Label>
-                        <Input type="file" accept=".mp4,.mov,.avi,.wmv" onChange={handleFileChange} />
+                      <TabsContent value="Video" className="mt-4">
+                        <Label className="text-sm font-semibold text-gray-700">Upload Video</Label>
+                        <Input type="file" accept=".mp4,.mov,.avi,.wmv" onChange={handleFileChange} className="mt-2 h-11 border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]" />
                       </TabsContent>
 
-                      <TabsContent value="Link">
-                        <Label>External Link</Label>
+                      <TabsContent value="Link" className="mt-4">
+                        <Label className="text-sm font-semibold text-gray-700">External Link</Label>
                         <Input 
                           type="url" 
                           placeholder="https://example.com"
                           value={newMaterial.url}
                           onChange={(e) => setNewMaterial({...newMaterial, url: e.target.value})}
+                          className="mt-2 h-11 border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]"
                         />
                       </TabsContent>
                     </Tabs>
                   </div>
 
                   {/* Material Details */}
-                  <div className="space-y-2">
-                    <Label htmlFor="title">Material Title</Label>
-                    <Input 
-                      id="title"
-                      value={newMaterial.title}
-                      onChange={(e) => setNewMaterial({...newMaterial, title: e.target.value})}
-                      placeholder="Enter material title"
-                    />
-                    <Label>Description</Label>
-                    <Textarea 
-                      value={newMaterial.description}
-                      onChange={(e) => setNewMaterial({...newMaterial, description: e.target.value})}
-                      placeholder="Enter material description"
-                    />
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="title" className="text-sm font-bold text-gray-700">Material Title</Label>
+                      <Input 
+                        id="title"
+                        value={newMaterial.title}
+                        onChange={(e) => setNewMaterial({...newMaterial, title: e.target.value})}
+                        placeholder="Enter material title"
+                        className="mt-2 h-11 border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-sm font-bold text-gray-700">Description</Label>
+                      <Textarea 
+                        value={newMaterial.description}
+                        onChange={(e) => setNewMaterial({...newMaterial, description: e.target.value})}
+                        placeholder="Enter material description"
+                        className="mt-2 border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]"
+                        rows={4}
+                      />
+                    </div>
                   </div>
 
-                  <Button onClick={handleAddMaterial} className="w-full bg-[#f0ae16] hover:bg-[#d99e00]">
-                    <Plus className="w-4 h-4 mr-2" /> Add Material
+                  <Button onClick={handleAddMaterial} className="w-full h-12 bg-[#FBBF24] hover:bg-[#F59E0B] text-black font-bold text-base">
+                    <Plus className="w-5 h-5 mr-2" /> Add Material
                   </Button>
                 </CardContent>
               </Card>
@@ -1917,21 +2000,23 @@ export default function CoursePage() {
 
             {/* Preview */}
             <div className="space-y-6">
-              <Card>
-                <CardHeader><CardTitle>Upload Summary</CardTitle></CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between">
-                    <span>Materials Added</span>
-                    <Badge>{uploadMaterials.length}</Badge>
+              <Card className="border-none shadow-lg">
+                <CardHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-t-xl">
+                  <CardTitle className="text-lg font-bold">Upload Summary</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4 p-6">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-700 font-medium">Materials Added</span>
+                    <Badge className="bg-[#FBBF24] text-black font-bold text-base px-3 py-1">{uploadMaterials.length}</Badge>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Current Module</span>
-                    <span className="text-sm truncate">{moduleDetails?.name || 'Loading...'}</span>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-700 font-medium">Current Module</span>
+                    <span className="text-sm font-semibold text-gray-900 truncate max-w-[120px]">{moduleDetails?.name || 'Loading...'}</span>
                   </div>
                   <Button 
                     onClick={handleSaveAllMaterials}
                     disabled={uploadMaterials.length === 0}
-                    className="w-full bg-[#f0ae16] hover:bg-[#d99e00]"
+                    className="w-full h-11 bg-green-500 hover:bg-green-600 text-white font-bold disabled:bg-gray-300"
                   >
                     <Save className="w-4 h-4 mr-2" /> Save Materials
                   </Button>
@@ -1939,24 +2024,28 @@ export default function CoursePage() {
               </Card>
 
               {/* Recent Materials */}
-              <Card>
-                <CardHeader><CardTitle>Added Materials</CardTitle></CardHeader>
-                <CardContent>
+              <Card className="border-none shadow-lg">
+                <CardHeader className="bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-t-xl">
+                  <CardTitle className="text-lg font-bold">Added Materials</CardTitle>
+                </CardHeader>
+                <CardContent className="p-6">
                   {uploadMaterials.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      <Upload className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                      <p>No materials added yet</p>
+                    <div className="text-center py-12">
+                      <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Upload className="w-10 h-10 text-gray-400" />
+                      </div>
+                      <p className="text-gray-500 font-medium">No materials added yet</p>
                     </div>
                   ) : (
                     <div className="space-y-3">
                       {uploadMaterials.map((m) => (
-                        <div key={m.id} className="flex items-center space-x-3 p-3 border rounded-lg">
+                        <div key={m.id} className="flex items-center space-x-3 p-4 border border-gray-200 rounded-xl hover:shadow-md hover:border-[#FBBF24] transition-all bg-white">
                           {getIconForMaterialType(m.type)}
                           <div className="flex-1">
-                            <h4 className="font-medium text-sm">{m.title}</h4>
-                            <p className="text-xs text-gray-500 capitalize">{m.type}</p>
+                            <h4 className="font-bold text-sm text-gray-900">{m.title}</h4>
+                            <p className="text-xs text-gray-500 capitalize mt-1">{m.type}</p>
                           </div>
-                          <Button size="sm" variant="ghost" onClick={() => handleRemoveMaterial(m.id)}>
+                          <Button size="sm" variant="ghost" onClick={() => handleRemoveMaterial(m.id)} className="hover:bg-red-50">
                             <Trash2 className="w-4 h-4 text-red-500" />
                           </Button>
                         </div>
@@ -1967,6 +2056,151 @@ export default function CoursePage() {
               </Card>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Module Description Dialog */}
+      <Dialog open={showDescriptionDialog} onOpenChange={setShowDescriptionDialog}>
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto border-none shadow-2xl">
+          <DialogHeader className="pb-4">
+            <DialogTitle className="text-2xl font-bold text-gray-900">
+              {descriptionExists ? 'Edit Module Description' : 'Create Module Description'}
+            </DialogTitle>
+            <DialogDescription className="text-gray-600">
+              Add detailed description points for this module. Each point will be displayed separately.
+            </DialogDescription>
+          </DialogHeader>
+
+          {isLoadingDescription ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="flex flex-col items-center space-y-3">
+                <Loader2 className="w-10 h-10 animate-spin text-[#FBBF24]" />
+                <span className="text-gray-600">Loading description...</span>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Description Points */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label className="text-base font-bold text-gray-900">Description Points</Label>
+                  <Button
+                    onClick={handleAddDescriptionPoint}
+                    variant="outline"
+                    size="sm"
+                    className="border-[#FBBF24] text-gray-700 hover:bg-yellow-50"
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Add Point
+                  </Button>
+                </div>
+
+                <div className="space-y-3">
+                  {descriptionPoints.map((point, index) => (
+                    <div key={index} className="flex items-start space-x-3">
+                      <div className="flex-shrink-0 w-8 h-8 bg-[#FBBF24] rounded-full flex items-center justify-center text-black font-bold mt-2">
+                        {index + 1}
+                      </div>
+                      <Textarea
+                        value={point}
+                        onChange={(e) => handleDescriptionPointChange(index, e.target.value)}
+                        placeholder={`Enter description point ${index + 1}...`}
+                        className="flex-1 w-full max-w-full border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24] min-h-[80px] resize-y overflow-wrap break-words"
+                        style={{ resize: 'vertical' }}
+                        rows={3}
+                      />
+                      {descriptionPoints.length > 1 && (
+                        <Button
+                          onClick={() => handleRemoveDescriptionPoint(index)}
+                          variant="ghost"
+                          size="sm"
+                          className="hover:bg-red-50 mt-2 flex-shrink-0"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-500" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {descriptionPoints.length === 0 && (
+                  <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                    <p className="text-gray-500">No description points added yet. Click &quot;Add Point&quot; to start.</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Preview Section */}
+              <Card className="border-none shadow-lg bg-gradient-to-br from-yellow-50 to-white">
+                <CardHeader className="bg-gradient-to-r from-[#FBBF24] to-[#F59E0B] text-black rounded-t-xl">
+                  <CardTitle className="text-lg font-bold">Preview</CardTitle>
+                  <CardDescription className="text-black/80">
+                    How your description will appear to students
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="p-6">
+                  {descriptionPoints.filter(p => p.trim() !== '').length === 0 ? (
+                    <div className="text-center py-8">
+                      <p className="text-gray-500">No description points to preview</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {descriptionPoints
+                        .filter(point => point.trim() !== '')
+                        .map((point, index) => (
+                          <div key={index} className="flex items-start space-x-3 p-3 bg-white rounded-lg border border-gray-200">
+                            <div className="flex-shrink-0 w-6 h-6 bg-[#FBBF24] rounded-full flex items-center justify-center text-black font-bold text-sm">
+                              {index + 1}
+                            </div>
+                            <p className="flex-1 text-gray-700 leading-relaxed">{point}</p>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Action Buttons */}
+              <div className="flex gap-4 pt-4 border-t border-gray-200">
+                {descriptionExists && (
+                  <Button
+                    onClick={handleDeleteDescription}
+                    variant="outline"
+                    disabled={isSavingDescription}
+                    className="border-red-300 text-red-600 hover:bg-red-50"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete
+                  </Button>
+                )}
+                <Button
+                  onClick={() => setShowDescriptionDialog(false)}
+                  variant="outline"
+                  disabled={isSavingDescription}
+                  className="flex-1 h-12 font-semibold border-gray-300 hover:bg-gray-100"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSaveDescription}
+                  disabled={isSavingDescription || descriptionPoints.filter(p => p.trim() !== '').length === 0}
+                  className="flex-1 h-12 bg-[#FBBF24] hover:bg-[#F59E0B] text-black font-bold text-base"
+                >
+                  {isSavingDescription ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-5 h-5 mr-2" />
+                      {descriptionExists ? 'Update Description' : 'Create Description'}
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
       
