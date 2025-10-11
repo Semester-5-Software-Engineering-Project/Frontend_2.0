@@ -206,91 +206,147 @@ export default function Profile() {
 
   return (
     <DashboardLayout>
-      <div className="p-6 space-y-6 max-w-4xl mx-auto">
+      <div className="p-6 space-y-6 max-w-5xl mx-auto">
         {/* Profile Creation Alert */}
         {createMode && !hasProfile && (
-          <Alert className="border-orange-200 bg-orange-50">
-            <AlertCircle className="h-4 w-4 text-orange-600" />
-            <AlertDescription className="text-orange-800">
-              <strong>Profile Required:</strong> You need to complete your profile to access all features. Please fill in the required information below.
+          <Alert className="border-[#FBBF24] bg-yellow-50 shadow-sm">
+            <AlertCircle className="h-5 w-5 text-[#FBBF24]" />
+            <AlertDescription className="text-gray-800 ml-2">
+              <strong className="font-semibold">Profile Required:</strong> Complete your profile to unlock all features. Fill in the required information below.
             </AlertDescription>
           </Alert>
         )}
 
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Profile</h1>
-            <p className="text-gray-600 text-sm">{profileLoading ? 'Loading profile...' : 'Manage your profile information'}</p>
-          </div>
-          <div className="flex gap-2">
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="outline" disabled={profileLoading}>
-                  <Key className="w-4 h-4 mr-2" />Change Password
+        {/* Header Section */}
+        <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">My Profile</h1>
+              <p className="text-gray-600 text-sm mt-1">
+                {profileLoading ? 'Loading profile...' : 'Manage your personal information and settings'}
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline" disabled={profileLoading} className="border-gray-300 hover:bg-gray-50">
+                    <Key className="w-4 h-4 mr-2" />
+                    Change Password
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle className="text-xl font-bold">Change Password</DialogTitle>
+                    <DialogDescription className="text-gray-600">
+                      Update your account password. Make sure your new password is secure.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="currentPassword" className="text-gray-700 font-medium">Current Password</Label>
+                      <Input 
+                        id="currentPassword" 
+                        type="password" 
+                        value={passwordData.currentPassword} 
+                        onChange={e => setPasswordData(p => ({...p, currentPassword: e.target.value}))} 
+                        placeholder="Enter your current password"
+                        className="border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="newPassword" className="text-gray-700 font-medium">New Password</Label>
+                      <Input 
+                        id="newPassword" 
+                        type="password" 
+                        value={passwordData.newPassword} 
+                        onChange={e => setPasswordData(p => ({...p, newPassword: e.target.value}))} 
+                        placeholder="Enter your new password"
+                        className="border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="confirmPassword" className="text-gray-700 font-medium">Confirm New Password</Label>
+                      <Input 
+                        id="confirmPassword" 
+                        type="password" 
+                        value={passwordData.confirmPassword} 
+                        onChange={e => setPasswordData(p => ({...p, confirmPassword: e.target.value}))} 
+                        placeholder="Confirm your new password"
+                        className="border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]"
+                      />
+                    </div>
+                    <div className="flex gap-2 pt-4">
+                      <Button 
+                        onClick={handleChangePassword} 
+                        className="bg-[#FBBF24] hover:bg-[#F59E0B] text-black font-semibold"
+                      >
+                        <Key className="w-4 h-4 mr-2" />
+                        Update Password
+                      </Button>
+                      <Button 
+                        onClick={() => { setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' }) }} 
+                        variant="outline"
+                        className="border-gray-300"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+              {hasProfile ? (
+                <Button
+                  onClick={() => isEditing ? handleSave() : setIsEditing(true)}
+                  className={isEditing ? 'bg-green-600 hover:bg-green-700 text-white font-semibold' : 'bg-[#FBBF24] hover:bg-[#F59E0B] text-black font-semibold'}
+                  disabled={profileLoading}
+                >
+                  {isEditing ? (<><Save className="w-4 h-4 mr-2" />Save Changes</>) : (<><Edit className="w-4 h-4 mr-2" />Edit Profile</>)}
                 </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                  <DialogTitle>Change Password</DialogTitle>
-                  <DialogDescription>Update your account password. Make sure your new password is secure.</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="currentPassword">Current Password</Label>
-                    <Input id="currentPassword" type="password" value={passwordData.currentPassword} onChange={e => setPasswordData(p => ({...p, currentPassword: e.target.value}))} placeholder="Enter your current password" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="newPassword">New Password</Label>
-                    <Input id="newPassword" type="password" value={passwordData.newPassword} onChange={e => setPasswordData(p => ({...p, newPassword: e.target.value}))} placeholder="Enter your new password" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                    <Input id="confirmPassword" type="password" value={passwordData.confirmPassword} onChange={e => setPasswordData(p => ({...p, confirmPassword: e.target.value}))} placeholder="Confirm your new password" />
-                  </div>
-                  <div className="flex gap-2 pt-4">
-                    <Button onClick={handleChangePassword} className="bg-blue-600 hover:bg-blue-700"><Key className="w-4 h-4 mr-2" />Update Password</Button>
-                    <Button onClick={() => { setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' }) }} variant="outline">Cancel</Button>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
-            {hasProfile ? (
-              <Button
-                onClick={() => isEditing ? handleSave() : setIsEditing(true)}
-                className={isEditing ? 'bg-green-600 hover:bg-green-700' : ''}
-                variant={isEditing ? 'default' : 'outline'}
-                disabled={profileLoading}
-              >
-                {isEditing ? (<><Save className="w-4 h-4 mr-2" />Save</>) : (<><Edit className="w-4 h-4 mr-2" />Edit</>)}
-              </Button>
-            ) : (
-              <Button onClick={handleSave} disabled={profileLoading} className="bg-green-600 hover:bg-green-700">
-                <Save className="w-4 h-4 mr-2" />Create Profile
-              </Button>
-            )}
+              ) : (
+                <Button 
+                  onClick={handleSave} 
+                  disabled={profileLoading} 
+                  className="bg-green-600 hover:bg-green-700 text-white font-semibold"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  Create Profile
+                </Button>
+              )}
+            </div>
           </div>
         </div>
 
         {!profileLoading && !hasProfile && (
-          <div className="p-4 border border-dashed rounded bg-muted/40 text-sm">
-            No profile found yet. Fill in the form below and click <span className="font-semibold">Create Profile</span> to save your information.
+          <div className="p-6 border-2 border-dashed border-[#FBBF24] rounded-xl bg-yellow-50 text-sm">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-[#FBBF24] mt-0.5" />
+              <div>
+                <p className="font-semibold text-gray-900 mb-1">No profile found yet</p>
+                <p className="text-gray-600">Fill in the form below and click <span className="font-semibold text-[#FBBF24]">Create Profile</span> to save your information.</p>
+              </div>
+            </div>
           </div>
         )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Personal Information</CardTitle>
-            <CardDescription>Basic details for your {isTutor ? 'tutor' : 'student'} profile</CardDescription>
+        <Card className="border-none shadow-lg">
+          <CardHeader className="border-b bg-gradient-to-r from-gray-50 to-white pb-6">
+            <CardTitle className="text-2xl text-gray-900">Personal Information</CardTitle>
+            <CardDescription className="text-gray-600">
+              Basic details for your {isTutor ? 'tutor' : 'student'} profile
+            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex items-center gap-6">
-              <Avatar className="w-24 h-24 relative group">
+          <CardContent className="space-y-8 pt-6">
+            {/* Avatar Section */}
+            <div className="flex items-center gap-6 p-6 bg-gradient-to-r from-yellow-50 to-white rounded-xl border border-yellow-100">
+              <Avatar className="w-28 h-28 relative group ring-4 ring-[#FBBF24] ring-offset-2">
                 <AvatarImage src={profileData.imageUrl || undefined} />
-                <AvatarFallback>{profileData.name?.charAt(0) || user?.name?.charAt(0) || '?'}</AvatarFallback>
+                <AvatarFallback className="text-2xl font-bold bg-[#FBBF24] text-black">
+                  {profileData.name?.charAt(0) || user?.name?.charAt(0) || '?'}
+                </AvatarFallback>
                 {isEditing && (
-                  <label className="absolute inset-0 rounded-full bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-white text-[10px] font-medium cursor-pointer transition-opacity">
-                    <Upload className="w-5 h-5 mb-1" />
-                    Change
+                  <label className="absolute inset-0 rounded-full bg-black/70 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-white text-xs font-semibold cursor-pointer transition-all">
+                    <Upload className="w-6 h-6 mb-1" />
+                    Upload Photo
                     <input
                       type="file"
                       accept="image/*"
@@ -336,31 +392,61 @@ export default function Profile() {
                   </label>
                 )}
               </Avatar>
-              <div>
-                <p className="font-semibold text-xl">{profileData.name || 'Unnamed'}</p>
-                <p className="text-xs text-gray-500">Role: {user?.role}</p>
-                {profile?.updatedAt && (
-                  <p className="text-xs text-gray-500">Last updated: {new Date(profile.updatedAt).toLocaleString()}</p>
+              <div className="flex-1">
+                <p className="font-bold text-2xl text-gray-900">{profileData.name || 'Unnamed User'}</p>
+                <div className="flex items-center gap-3 mt-2">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#FBBF24] text-black">
+                    {user?.role}
+                  </span>
+                  {profile?.updatedAt && (
+                    <span className="text-xs text-gray-500">
+                      Last updated: {new Date(profile.updatedAt).toLocaleDateString()}
+                    </span>
+                  )}
+                </div>
+                {isEditing && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    Click on your avatar to upload a new profile picture
+                  </p>
                 )}
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Form Fields */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {isTutor ? (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="firstName">First Name</Label>
-                    <Input id="firstName" value={profileData.firstName} disabled={!isEditing && hasProfile} onChange={e => setProfileData(p => ({...p, firstName: e.target.value, name: `${e.target.value} ${p.lastName}`.trim()}))} />
+                    <Label htmlFor="firstName" className="text-gray-700 font-semibold">First Name</Label>
+                    <Input 
+                      id="firstName" 
+                      value={profileData.firstName} 
+                      disabled={!isEditing && hasProfile} 
+                      onChange={e => setProfileData(p => ({...p, firstName: e.target.value, name: `${e.target.value} ${p.lastName}`.trim()}))} 
+                      className={`${!isEditing && hasProfile ? 'bg-gray-50' : 'border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]'}`}
+                    />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="lastName">Last Name</Label>
-                    <Input id="lastName" value={profileData.lastName} disabled={!isEditing && hasProfile} onChange={e => setProfileData(p => ({...p, lastName: e.target.value, name: `${p.firstName} ${e.target.value}`.trim()}))} />
+                    <Label htmlFor="lastName" className="text-gray-700 font-semibold">Last Name</Label>
+                    <Input 
+                      id="lastName" 
+                      value={profileData.lastName} 
+                      disabled={!isEditing && hasProfile} 
+                      onChange={e => setProfileData(p => ({...p, lastName: e.target.value, name: `${p.firstName} ${e.target.value}`.trim()}))} 
+                      className={`${!isEditing && hasProfile ? 'bg-gray-50' : 'border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]'}`}
+                    />
                   </div>
 
                   <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" value={profileData.email} disabled readOnly />
-              </div>
+                    <Label htmlFor="email" className="text-gray-700 font-semibold">Email</Label>
+                    <Input 
+                      id="email" 
+                      value={profileData.email} 
+                      disabled 
+                      readOnly 
+                      className="bg-gray-50 cursor-not-allowed"
+                    />
+                  </div>
                 </>
               ) : (
                 <></>
@@ -369,88 +455,191 @@ export default function Profile() {
               {isTutor ? (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="phoneNo">Phone</Label>
-                    <Input id="phoneNo" value={profileData.phoneNo} disabled={!isEditing && hasProfile} onChange={e => setProfileData(p => ({...p, phoneNo: e.target.value}))} />
+                    <Label htmlFor="phoneNo" className="text-gray-700 font-semibold">Phone</Label>
+                    <Input 
+                      id="phoneNo" 
+                      value={profileData.phoneNo} 
+                      disabled={!isEditing && hasProfile} 
+                      onChange={e => setProfileData(p => ({...p, phoneNo: e.target.value}))} 
+                      className={`${!isEditing && hasProfile ? 'bg-gray-50' : 'border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]'}`}
+                      placeholder="+1 234 567 8900"
+                    />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="dob">Date of Birth</Label>
-                    <Input id="dob" type="date" value={profileData.dob} disabled={!isEditing && hasProfile} onChange={e => setProfileData(p => ({...p, dob: e.target.value}))} />
+                    <Label htmlFor="dob" className="text-gray-700 font-semibold">Date of Birth</Label>
+                    <Input 
+                      id="dob" 
+                      type="date" 
+                      value={profileData.dob} 
+                      disabled={!isEditing && hasProfile} 
+                      onChange={e => setProfileData(p => ({...p, dob: e.target.value}))} 
+                      className={`${!isEditing && hasProfile ? 'bg-gray-50' : 'border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]'}`}
+                    />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="gender">Gender</Label>
+                    <Label htmlFor="gender" className="text-gray-700 font-semibold">Gender</Label>
                     <Select
                       value={profileData.gender}
                       onValueChange={(value) => setProfileData(p => ({...p, gender: value}))}
                       disabled={!isEditing && hasProfile}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className={`${!isEditing && hasProfile ? 'bg-gray-50' : 'border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]'}`}>
                         <SelectValue placeholder="Select gender" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="MALE">MALE</SelectItem>
-                        <SelectItem value="FEMALE">FEMALE</SelectItem>
+                        <SelectItem value="MALE">Male</SelectItem>
+                        <SelectItem value="FEMALE">Female</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="portfolio">Portfolio URL</Label>
-                    <Input id="portfolio" value={profileData.portfolio} disabled={!isEditing && hasProfile} onChange={e => setProfileData(p => ({...p, portfolio: e.target.value}))} />
+                    <Label htmlFor="portfolio" className="text-gray-700 font-semibold">Portfolio URL</Label>
+                    <Input 
+                      id="portfolio" 
+                      value={profileData.portfolio} 
+                      disabled={!isEditing && hasProfile} 
+                      onChange={e => setProfileData(p => ({...p, portfolio: e.target.value}))} 
+                      className={`${!isEditing && hasProfile ? 'bg-gray-50' : 'border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]'}`}
+                      placeholder="https://yourportfolio.com"
+                    />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="address">Address</Label>
-                    <Input id="address" value={profileData.address} disabled={!isEditing && hasProfile} onChange={e => setProfileData(p => ({...p, address: e.target.value}))} placeholder="e.g. Home 1, Street Name" />
+                    <Label htmlFor="address" className="text-gray-700 font-semibold">Address</Label>
+                    <Input 
+                      id="address" 
+                      value={profileData.address} 
+                      disabled={!isEditing && hasProfile} 
+                      onChange={e => setProfileData(p => ({...p, address: e.target.value}))} 
+                      placeholder="e.g. Home 1, Street Name" 
+                      className={`${!isEditing && hasProfile ? 'bg-gray-50' : 'border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]'}`}
+                    />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="city">City</Label>
-                    <Input id="city" value={profileData.city} disabled={!isEditing && hasProfile} onChange={e => setProfileData(p => ({...p, city: e.target.value}))} placeholder="e.g. Matara" />
+                    <Label htmlFor="city" className="text-gray-700 font-semibold">City</Label>
+                    <Input 
+                      id="city" 
+                      value={profileData.city} 
+                      disabled={!isEditing && hasProfile} 
+                      onChange={e => setProfileData(p => ({...p, city: e.target.value}))} 
+                      placeholder="e.g. Matara" 
+                      className={`${!isEditing && hasProfile ? 'bg-gray-50' : 'border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]'}`}
+                    />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="country">Country</Label>
-                    <Input id="country" value={profileData.country} disabled={!isEditing && hasProfile} onChange={e => setProfileData(p => ({...p, country: e.target.value}))} placeholder="e.g. Sri Lanka" />
+                    <Label htmlFor="country" className="text-gray-700 font-semibold">Country</Label>
+                    <Input 
+                      id="country" 
+                      value={profileData.country} 
+                      disabled={!isEditing && hasProfile} 
+                      onChange={e => setProfileData(p => ({...p, country: e.target.value}))} 
+                      placeholder="e.g. Sri Lanka" 
+                      className={`${!isEditing && hasProfile ? 'bg-gray-50' : 'border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]'}`}
+                    />
                   </div>
                 </>
               ) : (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="student-firstName">First Name</Label>
-                    <Input id="student-firstName" value={profileData.firstName} disabled={!isEditing && hasProfile} onChange={e => setProfileData(p => ({...p, firstName: e.target.value, name: `${e.target.value} ${p.lastName}`.trim()}))} />
+                    <Label htmlFor="student-firstName" className="text-gray-700 font-semibold">First Name</Label>
+                    <Input 
+                      id="student-firstName" 
+                      value={profileData.firstName} 
+                      disabled={!isEditing && hasProfile} 
+                      onChange={e => setProfileData(p => ({...p, firstName: e.target.value, name: `${e.target.value} ${p.lastName}`.trim()}))} 
+                      className={`${!isEditing && hasProfile ? 'bg-gray-50' : 'border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]'}`}
+                    />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="student-lastName">Last Name</Label>
-                    <Input id="student-lastName" value={profileData.lastName} disabled={!isEditing && hasProfile} onChange={e => setProfileData(p => ({...p, lastName: e.target.value, name: `${p.firstName} ${e.target.value}`.trim()}))} />
+                    <Label htmlFor="student-lastName" className="text-gray-700 font-semibold">Last Name</Label>
+                    <Input 
+                      id="student-lastName" 
+                      value={profileData.lastName} 
+                      disabled={!isEditing && hasProfile} 
+                      onChange={e => setProfileData(p => ({...p, lastName: e.target.value, name: `${p.firstName} ${e.target.value}`.trim()}))} 
+                      className={`${!isEditing && hasProfile ? 'bg-gray-50' : 'border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]'}`}
+                    />
                   </div>
 
                   <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" value={profileData.email} disabled readOnly />
-              </div>
+                    <Label htmlFor="email" className="text-gray-700 font-semibold">Email</Label>
+                    <Input 
+                      id="email" 
+                      value={profileData.email} 
+                      disabled 
+                      readOnly 
+                      className="bg-gray-50 cursor-not-allowed"
+                    />
+                  </div>
               
                   <div className="space-y-2">
-                    <Label htmlFor="phone">Phone</Label>
-                    <Input id="phone" value={profileData.phone} disabled={!isEditing && hasProfile} onChange={e => setProfileData(p => ({...p, phone: e.target.value}))} />
+                    <Label htmlFor="phone" className="text-gray-700 font-semibold">Phone</Label>
+                    <Input 
+                      id="phone" 
+                      value={profileData.phone} 
+                      disabled={!isEditing && hasProfile} 
+                      onChange={e => setProfileData(p => ({...p, phone: e.target.value}))} 
+                      className={`${!isEditing && hasProfile ? 'bg-gray-50' : 'border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]'}`}
+                      placeholder="+1 234 567 8900"
+                    />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="birthday">Birthday</Label>
-                    <Input id="birthday" type="date" value={profileData.birthday} disabled={!isEditing && hasProfile} onChange={e => setProfileData(p => ({...p, birthday: e.target.value}))} />
+                    <Label htmlFor="birthday" className="text-gray-700 font-semibold">Birthday</Label>
+                    <Input 
+                      id="birthday" 
+                      type="date" 
+                      value={profileData.birthday} 
+                      disabled={!isEditing && hasProfile} 
+                      onChange={e => setProfileData(p => ({...p, birthday: e.target.value}))} 
+                      className={`${!isEditing && hasProfile ? 'bg-gray-50' : 'border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]'}`}
+                    />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="student-address">Address</Label>
-                    <Input id="student-address" value={profileData.address} disabled={!isEditing && hasProfile} onChange={e => setProfileData(p => ({...p, address: e.target.value}))} placeholder="e.g. Home 1, Street Name" />
+                    <Label htmlFor="student-address" className="text-gray-700 font-semibold">Address</Label>
+                    <Input 
+                      id="student-address" 
+                      value={profileData.address} 
+                      disabled={!isEditing && hasProfile} 
+                      onChange={e => setProfileData(p => ({...p, address: e.target.value}))} 
+                      placeholder="e.g. Home 1, Street Name" 
+                      className={`${!isEditing && hasProfile ? 'bg-gray-50' : 'border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]'}`}
+                    />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="student-city">City</Label>
-                    <Input id="student-city" value={profileData.city} disabled={!isEditing && hasProfile} onChange={e => setProfileData(p => ({...p, city: e.target.value}))} placeholder="e.g. Matara" />
+                    <Label htmlFor="student-city" className="text-gray-700 font-semibold">City</Label>
+                    <Input 
+                      id="student-city" 
+                      value={profileData.city} 
+                      disabled={!isEditing && hasProfile} 
+                      onChange={e => setProfileData(p => ({...p, city: e.target.value}))} 
+                      placeholder="e.g. Matara" 
+                      className={`${!isEditing && hasProfile ? 'bg-gray-50' : 'border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]'}`}
+                    />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="student-country">Country</Label>
-                    <Input id="student-country" value={profileData.country} disabled={!isEditing && hasProfile} onChange={e => setProfileData(p => ({...p, country: e.target.value}))} placeholder="e.g. Sri Lanka" />
+                    <Label htmlFor="student-country" className="text-gray-700 font-semibold">Country</Label>
+                    <Input 
+                      id="student-country" 
+                      value={profileData.country} 
+                      disabled={!isEditing && hasProfile} 
+                      onChange={e => setProfileData(p => ({...p, country: e.target.value}))} 
+                      placeholder="e.g. Sri Lanka" 
+                      className={`${!isEditing && hasProfile ? 'bg-gray-50' : 'border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]'}`}
+                    />
                   </div>
                 </>
               )}
 
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="bio">Bio</Label>
-                <Textarea id="bio" rows={4} value={profileData.bio} disabled={!isEditing && hasProfile} onChange={e => setProfileData(p => ({...p, bio: e.target.value}))} placeholder="Tell us about yourself..." />
+                <Label htmlFor="bio" className="text-gray-700 font-semibold">Bio</Label>
+                <Textarea 
+                  id="bio" 
+                  rows={5} 
+                  value={profileData.bio} 
+                  disabled={!isEditing && hasProfile} 
+                  onChange={e => setProfileData(p => ({...p, bio: e.target.value}))} 
+                  placeholder="Tell us about yourself..." 
+                  className={`${!isEditing && hasProfile ? 'bg-gray-50' : 'border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]'} resize-none`}
+                />
               </div>
               {/* {isTutor && (
                 <>

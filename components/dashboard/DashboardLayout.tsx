@@ -27,6 +27,7 @@ import { usePathname } from 'next/navigation'
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false)
   const pathname = usePathname()
 
   const studentNavItems = [
@@ -54,40 +55,57 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const navItems = user?.role === userType.STUDENT ? studentNavItems : tutorNavItems
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gray-50">
       {/* Top Header */}
-      <header className="bg-card border-b border-border px-4 py-3 flex items-center justify-between">
+      <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-30 shadow-sm">
         <div className="flex items-center space-x-4">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="hover:bg-muted"
+            className="hover:bg-yellow-50 lg:hidden"
           >
             {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </Button>
           
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setDesktopSidebarCollapsed(!desktopSidebarCollapsed)}
+            className="hover:bg-yellow-50 hidden lg:flex"
+            title={desktopSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            <Menu className="w-5 h-5" />
+          </Button>
+          
           <Link href="/dashboard" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <BookOpen className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 bg-[#FBBF24] rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-lg">TV</span>
             </div>
-            <span className="text-xl font-bold text-gradient">TutorVerse</span>
+            <span className="text-xl font-bold">Tutor<span className="text-[#FBBF24]">Verse</span></span>
           </Link>
         </div>
 
         <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-3">
-            <Avatar className="w-8 h-8">
+          <div className="flex items-center space-x-3 bg-gray-50 rounded-lg px-3 py-2">
+            <Avatar className="w-9 h-9 ring-2 ring-[#FBBF24]">
               <AvatarImage src={user?.avatar} />
-              {/* <AvatarFallback>{user?.name.charAt(0)}</AvatarFallback> */}
+              <AvatarFallback className="bg-[#FBBF24] text-white font-semibold">
+                {user?.name?.charAt(0).toUpperCase() || 'U'}
+              </AvatarFallback>
             </Avatar>
             <div className="hidden md:block">
-              <p className="text-sm font-medium">{user?.name}</p>
-              <p className="text-xs text-muted-foreground capitalize">{user?.role}</p>
+              <p className="text-sm font-semibold text-gray-900">{user?.name}</p>
+              <p className="text-xs text-gray-500 uppercase tracking-wide">{user?.role}</p>
             </div>
           </div>
           
-          <Button variant="ghost" size="sm" onClick={logout}>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={logout}
+            className="hover:bg-red-50 hover:text-red-600"
+          >
             <LogOut className="w-4 h-4" />
           </Button>
         </div>
@@ -97,11 +115,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Sidebar */}
         <aside className={`
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} 
-          fixed inset-y-0 left-0 z-50 w-64 bg-card border-r border-border 
-          transition-transform duration-300 ease-in-out
+          ${desktopSidebarCollapsed ? 'lg:w-20' : 'lg:w-64'}
+          lg:translate-x-0
+          fixed inset-y-0 left-0 top-[73px] z-40 w-64 bg-white border-r border-gray-200 
+          transition-all duration-300 ease-in-out shadow-lg lg:shadow-none
         `}>
-          <div className="p-6">
-            <nav className="space-y-2">
+          <div className="p-6 h-full overflow-y-auto">
+            <nav className="space-y-1">
               {navItems.map((item) => {
                 const isActive = pathname === item.href
                 return (
@@ -109,16 +129,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     key={item.name}
                     href={item.href}
                     className={`
-                      flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors
+                      flex items-center ${desktopSidebarCollapsed ? 'lg:justify-center' : 'space-x-3'} px-4 py-3 rounded-lg text-sm font-medium transition-all
                       ${isActive 
-                        ? 'bg-primary/15 text-primary' 
-                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                        ? 'bg-[#FBBF24] text-black shadow-md' 
+                        : 'text-gray-600 hover:bg-yellow-50 hover:text-gray-900'
                       }
                     `}
                     onClick={() => setSidebarOpen(false)}
+                    title={desktopSidebarCollapsed ? item.name : ''}
                   >
-                    <item.icon className="w-5 h-5" />
-                    <span>{item.name}</span>
+                    <item.icon className={`w-5 h-5 ${isActive ? 'text-black' : 'text-gray-500'} ${desktopSidebarCollapsed ? '' : 'flex-shrink-0'}`} />
+                    <span className={`${desktopSidebarCollapsed ? 'lg:hidden' : ''}`}>{item.name}</span>
                   </Link>
                 )
               })}
@@ -129,13 +150,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Overlay */}
         {sidebarOpen && (
           <div 
-            className="fixed inset-0 bg-black bg-opacity-50 z-40"
+            className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden top-[73px]"
             onClick={() => setSidebarOpen(false)}
           />
         )}
 
         {/* Main Content */}
-        <main className="flex-1 min-h-screen">
+        <main className={`flex-1 min-h-screen bg-gray-50 transition-all duration-300 ${
+          desktopSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'
+        }`}>
           {children}
         </main>
       </div>

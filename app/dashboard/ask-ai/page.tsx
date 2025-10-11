@@ -232,23 +232,21 @@ export default function AskAiPage() {
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col h-full bg-background">
-        {/* Header - Project theme */}
-        <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-background">
+      <div className="flex flex-col h-full bg-gray-50">
+        {/* Header - Yellow theme */}
+        <header className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-              <Bot className="w-5 h-5 text-primary-foreground" />
+            <div className="w-10 h-10 bg-[#FBBF24] rounded-full flex items-center justify-center shadow-md">
+              <Bot className="w-6 h-6 text-black" />
             </div>
-            <h1 className="text-xl font-semibold text-foreground">Tutorverse AI</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Tutorverse AI</h1>
           </div>
           <div className="flex items-center gap-2">
             {turns.length > 0 && (
               <Button
-                variant="ghost"
-                size="sm"
                 onClick={clearChat}
                 disabled={loading}
-                className="text-muted-foreground "
+                className="bg-[#FBBF24] hover:bg-[#F59E0B] text-black font-semibold shadow-md"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 New chat
@@ -267,16 +265,16 @@ export default function AskAiPage() {
             {/* Welcome Screen */}
             {turns.length === 0 && (
               <div className="flex flex-col items-center justify-center h-full px-6 text-center">
-                <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center mb-6">
-                  <Bot className="w-10 h-10 text-primary-foreground" />
+                <div className="w-24 h-24 bg-[#FBBF24] rounded-full flex items-center justify-center mb-6 shadow-lg">
+                  <Bot className="w-12 h-12 text-black" />
                 </div>
-                <h2 className="text-2xl font-semibold text-foreground mb-4">
+                <h2 className="text-3xl font-bold text-gray-900 mb-4">
                   How can I help you today?
                 </h2>
-                <p className="text-muted-foreground mb-8 max-w-md">
+                <p className="text-gray-600 mb-8 max-w-md text-lg">
                   I&apos;m your study assistant. Ask me anything about your courses, homework, or academic topics.
                 </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full max-w-2xl">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-2xl">
                   {[
                     { icon: "💡", title: "Explain concepts", subtitle: "Help me understand photosynthesis" },
                     { icon: "🔢", title: "Solve problems", subtitle: "Walk me through this math equation" },
@@ -285,12 +283,12 @@ export default function AskAiPage() {
                   ].map((item, index) => (
                     <div
                       key={index}
-                      className="p-4 border border-border rounded-lg hover:bg-muted cursor-pointer transition-colors"
+                      className="p-5 border border-gray-200 rounded-xl hover:border-[#FBBF24] hover:shadow-md bg-white cursor-pointer transition-all"
                       onClick={() => setInput(item.subtitle)}
                     >
-                      <div className="text-2xl mb-2">{item.icon}</div>
-                      <div className="text-sm font-medium text-foreground">{item.title}</div>
-                      <div className="text-xs text-muted-foreground mt-1">{item.subtitle}</div>
+                      <div className="text-3xl mb-2">{item.icon}</div>
+                      <div className="text-sm font-semibold text-gray-900">{item.title}</div>
+                      <div className="text-xs text-gray-600 mt-1">{item.subtitle}</div>
                     </div>
                   ))}
                 </div>
@@ -309,21 +307,21 @@ export default function AskAiPage() {
                 )}
               >
                 {turn.role === 'user' ? (
-                  // User message - right aligned
+                  // User message - right aligned with yellow theme
                   <div className="max-w-3xl mx-auto flex gap-4 justify-end">
                     {/* Message Content */}
                     <div className="flex-1 min-w-0 max-w-2xl">
                       <div className="flex items-center gap-2 mb-2 justify-end">
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-xs text-gray-500 font-medium">
                           {formatTimestamp(turn.timestamp)}
                         </span>
-                        <span className="font-semibold text-foreground text-sm">
+                        <span className="font-semibold text-gray-900 text-sm">
                           You
                         </span>
                       </div>
                       
-                      <div className="bg-primary text-primary-foreground rounded-lg px-4 py-3 ml-8">
-                        <div className="whitespace-pre-wrap">{turn.text}</div>
+                      <div className="bg-[#FBBF24] text-black rounded-xl px-4 py-3 ml-8 shadow-md">
+                        <div className="whitespace-pre-wrap font-medium">{turn.text}</div>
                       </div>
 
                       {/* Message Actions */}
@@ -349,27 +347,27 @@ export default function AskAiPage() {
                     </div>
                   </div>
                 ) : (
-                  // AI message - left aligned
+                  // AI message - left aligned with updated styling
                   <div className="max-w-3xl mx-auto flex gap-4">
                     {/* Avatar */}
                     <div className="flex-shrink-0">
-                      <div className="w-8 h-8 bg-slate-600 rounded-full flex items-center justify-center">
-                        <Bot className="w-5 h-5 text-white" />
+                      <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-blue-600 rounded-full flex items-center justify-center shadow-md">
+                        <Bot className="w-6 h-6 text-white" />
                       </div>
                     </div>
 
                     {/* Message Content */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="font-semibold text-foreground text-sm">
+                        <span className="font-semibold text-gray-900 text-sm">
                           Study Assistant
                         </span>
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-xs text-gray-500 font-medium">
                           {formatTimestamp(turn.timestamp)}
                         </span>
                       </div>
                       
-                      <div className="prose prose-sm max-w-none text-foreground">
+                      <div className="prose prose-sm max-w-none bg-white rounded-xl px-4 py-3 shadow-md border border-gray-200">
                         {turn.status === 'pending' ? (
                           <TypingIndicator />
                         ) : (
@@ -381,19 +379,15 @@ export default function AskAiPage() {
                       {turn.status === 'done' && turn.text && (
                         <div className="flex items-center gap-2 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
                           <Button
-                            size="sm"
-                            variant="ghost"
                             onClick={() => handleCopy(turn.text)}
-                            className="text-muted-foreground h-8"
+                            className="bg-gray-100 hover:bg-gray-200 text-gray-700 h-8 px-3 font-semibold"
                           >
                             <Copy className="w-4 h-4" />
                           </Button>
                           {turn.role === 'model' && turn.originalMessage && (
                             <Button
-                              size="sm"
-                              variant="ghost"
                               onClick={() => retryMessage(turn.originalMessage!)}
-                              className="text-muted-foreground h-8"
+                              className="bg-gray-100 hover:bg-gray-200 text-gray-700 h-8 px-3 font-semibold"
                             >
                               <RotateCcw className="w-4 h-4" />
                             </Button>
@@ -404,15 +398,13 @@ export default function AskAiPage() {
                       {/* Error State */}
                       {turn.status === 'error' && (
                         <div className="flex items-center gap-2 mt-3">
-                          <span className="text-xs text-destructive bg-destructive/10 px-2 py-1 rounded">
+                          <span className="text-xs text-red-700 bg-red-50 px-2 py-1 rounded font-semibold">
                             Error
                           </span>
                           {turn.originalMessage && (
                             <Button
-                              size="sm"
-                              variant="ghost"
                               onClick={() => retryMessage(turn.originalMessage!)}
-                              className="text-destructive hover:text-destructive/80 h-8"
+                              className="bg-red-100 hover:bg-red-200 text-red-700 h-8 px-3 font-semibold"
                             >
                               <RotateCcw className="w-4 h-4" />
                             </Button>
@@ -432,9 +424,9 @@ export default function AskAiPage() {
         {(error || copyFeedback) && (
           <div className="px-4 py-2">
             <div className={cn(
-              "text-sm rounded-md p-3 max-w-3xl mx-auto",
+              "text-sm rounded-xl p-3 max-w-3xl mx-auto font-semibold shadow-md",
               error 
-                ? "text-destructive bg-destructive/10 border border-destructive/20"
+                ? "text-red-700 bg-red-50 border border-red-200"
                 : "text-green-700 bg-green-50 border border-green-200"
             )}>
               {error || copyFeedback}
@@ -442,8 +434,8 @@ export default function AskAiPage() {
           </div>
         )}
 
-        {/* Input Area - Project theme */}
-        <div className="border-t border-border bg-background p-4">
+        {/* Input Area - Yellow theme */}
+        <div className="border-t border-gray-200 bg-white p-6 shadow-lg">
           <form
             onSubmit={(e) => { e.preventDefault(); send(); }}
             className="max-w-3xl mx-auto"
@@ -457,7 +449,7 @@ export default function AskAiPage() {
                   onKeyDown={onKeyDown}
                   placeholder="Message Study Assistant..."
                   disabled={loading}
-                  className="min-h-[52px] max-h-[200px] resize-none rounded-lg border border-input bg-background px-4 py-3 pr-12 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent text-foreground placeholder-muted-foreground"
+                  className="min-h-[52px] max-h-[200px] resize-none rounded-xl border-gray-200 bg-white px-4 py-3 pr-14 text-sm focus:outline-none focus:ring-2 focus:ring-[#FBBF24] focus:border-[#FBBF24] text-gray-900 placeholder-gray-400 shadow-sm"
                   rows={1}
                   style={{ 
                     resize: 'none',
@@ -468,20 +460,19 @@ export default function AskAiPage() {
                 <Button
                   type="submit"
                   disabled={loading || !input.trim()}
-                  size="sm"
-                  className="absolute right-2 bottom-2 w-8 h-8 p-0 rounded-md bg-primary hover:bg-primary/90 disabled:bg-muted disabled:cursor-not-allowed"
+                  className="absolute right-2 bottom-2 w-9 h-9 p-0 rounded-lg bg-[#FBBF24] hover:bg-[#F59E0B] disabled:bg-gray-200 disabled:cursor-not-allowed shadow-md"
                 >
                   {loading ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary-foreground border-t-transparent" />
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-black border-t-transparent" />
                   ) : (
-                    <Send className="w-4 h-4 text-primary-foreground" />
+                    <Send className="w-4 h-4 text-black" />
                   )}
                 </Button>
               </div>
             </div>
             
             <div className="flex items-center justify-center mt-2">
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-gray-500 font-medium">
                 Press Enter to send, Shift+Enter for new line
               </p>
             </div>

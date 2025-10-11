@@ -2,75 +2,71 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Color Scheme Variables */
 :root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
-  }
+  --color-primary-white: #FFFFFF;
+  --color-secondary-yellow: #FBBF24;
+  --color-third-grey: #6B7280;
+  --color-fourth-black: #000000;
+  --color-yellow-light: #FDE68A;
+  --color-grey-light: #F3F4F6;
 }
 
 @layer base {
   :root {
-    /* Building Demo WooCommerce light mode - optimized */
-    --background: 0 0% 100%; /* Pure white background */
-    --foreground: 0 0% 32%; /* #515151 - WC Secondary text */
+    /* White, Yellow, Grey, Black Color Scheme */
+    --background: 0 0% 100%; /* Pure white background #FFFFFF */
+    --foreground: 0 0% 0%; /* Black text #000000 */
     --card: 0 0% 100%; /* White cards */
-    --card-foreground: 0 0% 32%; /* Dark text on cards */
+    --card-foreground: 0 0% 0%; /* Black text on cards */
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 32%;
-    --primary: 45 93% 51%; /* #f0ae16 - Updated golden highlight (main CTA color) */
-    --primary-foreground: 0 0% 100%; /* White text on golden */
-    --secondary: 260 23% 91%; /* #e9e6ed - Light grey sections */
-    --secondary-foreground: 0 0% 32%; /* Dark text on light grey */
-    --muted: 260 23% 91%; /* Light grey for muted elements */
-    --muted-foreground: 0 0% 50%; /* Medium grey for muted text */
-    --accent: 270 88% 49%; /* #720eec - WC Primary purple for accents */
-    --accent-foreground: 260 89% 98%; /* #fcfbfe - Light text on purple */
-    --destructive: 0 100% 33%; /* #a00 - WC Red for errors */
+    --popover-foreground: 0 0% 0%;
+    --primary: 45 96% 56%; /* Yellow #FBBF24 */
+    --primary-foreground: 0 0% 0%; /* Black text on yellow */
+    --secondary: 220 13% 46%; /* Grey #6B7280 */
+    --secondary-foreground: 0 0% 100%; /* White text on grey */
+    --muted: 210 20% 95%; /* Light grey #F3F4F6 */
+    --muted-foreground: 220 13% 46%; /* Grey text */
+    --accent: 48 97% 77%; /* Light yellow #FDE68A */
+    --accent-foreground: 0 0% 0%; /* Black text on light yellow */
+    --destructive: 0 84% 60%; /* Red for errors */
     --destructive-foreground: 0 0% 100%;
-    --border: 260 23% 85%; /* Slightly darker border for definition */
-    --input: 260 23% 91%; /* Light grey input backgrounds */
-    --ring: 45 93% 51%; /* Updated golden focus ring */
-    --chart-1: 45 93% 51%; /* Updated Golden */
-    --chart-2: 44 100% 50%; /* Orange #ffba00 */
-    --chart-3: 95 64% 52%; /* Green #7ad03a */
-    --chart-4: 0 100% 33%; /* Red #a00 */
-    --chart-5: 190 81% 47%; /* Blue #2ea2cc */
-    --radius: 0.5rem; /* Slightly smaller radius for cleaner look */
+    --border: 220 13% 91%; /* Light border #E5E7EB */
+    --input: 0 0% 100%; /* White input backgrounds */
+    --ring: 45 96% 56%; /* Yellow focus ring #FBBF24 */
+    --chart-1: 45 96% 56%; /* Yellow #FBBF24 */
+    --chart-2: 48 97% 77%; /* Light Yellow #FDE68A */
+    --chart-3: 220 13% 46%; /* Grey #6B7280 */
+    --chart-4: 0 0% 0%; /* Black #000000 */
+    --chart-5: 210 20% 95%; /* Light Grey #F3F4F6 */
+    --radius: 1rem; /* Rounded corners */
   }
   .dark {
-    /* Dark theme: Building Demo adapted for dark mode */
-    --background: 0 0% 8%; /* Very dark background */
-    --foreground: 260 89% 98%; /* Light text */
+    /* Dark theme: Inverted color scheme */
+    --background: 0 0% 7%; /* Almost black background */
+    --foreground: 0 0% 100%; /* White text */
     --card: 0 0% 10%;
-    --card-foreground: 260 89% 98%;
+    --card-foreground: 0 0% 100%;
     --popover: 0 0% 10%;
-    --popover-foreground: 260 89% 98%;
-    --primary: 45 93% 55%; /* Brighter version of #f0ae16 for dark mode */
-    --primary-foreground: 0 0% 100%;
-    --secondary: 0 0% 15%; /* Dark grey sections */
-    --secondary-foreground: 260 89% 98%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 45 96% 56%; /* Yellow #FBBF24 */
+    --primary-foreground: 0 0% 0%; /* Black text on yellow */
+    --secondary: 220 13% 46%; /* Grey #6B7280 */
+    --secondary-foreground: 0 0% 100%;
     --muted: 0 0% 15%;
-    --muted-foreground: 0 0% 65%;
-    --accent: 270 88% 60%; /* Lighter purple for dark mode */
-    --accent-foreground: 260 89% 98%;
-    --destructive: 0 85% 45%;
-    --destructive-foreground: 260 89% 98%;
+    --muted-foreground: 220 13% 65%;
+    --accent: 48 97% 77%; /* Light yellow #FDE68A */
+    --accent-foreground: 0 0% 0%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
     --border: 0 0% 18%;
-    --input: 0 0% 18%;
-    --ring: 45 93% 55%;
-    --chart-1: 45 93% 55%;
-    --chart-2: 44 100% 60%;
-    --chart-3: 95 64% 62%;
-    --chart-4: 0 85% 45%;
-    --chart-5: 190 81% 57%;
+    --input: 0 0% 15%;
+    --ring: 45 96% 56%;
+    --chart-1: 45 96% 56%;
+    --chart-2: 48 97% 77%;
+    --chart-3: 220 13% 60%;
+    --chart-4: 0 0% 90%;
+    --chart-5: 210 20% 25%;
   }
 }
 
@@ -83,58 +79,151 @@
   }
 }
 
-.gradient-green {
-  /* Building Demo golden gradient */
-  background: linear-gradient(135deg, #f0ae16 0%, #f0ae16 100%);
+/* Custom scrollbar with new color scheme */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background-color: #F9FAFB;
+  border-radius: 9999px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #6B7280;
+  border-radius: 9999px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #FBBF24;
+}
+
+/* Smooth transitions */
+.transition-smooth {
+  transition: all 0.3s ease-in-out;
+}
+
+/* Card base */
+.card-base {
+  background-color: white;
+  border-radius: 1.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem;
+  transition: all 0.3s ease-in-out;
+  border: 1px solid #F3F4F6;
+}
+
+.card-base:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(251, 191, 36, 0.1);
+  border-color: #FDE68A;
+  transform: translateY(-2px);
+}
+
+/* Button base */
+.btn-base {
+  padding: 0.75rem 1.5rem;
+  border-radius: 1rem;
+  font-weight: 600;
+  transition: all 0.3s ease-in-out;
+  outline: none;
+}
+
+.btn-base:focus {
+  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.3);
+}
+
+/* Input base */
+.input-base {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 1rem;
+  border: 2px solid #E5E7EB;
+  background-color: white;
+  outline: none;
+  transition: all 0.3s ease-in-out;
+  color: #000000;
+}
+
+.input-base:focus {
+  border-color: #FBBF24;
+  box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.15);
+}
+
+.input-base:hover {
+  border-color: #D1D5DB;
+}
+
+/* Skeleton loading with yellow accent */
+.skeleton {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  background: linear-gradient(90deg, #F3F4F6 25%, #FDE68A 50%, #F3F4F6 75%);
+  background-size: 200% 100%;
+  border-radius: 0.75rem;
+}
+
+@keyframes pulse {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Yellow gradient utilities */
+.gradient-yellow {
+  background: linear-gradient(135deg, #FBBF24 0%, #FDE68A 100%);
 }
 
 .text-gradient {
-  background: linear-gradient(135deg, #f0ae16 0%, #f0ae16 100%);
+  background: linear-gradient(135deg, #FBBF24 0%, #FDE68A 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-/* Building Demo utilities - keeping content, just enhancing colors */
+/* Header utilities */
 .header-dark {
-  background: linear-gradient(135deg, #1a1a1a 0%, #0f0f0f 100%);
+  background: linear-gradient(135deg, #1a1a1a 0%, #000000 100%);
 }
 
-/* Additional Building Demo light mode utilities */
+/* Section utilities */
 .section-white {
-  background-color: #ffffff;
+  background-color: #FFFFFF;
 }
 
 .section-grey {
-  background-color: #e9e6ed;
+  background-color: #F3F4F6;
 }
 
-.text-building-gold {
-  color: #f0ae16;
+.text-yellow {
+  color: #FBBF24;
 }
 
-.text-building-purple {
-  color: #f0ae16;
+.text-grey {
+  color: #6B7280;
 }
 
-.text-building-dark {
-  color: #515151;
+.text-black {
+  color: #000000;
 }
 
-.border-building-light {
-  border-color: #e9e6ed;
+.border-grey-light {
+  border-color: #E5E7EB;
 }
 
-.shadow-building {
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+.shadow-card {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.hover-shadow-building {
-  transition: box-shadow 0.2s ease;
+.hover-shadow-card {
+  transition: box-shadow 0.3s ease-in-out, transform 0.3s ease-in-out;
 }
 
-.hover-shadow-building:hover {
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+.hover-shadow-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(251, 191, 36, 0.1);
+  transform: translateY(-2px);
 }
 
 /* Syntax highlighting for code blocks */
