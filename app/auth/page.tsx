@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -8,14 +8,19 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Checkbox } from '@/components/ui/checkbox'
-import { BookOpen, Users, ArrowRight, Mail, Lock } from 'lucide-react'
+import { BookOpen, Users, ArrowRight, Mail, Lock, ArrowLeft } from 'lucide-react'
 import { useAuth, userType } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 export default function AuthPage() {
   const { login, register, isLoading, googleLogin } = useAuth()
   const router = useRouter()
+  const lottieContainer = useRef<HTMLDivElement>(null)
+  const animationRef = useRef<any>(null)
+  const hasLoadedRef = useRef(false)
+  
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -24,6 +29,88 @@ export default function AuthPage() {
   })
   
   const [rememberMe, setRememberMe] = useState(false)
+
+  useEffect(() => {
+    // Prevent double loading in strict mode
+    if (hasLoadedRef.current) return
+    hasLoadedRef.current = true
+    
+    // Dynamically load Lottie player
+    const container = lottieContainer.current
+    
+    const loadLottie = async () => {
+      if (typeof window !== 'undefined' && container) {
+        // Destroy any existing animation first
+        if (animationRef.current) {
+          animationRef.current.destroy()
+          animationRef.current = null
+        }
+        
+        // Clear container
+        container.innerHTML = ''
+        
+        const lottie = (await import('lottie-web')).default
+        
+        animationRef.current = lottie.loadAnimation({
+          container: container,
+          renderer: 'svg',
+          loop: true,
+          autoplay: true,
+          path: '/STUDENT.json',
+          rendererSettings: {
+            preserveAspectRatio: 'xMidYMid meet'
+          }
+        })
+
+        // Hide background groups after animation loads (conservative)
+        animationRef.current.addEventListener('DOMLoaded', () => {
+          const svgElement = container.querySelector('svg')
+          if (!svgElement) return
+
+          // Debug: list top-level group names/ids so we can target reliably
+          const topGroups = Array.from(svgElement.querySelectorAll(':scope > g'))
+          // eslint-disable-next-line no-console
+          console.log('[Lottie] Top groups:', topGroups.map(g => ({
+            name: g.getAttribute('data-name'), id: g.getAttribute('id')
+          })))
+
+          // Only hide exact-named background groups
+          const exactNames = new Set(['Background', 'Background Complete'])
+          topGroups.forEach(g => {
+            const name = g.getAttribute('data-name') || ''
+            const id = g.getAttribute('id') || ''
+            if (exactNames.has(name) || exactNames.has(id)) {
+              ;(g as unknown as HTMLElement).style.display = 'none'
+            }
+          })
+
+          // Hide only very specific light beige rects (common background fills)
+          const rects = svgElement.querySelectorAll('rect')
+          rects.forEach((rect) => {
+            const fill = (rect.getAttribute('fill') || '').toLowerCase()
+            const isLightBG = ['#f4e3c7', '#f4e3c6', '#f4e3c8', '#fff7cc', '#fff6d8', '#fef7e6', '#fffbf0'].includes(fill)
+            if (isLightBG) {
+              ;(rect as unknown as HTMLElement).style.display = 'none'
+            }
+          })
+        })
+      }
+    }
+    
+    loadLottie()
+    
+    // Cleanup function
+    return () => {
+      if (animationRef.current) {
+        animationRef.current.destroy()
+        animationRef.current = null
+      }
+      if (container) {
+        container.innerHTML = ''
+      }
+      hasLoadedRef.current = false
+    }
+  }, [])
   
   const handleInputChange = (field: string, value: string) => {
     setFormData({...formData, [field]: value})
@@ -61,21 +148,25 @@ export default function AuthPage() {
 
   return (
     <div className="min-h-screen flex">
-      {/* Left Side - Compact Content */}
-      <div className="hidden lg:flex lg:w-1/2 relative">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-blue-600/20"></div>
-        <Image
-          src="/hero.jpeg"
-          alt="STUDENTs learning together"
-          fill
-          className="object-cover"
-        />
-        <div className="absolute inset-0 bg-black/30"></div>
+      {/* Left Side - Animation */}
+      <div className="hidden lg:flex lg:w-1/2 relative ">
+        <div className="absolute inset-0 flex items-center justify-center p-12">
+            <div ref={lottieContainer} className="w-full h-full max-w-2xl lottie-animation overflow-hidden"></div>
+        </div>
       </div>
 
       {/* Right Side - Compact Auth Forms */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6 bg-card">
         <div className="w-full max-w-sm">
+          {/* Back to Landing */}
+          <div className="mb-4">
+            <Link href="/">
+              <Button variant="ghost" size="sm" className="gap-2 px-2">
+                <ArrowLeft className="w-4 h-4" />
+                Back to landing page
+              </Button>
+            </Link>
+          </div>
           {/* Logo */}
           <div className="text-center mb-8">
             <div className="flex items-center justify-center space-x-3 mb-3">

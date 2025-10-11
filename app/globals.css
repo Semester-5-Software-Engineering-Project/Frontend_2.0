@@ -329,3 +329,100 @@
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
   line-height: 1.5;
 }
+/* ============================================
+   Hero Carousel Animations - Elegant & Smooth
+   ============================================ */
+
+/* Gradient shift animation for text */
+@keyframes gradient-shift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* Slide up and fade in animation */
+@keyframes slide-up-fade {
+  0% {
+    opacity: 0;
+    transform: translateY(40px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-slide-up-fade {
+  animation: slide-up-fade 1s ease-out forwards;
+}
+
+/* Radial gradient utility */
+.bg-gradient-radial {
+  background: radial-gradient(circle, var(--tw-gradient-stops));
+}
+
+/* Paper unfold effect - smooth circle expansion */
+@keyframes paper-unfold {
+  0% {
+    clip-path: circle(0% at 50% 50%);
+    transform: scale(0.95);
+  }
+  100% {
+    clip-path: circle(100% at 50% 50%);
+    transform: scale(1);
+  }
+}
+
+/* Gentle breathing animation for images */
+@keyframes gentle-breathe {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+/* Shimmer effect for text */
+@keyframes shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+/* Elegant fade transition */
+.carousel-fade-enter {
+  animation: fadeIn 1.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Custom utilities for carousel */
+.transition-slow {
+  transition-duration: 2000ms;
+}
+
+.transition-elegant {
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Lottie animation - safely hide only named background groups */
+.lottie-animation [data-name="Background"],
+.lottie-animation [data-name="Background Complete"],
+.lottie-animation g#Background,
+.lottie-animation g#background {
+  display: none !important;
+}
