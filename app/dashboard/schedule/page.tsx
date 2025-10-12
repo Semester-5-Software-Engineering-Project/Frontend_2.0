@@ -1,266 +1,355 @@
 'use client'
 
 import { useState } from 'react'
+import Cookies from "js-cookie";
+import { useSearchParams, useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Calendar as CalendarIcon, Clock, Users, Video, Plus, Filter } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Calendar as CalendarIcon, ChevronLeft } from 'lucide-react'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { ShieldAlert, CheckCircle, XCircle } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
+import axios from 'axios'
+
+interface ScheduleFormData {
+  date: string
+  time: string
+  duration: number
+  recurrenceType: 'specific' | 'daily' | 'weekly'
+  weekDay?: number // For weekly recurrence: 1=Monday, 2=Tuesday, ..., 7=Sunday
+}
 
 export default function Schedule() {
   const { user } = useAuth()
-  const [selectedDate, setSelectedDate] = useState(new Date())
-  const [viewMode, setViewMode] = useState<'day' | 'week' | 'month'>('week')
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const moduleId = searchParams.get('moduleId')
 
-  const sessions = [
-    {
-      id: 1,
-      title: 'Advanced Mathematics',
-      participant: user?.role === 'student' ? 'Dr. Sarah Johnson' : 'Alex Smith',
-      time: '10:00 AM',
-      duration: 60,
-      status: 'confirmed',
-      type: 'regular'
-    },
-    {
-      id: 2,
-      title: 'Physics Fundamentals',
-      participant: user?.role === 'student' ? 'Prof. Michael Chen' : 'Emma Wilson',
-      time: '2:00 PM',
-      duration: 90,
-      status: 'pending',
-      type: 'premium'
-    },
-    {
-      id: 3,
-      title: 'Chemistry Lab Prep',
-      participant: user?.role === 'student' ? 'Dr. Emily Davis' : 'John Davis',
-      time: '4:00 PM',
-      duration: 60,
-      status: 'confirmed',
-      type: 'regular'
-    }
-  ]
+  const [formData, setFormData] = useState<ScheduleFormData>({
+    date: '',
+    time: '',
+    duration: 60,
+    recurrenceType: 'specific'
+  })
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitStatus, setSubmitStatus] = useState<{
+    type: 'success' | 'error' | null
+    message: string
+  }>({ type: null, message: '' })
 
-  const timeSlots = [
-    '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
-    '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM'
-  ]
+  // Redirect if not a tutor
+  if (user?.role !== 'TUTOR') {
+    return (
+      <DashboardLayout>
+        <div className="p-6">
+          <Alert variant="destructive" className="max-w-2xl border-red-300 bg-red-50 shadow-lg">
+            <ShieldAlert className="h-5 w-5 text-red-600" />
+            <AlertTitle className="font-bold text-lg">Access Restricted</AlertTitle>
+            <AlertDescription className="text-red-800 font-medium">
+              Scheduling is available to tutors only.
+            </AlertDescription>
+          </Alert>
+        </div>
+      </DashboardLayout>
+    )
+  }
 
-  const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+  // Redirect if no moduleId
+  if (!moduleId) {
+    return (
+      <DashboardLayout>
+        <div className="p-6">
+          <Alert variant="destructive" className="max-w-2xl border-red-300 bg-red-50 shadow-lg">
+            <ShieldAlert className="h-5 w-5 text-red-600" />
+            <AlertTitle className="font-bold text-lg">Invalid Request</AlertTitle>
+            <AlertDescription className="text-red-800 font-medium">
+              No module selected for scheduling. Please go back and select a module.
+            </AlertDescription>
+          </Alert>
+          <Button 
+            onClick={() => router.push('/dashboard/courses')}
+            className="mt-4 h-11 bg-[#FBBF24] hover:bg-[#F59E0B] text-black font-semibold"
+          >
+            <ChevronLeft className="w-5 h-5 mr-2" />
+            Back to Modules
+          </Button>
+        </div>
+      </DashboardLayout>
+    )
+  }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'confirmed':
-        return 'bg-green-100 text-green-700'
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-700'
-      case 'cancelled':
-        return 'bg-red-100 text-red-700'
+  const handleInputChange = (field: keyof ScheduleFormData, value: string | number) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
+    setSubmitStatus({ type: null, message: '' })
+  }
+
+  const getWeekNumber = (recurrenceType: string, weekDay?: number): number => {
+    switch (recurrenceType) {
+      case 'specific':
+        return 0
+      case 'daily':
+        return 8
+      case 'weekly':
+        return weekDay || 1 // Default to Monday if not specified
       default:
-        return 'bg-gray-100 text-gray-700'
+        return 0
     }
   }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    console.log('=== Schedule Page Debug ============================================================================')
+    e.preventDefault()
+    setIsSubmitting(true)
+    setSubmitStatus({ type: null, message: '' })
+
+    try {
+
+
+      const token = Cookies.get('jwt_token');
+      if (!token) {
+        throw new Error('Authentication token not found. Please log in again.')
+      }
+
+      // Prepare the payload
+      const payload = {
+        moduleId: moduleId, // Keep as string UUID, don't parse as integer
+        date: formData.date,
+        time: formData.time,
+        duration: formData.duration,
+        weekNumber: getWeekNumber(formData.recurrenceType, formData.weekDay),
+        recurrentType: formData.recurrenceType
+      }
+      console.log('Scheduling payload:', payload)
+      console.log('Using token:', token)
+
+      // Make the API request WITHOUT credentials
+      const response = await axios.post(
+        'http://localhost:8080/api/schedules/create',
+        payload,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          withCredentials: true // Explicitly set to false
+        }
+      )
+
+      if (response.status === 200 || response.status === 201) {
+        setSubmitStatus({
+          type: 'success',
+          message: 'Meeting scheduled successfully!'
+        })
+        
+        // Reset form
+        setFormData({
+          date: '',
+          time: '',
+          duration: 60,
+          recurrenceType: 'specific'
+        })
+      }
+    } catch (error: any) {
+      console.error('Error scheduling meeting:', error)
+      setSubmitStatus({
+        type: 'error',
+        message: error.response?.data?.message || error.message || 'Failed to schedule meeting. Please try again.'
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const isFormValid = formData.date && formData.time && formData.duration > 0 &&
+                     (formData.recurrenceType !== 'weekly' || formData.weekDay)
 
   return (
     <DashboardLayout>
       <div className="p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Schedule</h1>
-            <p className="text-gray-600">
-              {user?.role === 'student' 
-                ? 'Manage your tutoring sessions and book new ones'
-                : 'Manage your teaching schedule and availability'
-              }
-            </p>
-          </div>
-          <div className="flex items-center space-x-3">
-            <div className="flex items-center border rounded-lg">
-              <Button 
-                variant={viewMode === 'day' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('day')}
-                className={viewMode === 'day' ? 'bg-green-600 hover:bg-green-700' : ''}
-              >
-                Day
-              </Button>
-              <Button 
-                variant={viewMode === 'week' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('week')}
-                className={viewMode === 'week' ? 'bg-green-600 hover:bg-green-700' : ''}
-              >
-                Week
-              </Button>
-              <Button 
-                variant={viewMode === 'month' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('month')}
-                className={viewMode === 'month' ? 'bg-green-600 hover:bg-green-700' : ''}
-              >
-                Month
-              </Button>
-            </div>
-            <Button className="bg-green-600 hover:bg-green-700">
-              <Plus className="w-4 h-4 mr-2" />
-              {user?.role === 'student' ? 'Book Session' : 'Add Availability'}
+        <div className="bg-gradient-to-r from-[#FBBF24] to-[#F59E0B] rounded-2xl p-8 shadow-lg">
+          <div className="flex items-center space-x-4">
+            <Button 
+              onClick={() => router.push(`/dashboard/courses/${moduleId}`)}
+              className="bg-black/20 hover:bg-black/30 text-black font-semibold h-11 border-none"
+            >
+              <ChevronLeft className="w-5 h-5 mr-1" />
+              <span>Back to Module</span>
             </Button>
+            <div>
+              <h1 className="text-4xl font-bold text-black">Schedule Meeting</h1>
+              <p className="text-black/80 mt-1 text-lg">Create a new meeting schedule for your module</p>
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
-          {/* Calendar View */}
-          <div className="xl:col-span-3">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Weekly Schedule</CardTitle>
-                  <CardDescription>January 15-21, 2024</CardDescription>
+        <div className="max-w-2xl">
+          {submitStatus.type && (
+            <Alert 
+              variant={submitStatus.type === 'success' ? 'default' : 'destructive'} 
+              className={`mb-6 shadow-lg ${
+                submitStatus.type === 'success' 
+                  ? 'border-green-300 bg-green-50' 
+                  : 'border-red-300 bg-red-50'
+              }`}
+            >
+              {submitStatus.type === 'success' ? (
+                <CheckCircle className="h-5 w-5 text-green-600" />
+              ) : (
+                <XCircle className="h-5 w-5 text-red-600" />
+              )}
+              <AlertTitle className="font-bold text-lg">
+                {submitStatus.type === 'success' ? 'Success' : 'Error'}
+              </AlertTitle>
+              <AlertDescription className={`font-medium ${
+                submitStatus.type === 'success' ? 'text-green-800' : 'text-red-800'
+              }`}>
+                {submitStatus.message}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <Card className="border-none shadow-2xl">
+            <CardHeader className="bg-gradient-to-r from-[#FBBF24] to-[#F59E0B] text-black rounded-t-xl">
+              <CardTitle className="text-2xl font-bold">Meeting Details</CardTitle>
+              <CardDescription className="text-black/80 text-base">
+                Set up the date, time, and recurrence for your meeting
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-8">
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <Label htmlFor="date" className="text-base font-bold text-gray-800">Date *</Label>
+                    <Input
+                      id="date"
+                      type="date"
+                      value={formData.date}
+                      onChange={(e) => handleInputChange('date', e.target.value)}
+                      min={new Date().toISOString().split('T')[0]}
+                      required
+                      className="h-12 border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]"
+                    />
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <Label htmlFor="time" className="text-base font-bold text-gray-800">Time *</Label>
+                    <Input
+                      id="time"
+                      type="time"
+                      value={formData.time}
+                      onChange={(e) => handleInputChange('time', e.target.value)}
+                      required
+                      className="h-12 border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]"
+                    />
+                  </div>
                 </div>
-                <Button variant="outline" size="sm">
-                  <Filter className="w-4 h-4 mr-2" />
-                  Filter
-                </Button>
-              </CardHeader>
-              <CardContent>
-                {/* Calendar Grid */}
-                <div className="overflow-x-auto">
-                  <div className="min-w-full">
-                    {/* Header */}
-                    <div className="grid grid-cols-8 gap-2 mb-4">
-                      <div className="p-2"></div>
-                      {weekDays.map((day, index) => (
-                        <div key={day} className="p-2 text-center font-medium text-gray-600">
-                          <div>{day}</div>
-                          <div className="text-lg font-bold text-gray-900">{15 + index}</div>
+
+                <div className="space-y-3">
+                  <Label htmlFor="duration" className="text-base font-bold text-gray-800">Duration (minutes) *</Label>
+                  <Select
+                    value={formData.duration.toString()}
+                    onValueChange={(value) => handleInputChange('duration', parseInt(value))}
+                  >
+                    <SelectTrigger className="h-12 border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]">
+                      <SelectValue placeholder="Select duration" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="30">30 minutes</SelectItem>
+                      <SelectItem value="45">45 minutes</SelectItem>
+                      <SelectItem value="60">1 hour</SelectItem>
+                      <SelectItem value="90">1.5 hours</SelectItem>
+                      <SelectItem value="120">2 hours</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-3">
+                  <Label htmlFor="recurrence" className="text-base font-bold text-gray-800">Recurrence Type *</Label>
+                  <Select
+                    value={formData.recurrenceType}
+                    onValueChange={(value: 'specific' | 'daily' | 'weekly') => {
+                      handleInputChange('recurrenceType', value)
+                      if (value !== 'weekly') {
+                        setFormData(prev => ({ ...prev, weekDay: undefined }))
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="h-12 border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]">
+                      <SelectValue placeholder="Select recurrence" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="specific">
+                        <div className="flex items-center gap-2">
+                          <div className="h-2 w-2 rounded-full bg-blue-500" />
+                          <span className="font-medium">One-time meeting</span>
                         </div>
-                      ))}
-                    </div>
-
-                    {/* Time Slots */}
-                    <div className="space-y-2">
-                      {timeSlots.map((time) => (
-                        <div key={time} className="grid grid-cols-8 gap-2">
-                          <div className="p-2 text-sm text-gray-500 font-medium">
-                            {time}
-                          </div>
-                          {weekDays.map((day, dayIndex) => {
-                            const session = dayIndex === 0 && time === '10:00 AM' ? sessions[0] :
-                                           dayIndex === 0 && time === '2:00 PM' ? sessions[1] :
-                                           dayIndex === 1 && time === '4:00 PM' ? sessions[2] : null
-                            
-                            return (
-                              <div key={`${day}-${time}`} className="p-1">
-                                {session ? (
-                                  <div className={`
-                                    p-2 rounded-lg border-l-4 cursor-pointer hover:shadow-md transition-shadow
-                                    ${session.status === 'confirmed' 
-                                      ? 'bg-green-50 border-green-500' 
-                                      : 'bg-yellow-50 border-yellow-500'
-                                    }
-                                  `}>
-                                    <div className="text-xs font-medium">{session.title}</div>
-                                    <div className="text-xs text-gray-600">{session.participant}</div>
-                                    <div className="flex items-center space-x-1 mt-1">
-                                      <Clock className="w-3 h-3 text-gray-400" />
-                                      <span className="text-xs text-gray-500">{session.duration}min</span>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <div className="h-16 border-2 border-dashed border-gray-200 rounded-lg flex items-center justify-center hover:border-green-300 transition-colors cursor-pointer">
-                                    <Plus className="w-4 h-4 text-gray-400" />
-                                  </div>
-                                )}
-                              </div>
-                            )
-                          })}
+                      </SelectItem>
+                      <SelectItem value="weekly">
+                        <div className="flex items-center gap-2">
+                          <div className="h-2 w-2 rounded-full bg-green-500" />
+                          <span className="font-medium">Weekly recurring</span>
                         </div>
-                      ))}
-                    </div>
-                  </div>
+                      </SelectItem>
+                      <SelectItem value="daily">
+                        <div className="flex items-center gap-2">
+                          <div className="h-2 w-2 rounded-full bg-purple-500" />
+                          <span className="font-medium">Daily recurring</span>
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Today's Sessions */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Today's Sessions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {sessions.map((session) => (
-                  <div key={session.id} className="border rounded-lg p-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-medium text-sm">{session.title}</h4>
-                      <Badge className={getStatusColor(session.status)}>
-                        {session.status}
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-gray-500 mb-2">{session.participant}</p>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2 text-xs text-gray-600">
-                        <Clock className="w-3 h-3" />
-                        <span>{session.time} ({session.duration}min)</span>
-                      </div>
-                      <Button size="sm" className="bg-green-600 hover:bg-green-700">
-                        <Video className="w-3 h-3 mr-1" />
-                        Join
-                      </Button>
-                    </div>
+                {formData.recurrenceType === 'weekly' && (
+                  <div className="space-y-3 p-4 bg-blue-50 rounded-lg border-2 border-blue-200">
+                    <Label htmlFor="weekDay" className="text-base font-bold text-gray-800">Day of Week *</Label>
+                    <Select
+                      value={formData.weekDay?.toString() || ''}
+                      onValueChange={(value) => handleInputChange('weekDay', parseInt(value))}
+                    >
+                      <SelectTrigger className="h-12 border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24] bg-white">
+                        <SelectValue placeholder="Select day of week" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">Monday</SelectItem>
+                        <SelectItem value="2">Tuesday</SelectItem>
+                        <SelectItem value="3">Wednesday</SelectItem>
+                        <SelectItem value="4">Thursday</SelectItem>
+                        <SelectItem value="5">Friday</SelectItem>
+                        <SelectItem value="6">Saturday</SelectItem>
+                        <SelectItem value="7">Sunday</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                ))}
-              </CardContent>
-            </Card>
+                )}
 
-            {/* Quick Stats */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">This Week</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Total Sessions</span>
-                  <span className="font-semibold">8</span>
+                <div className="flex items-center space-x-4 pt-6 border-t border-gray-200">
+                  <Button
+                    type="submit"
+                    disabled={!isFormValid || isSubmitting}
+                    className="h-12 bg-[#FBBF24] hover:bg-[#F59E0B] text-black font-bold text-base flex items-center space-x-2 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  >
+                    <CalendarIcon className="w-5 h-5" />
+                    <span>{isSubmitting ? 'Scheduling...' : 'Schedule Meeting'}</span>
+                  </Button>
+                  
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => router.push(`/dashboard/courses/${moduleId}`)}
+                    disabled={isSubmitting}
+                    className="h-12 font-semibold border-gray-300 hover:bg-gray-100"
+                  >
+                    Cancel
+                  </Button>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Hours Scheduled</span>
-                  <span className="font-semibold">12</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Availability</span>
-                  <span className="font-semibold text-green-600">85%</span>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Upcoming Reminders */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Reminders</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span>Session with Alex in 30 min</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <span>Upload materials for tomorrow</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                    <span>Review pending bookings</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+              </form>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </DashboardLayout>

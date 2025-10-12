@@ -1,6 +1,6 @@
 'use client'
 
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth, userType } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import StudentDashboard from '@/components/dashboard/StudentDashboard'
@@ -28,10 +28,11 @@ export default function Dashboard() {
   if (!user) {
     return null
   }
+  
 
   return (
     <DashboardLayout>
-      {user.role === 'student' ? <StudentDashboard /> : <TutorDashboard />}
+      {user.role === userType.STUDENT ? <StudentDashboard /> : <TutorDashboard />}
     </DashboardLayout>
   )
 }
