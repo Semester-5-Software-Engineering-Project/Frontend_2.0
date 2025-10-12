@@ -161,6 +161,18 @@ export const TutorProfileApi = {
 		}
 	},
 
+	/** Get a tutor's display name by tutorId */
+	async getTutorNameById(tutorId: string): Promise<string> {
+		try {
+			const res = await axiosInstance.get('/api/tutor-profile/tutorname', {
+				params: { tutorId },
+			});
+			return (res.data && (res.data.tutorName as string)) || '';
+		} catch (e) {
+			throw parseError(e);
+		}
+	},
+
 	/** Get current tutor's profile ("/me") */
 	async getMe(): Promise<TutorProfileEntity> {
 		try {
@@ -198,6 +210,17 @@ export const TutorProfileApi = {
 			await axiosInstance.put('/api/tutor-profile/change-password', { newPassword });
 		} catch (e) {
 			throw parseError(e);
+		}
+	},
+
+	/** Get tutor profile image URL */
+	async getImageUrl(): Promise<string | null> {
+		try {
+			const res = await axiosInstance.get('/api/tutor-profile/image');
+			return res.data?.imageUrl || null;
+		} catch (e) {
+			console.error('Error fetching tutor image URL:', e);
+			return null;
 		}
 	},
 

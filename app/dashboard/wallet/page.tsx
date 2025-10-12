@@ -235,13 +235,13 @@ export default function WalletPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'PENDING':
-        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Pending</Badge>
+        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200 font-semibold">Pending</Badge>
       case 'APPROVED':
-        return <Badge className="bg-green-100 text-green-800 border-green-200">Approved</Badge>
+        return <Badge className="bg-green-100 text-green-800 border-green-200 font-semibold">Approved</Badge>
       case 'REJECTED':
-        return <Badge className="bg-red-100 text-red-800 border-red-200">Rejected</Badge>
+        return <Badge className="bg-red-100 text-red-800 border-red-200 font-semibold">Rejected</Badge>
       default:
-        return <Badge variant="secondary">Unknown</Badge>
+        return <Badge variant="secondary" className="font-semibold">Unknown</Badge>
     }
   }
 
@@ -265,11 +265,11 @@ export default function WalletPage() {
   if (user?.role !== 'TUTOR') {
     return (
       <DashboardLayout>
-        <div className="p-6">
-          <Alert variant="destructive" className="max-w-2xl">
-            <ShieldAlert className="h-4 w-4" />
-            <AlertTitle>Access restricted</AlertTitle>
-            <AlertDescription>
+        <div className="p-6 max-w-2xl mx-auto mt-12">
+          <Alert variant="destructive" className="border-2 border-red-200 shadow-md">
+            <ShieldAlert className="h-5 w-5" />
+            <AlertTitle className="font-bold text-lg">Access Restricted</AlertTitle>
+            <AlertDescription className="font-medium">
               This page is only available to tutors.
             </AlertDescription>
           </Alert>
@@ -281,86 +281,94 @@ export default function WalletPage() {
   return (
     <DashboardLayout>
       <div className="p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-foreground">My Wallet</h1>
-          <Button 
-            onClick={() => setShowWithdrawDialog(true)}
-            className="bg-primary hover:bg-primary/90"
-          >
-            <Download className="w-4 h-4 mr-2" />
-            Request Withdrawal
-          </Button>
+        {/* Header */}
+        <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">My Wallet</h1>
+              <p className="text-gray-600 mt-1">Manage your earnings and withdrawal requests</p>
+            </div>
+            <Button 
+              onClick={() => setShowWithdrawDialog(true)}
+              className="bg-[#FBBF24] hover:bg-[#F59E0B] text-black font-semibold shadow-md"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Request Withdrawal
+            </Button>
+          </div>
         </div>
 
         {loading && (
-          <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-            <Loader2 className="w-4 h-4 animate-spin" /> <span>Loading balance...</span>
+          <div className="flex items-center space-x-2 text-sm text-gray-600 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <Loader2 className="w-4 h-4 animate-spin" /> <span className="font-medium">Loading balance...</span>
           </div>
         )}
         {error && !loading && (
-          <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md p-3 max-w-md">
-            {error}
+          <div className="text-sm text-red-700 bg-red-50 border-2 border-red-200 rounded-lg p-4 max-w-md shadow-sm">
+            <span className="font-medium">{error}</span>
           </div>
         )}
         {!loading && !error && (
-          <Card className="border-2 border-primary/20 max-w-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Wallet className="h-4 w-4 text-primary" /> Available Balance
+          <Card className="border-none shadow-md max-w-sm hover:shadow-lg transition-shadow">
+            <CardHeader className="pb-3 border-b border-gray-200 bg-gradient-to-r from-yellow-50 to-orange-50">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2 text-gray-900">
+                <Wallet className="h-5 w-5 text-[#FBBF24]" /> Available Balance
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-primary">${availableBalance.toFixed(2)}</div>
-              <p className="text-xs text-muted-foreground mt-1">Funds you can withdraw now</p>
+            <CardContent className="pt-6">
+              <div className="text-4xl font-bold text-[#FBBF24]">${availableBalance.toFixed(2)}</div>
+              <p className="text-sm text-gray-600 mt-2 font-medium">Funds you can withdraw now</p>
             </CardContent>
           </Card>
         )}
 
         {/* Withdrawal History */}
         {!loading && !error && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="w-5 h-5" />
+          <Card className="border-none shadow-md">
+            <CardHeader className="border-b border-gray-200 bg-gray-50">
+              <CardTitle className="flex items-center gap-2 text-xl font-bold text-gray-900">
+                <Clock className="w-5 h-5 text-gray-700" />
                 Withdrawal History
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-gray-600">
                 Your recent withdrawal requests ({totalWithdrawals} total)
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
               {withdrawalsLoading ? (
                 <div className="flex items-center justify-center py-8">
-                  <div className="flex items-center space-x-2">
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>Loading withdrawals...</span>
+                  <div className="flex items-center space-x-2 text-gray-600">
+                    <Loader2 className="w-5 h-5 animate-spin text-[#FBBF24]" />
+                    <span className="font-medium">Loading withdrawals...</span>
                   </div>
                 </div>
               ) : withdrawals.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Wallet className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
-                  <p>No withdrawal requests yet</p>
-                  <p className="text-xs mt-1">Your withdrawal history will appear here</p>
+                <div className="text-center py-12">
+                  <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Wallet className="w-10 h-10 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-900 mb-1">No withdrawal requests yet</h3>
+                  <p className="text-sm text-gray-600">Your withdrawal history will appear here</p>
                 </div>
               ) : (
                 <>
                   <div className="space-y-3">
                     {withdrawals.map((withdrawal, index) => (
-                      <div key={withdrawal.withdrawalId} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                      <div key={withdrawal.withdrawalId} className="flex items-center justify-between p-5 border border-gray-200 rounded-xl hover:shadow-md hover:border-[#FBBF24] transition-all bg-white">
                         <div className="flex items-center space-x-4">
                           <div className="flex-shrink-0">
-                            <div className="w-10 h-10 bg-[#F6BC0E] rounded-full flex items-center justify-center">
-                              <Download className="w-5 h-5 text-white" />
+                            <div className="w-12 h-12 bg-[#FBBF24] rounded-full flex items-center justify-center shadow-sm">
+                              <Download className="w-5 h-5 text-black" />
                             </div>
                           </div>
                           <div className="flex-1">
-                            <div className="flex items-center gap-3">
-                              <h4 className="font-medium">Withdrawal #{(currentPage - 1) * 10 + index + 1}</h4>
+                            <div className="flex items-center gap-3 mb-1">
+                              <h4 className="font-bold text-gray-900">Withdrawal #{(currentPage - 1) * 10 + index + 1}</h4>
                               {getStatusBadge(withdrawal.status)}
                             </div>
-                            <div className="flex items-center space-x-2 text-sm text-muted-foreground mt-1">
+                            <div className="flex items-center space-x-2 text-sm text-gray-600 mt-1">
                               <Calendar className="w-3 h-3" />
-                              <span>{formatDate(withdrawal.createdAt)}</span>
+                              <span className="font-medium">{formatDate(withdrawal.createdAt)}</span>
                               <span>•</span>
                               <span>{withdrawal.bankName}</span>
                               <span>•</span>
@@ -369,7 +377,7 @@ export default function WalletPage() {
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className="font-semibold text-[#F6BC0E]">
+                          <div className="font-bold text-xl text-[#FBBF24]">
                             ${withdrawal.amount.toFixed(2)}
                           </div>
                         </div>
@@ -379,8 +387,8 @@ export default function WalletPage() {
 
                   {/* Pagination */}
                   {totalPages > 1 && (
-                    <div className="flex items-center justify-between mt-6 pt-4 border-t">
-                      <div className="text-sm text-muted-foreground">
+                    <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
+                      <div className="text-sm text-gray-600 font-medium">
                         Showing {withdrawals.length} of {totalWithdrawals} withdrawals
                       </div>
                       <div className="flex items-center space-x-2">
@@ -389,7 +397,7 @@ export default function WalletPage() {
                           size="sm"
                           onClick={() => handlePageChange(currentPage - 1)}
                           disabled={currentPage === 1}
-                          className="h-8 w-8 p-0"
+                          className="h-8 w-8 p-0 border-gray-300"
                         >
                           <ChevronLeft className="h-4 w-4" />
                         </Button>
@@ -413,7 +421,11 @@ export default function WalletPage() {
                                 variant={currentPage === pageNum ? "default" : "outline"}
                                 size="sm"
                                 onClick={() => handlePageChange(pageNum)}
-                                className="h-8 w-8 p-0"
+                                className={`h-8 w-8 p-0 ${
+                                  currentPage === pageNum 
+                                    ? 'bg-[#FBBF24] hover:bg-[#F59E0B] text-black border-[#FBBF24]' 
+                                    : 'border-gray-300'
+                                }`}
                               >
                                 {pageNum}
                               </Button>
@@ -426,7 +438,7 @@ export default function WalletPage() {
                           size="sm"
                           onClick={() => handlePageChange(currentPage + 1)}
                           disabled={currentPage === totalPages}
-                          className="h-8 w-8 p-0"
+                          className="h-8 w-8 p-0 border-gray-300"
                         >
                           <ChevronRight className="h-4 w-4" />
                         </Button>
@@ -442,12 +454,12 @@ export default function WalletPage() {
         {/* Withdrawal Dialog */}
         <Dialog open={showWithdrawDialog} onOpenChange={setShowWithdrawDialog}>
           <DialogContent className="max-w-4xl w-full max-h-[85vh] overflow-y-auto">
-            <DialogHeader className="pb-4">
-              <DialogTitle className="text-xl font-semibold flex items-center gap-2">
-                <Download className="w-5 h-5 text-primary" />
+            <DialogHeader className="pb-4 border-b border-gray-200">
+              <DialogTitle className="text-2xl font-bold flex items-center gap-2 text-gray-900">
+                <Download className="w-6 h-6 text-[#FBBF24]" />
                 Request Withdrawal
               </DialogTitle>
-              <DialogDescription className="text-sm text-muted-foreground">
+              <DialogDescription className="text-sm text-gray-600 font-medium">
                 Complete the form below to request a withdrawal from your wallet
               </DialogDescription>
             </DialogHeader>
@@ -456,20 +468,20 @@ export default function WalletPage() {
               {/* Left Column - Amount & Balance */}
               <div className="space-y-4">
                 {/* Available Balance Info */}
-                <div className="p-4 bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg border border-primary/20">
+                <div className="p-4 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl border-2 border-[#FBBF24]/30 shadow-sm">
                   <div className="flex items-center gap-2 mb-2">
-                    <Wallet className="w-4 h-4 text-primary" />
-                    <span className="text-sm font-medium">Available Balance</span>
+                    <Wallet className="w-5 h-5 text-[#FBBF24]" />
+                    <span className="text-sm font-bold text-gray-900">Available Balance</span>
                   </div>
-                  <div className="text-2xl font-bold text-primary">${availableBalance.toFixed(2)}</div>
-                  <p className="text-xs text-muted-foreground mt-1">Ready for withdrawal</p>
+                  <div className="text-3xl font-bold text-[#FBBF24]">${availableBalance.toFixed(2)}</div>
+                  <p className="text-xs text-gray-600 mt-1 font-medium">Ready for withdrawal</p>
                 </div>
 
                 {/* Withdrawal Amount */}
                 <div className="space-y-2">
-                  <Label htmlFor="amount" className="text-sm font-medium">Withdrawal Amount *</Label>
+                  <Label htmlFor="amount" className="text-sm font-bold text-gray-900">Withdrawal Amount *</Label>
                   <div className="relative">
-                    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
                     <Input
                       id="amount"
                       type="number"
@@ -479,24 +491,24 @@ export default function WalletPage() {
                       min="0"
                       max={availableBalance}
                       step="0.01"
-                      className="pl-10 text-lg font-medium"
+                      className="pl-10 text-lg font-semibold border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]"
                     />
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-gray-600 font-medium">
                     Maximum: ${availableBalance.toFixed(2)}
                   </p>
                 </div>
 
                 {/* Quick Amount Buttons */}
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium">Quick Select</Label>
+                  <Label className="text-sm font-bold text-gray-900">Quick Select</Label>
                   <div className="grid grid-cols-2 gap-2">
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
                       onClick={() => setWithdrawalData({...withdrawalData, amount: (availableBalance * 0.25).toFixed(2)})}
-                      className="text-xs"
+                      className="text-xs border-gray-300 hover:bg-yellow-50 hover:border-[#FBBF24] font-semibold"
                     >
                       25%
                     </Button>
@@ -505,7 +517,7 @@ export default function WalletPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => setWithdrawalData({...withdrawalData, amount: (availableBalance * 0.5).toFixed(2)})}
-                      className="text-xs"
+                      className="text-xs border-gray-300 hover:bg-yellow-50 hover:border-[#FBBF24] font-semibold"
                     >
                       50%
                     </Button>
@@ -514,7 +526,7 @@ export default function WalletPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => setWithdrawalData({...withdrawalData, amount: (availableBalance * 0.75).toFixed(2)})}
-                      className="text-xs"
+                      className="text-xs border-gray-300 hover:bg-yellow-50 hover:border-[#FBBF24] font-semibold"
                     >
                       75%
                     </Button>
@@ -523,7 +535,7 @@ export default function WalletPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => setWithdrawalData({...withdrawalData, amount: availableBalance.toFixed(2)})}
-                      className="text-xs"
+                      className="text-xs border-gray-300 hover:bg-yellow-50 hover:border-[#FBBF24] font-semibold"
                     >
                       Max
                     </Button>
@@ -534,41 +546,41 @@ export default function WalletPage() {
               {/* Middle Column - Bank Details */}
               <div className="space-y-4">
                 <div className="flex items-center gap-2 mb-3">
-                  <div className="w-1 h-6 bg-primary rounded-full"></div>
-                  <h4 className="font-semibold text-sm">Bank Account Details</h4>
+                  <div className="w-1 h-6 bg-[#FBBF24] rounded-full"></div>
+                  <h4 className="font-bold text-sm text-gray-900">Bank Account Details</h4>
                 </div>
                 
                 <div className="space-y-3">
                   <div className="space-y-1">
-                    <Label htmlFor="accountHolderName" className="text-sm font-medium">Account Holder Name *</Label>
+                    <Label htmlFor="accountHolderName" className="text-sm font-semibold text-gray-900">Account Holder Name *</Label>
                     <Input
                       id="accountHolderName"
                       value={withdrawalData.accountHolderName}
                       onChange={(e) => setWithdrawalData({...withdrawalData, accountHolderName: e.target.value})}
                       placeholder="John Doe"
-                      className="text-sm"
+                      className="text-sm border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]"
                     />
                   </div>
 
                   <div className="space-y-1">
-                    <Label htmlFor="bankName" className="text-sm font-medium">Bank Name *</Label>
+                    <Label htmlFor="bankName" className="text-sm font-semibold text-gray-900">Bank Name *</Label>
                     <Input
                       id="bankName"
                       value={withdrawalData.bankName}
                       onChange={(e) => setWithdrawalData({...withdrawalData, bankName: e.target.value})}
                       placeholder="Bank of America"
-                      className="text-sm"
+                      className="text-sm border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]"
                     />
                   </div>
 
                   <div className="space-y-1">
-                    <Label htmlFor="accountNumber" className="text-sm font-medium">Account Number *</Label>
+                    <Label htmlFor="accountNumber" className="text-sm font-semibold text-gray-900">Account Number *</Label>
                     <Input
                       id="accountNumber"
                       value={withdrawalData.accountNumber}
                       onChange={(e) => setWithdrawalData({...withdrawalData, accountNumber: e.target.value})}
                       placeholder="1234567890"
-                      className="text-sm"
+                      className="text-sm border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]"
                     />
                   </div>
                 </div>
@@ -577,29 +589,29 @@ export default function WalletPage() {
               {/* Right Column - Notes & Actions */}
               <div className="space-y-4">
                 <div className="flex items-center gap-2 mb-3">
-                  <div className="w-1 h-6 bg-primary rounded-full"></div>
-                  <h4 className="font-semibold text-sm">Additional Information</h4>
+                  <div className="w-1 h-6 bg-[#FBBF24] rounded-full"></div>
+                  <h4 className="font-bold text-sm text-gray-900">Additional Information</h4>
                 </div>
 
                 <div className="space-y-1">
-                  <Label htmlFor="notes" className="text-sm font-medium">Additional Notes</Label>
+                  <Label htmlFor="notes" className="text-sm font-semibold text-gray-900">Additional Notes</Label>
                   <Textarea
                     id="notes"
                     value={withdrawalData.notes}
                     onChange={(e) => setWithdrawalData({...withdrawalData, notes: e.target.value})}
                     placeholder="Any special instructions for this withdrawal..."
                     rows={4}
-                    className="text-sm resize-none"
+                    className="text-sm resize-none border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]"
                   />
                 </div>
 
                 {/* Processing Info */}
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="p-3 bg-blue-50 border-2 border-blue-200 rounded-xl shadow-sm">
                   <div className="flex items-start gap-2">
                     <AlertCircle className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
                     <div className="text-xs text-blue-700">
-                      <p className="font-medium mb-1">Processing Information:</p>
-                      <ul className="space-y-0.5 text-xs">
+                      <p className="font-bold mb-1">Processing Information:</p>
+                      <ul className="space-y-0.5 text-xs font-medium">
                         <li>• Withdrawals are processed within 2-3 business days</li>
                         <li>• A processing fee may apply</li>
                         <li>• You&apos;ll receive an email confirmation</li>
@@ -613,7 +625,7 @@ export default function WalletPage() {
                   <Button 
                     onClick={handleWithdrawRequest}
                     disabled={isProcessingWithdraw}
-                    className="w-full bg-primary hover:bg-primary/90 h-11"
+                    className="w-full bg-[#FBBF24] hover:bg-[#F59E0B] text-black font-bold h-11 shadow-md"
                   >
                     {isProcessingWithdraw ? (
                       <>
@@ -631,7 +643,7 @@ export default function WalletPage() {
                     onClick={() => setShowWithdrawDialog(false)}
                     variant="outline"
                     disabled={isProcessingWithdraw}
-                    className="w-full h-11"
+                    className="w-full h-11 border-gray-300 hover:bg-gray-50 font-semibold"
                   >
                     Cancel
                   </Button>

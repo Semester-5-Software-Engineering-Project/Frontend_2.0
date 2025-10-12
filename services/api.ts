@@ -181,6 +181,14 @@ export const getAllModulesPublic = async (): Promise<Module[]> => {
   return response.data;
 };
 
+// Get recommended modules by domain (backend picks based on user + domain)
+export const getRecommendedModules = async (domain: string): Promise<Module[]> => {
+  const response = await axiosInstance.get<Module[]>("/api/modules/recommendedmodules", {
+    params: { domain },
+  });
+  return response.data;
+};
+
 // =====================================================================
 // ENROLLMENT API
 // =====================================================================
@@ -356,16 +364,13 @@ export const createSchedule = async (data: CreateScheduleRequest): Promise<Creat
 };
 
 export const upcomingSchedulesByTutor = async (req_data: UpcomingSessionsRequest): Promise<UpcomingSessionResponse> => {
-  const response = await axiosInstance.post<UpcomingSessionResponse>("/api/schedules/upcoming-by-tutor", {
-    body: req_data
-  });
+  const response = await axiosInstance.post<UpcomingSessionResponse>("/api/schedules/upcoming-by-tutor", req_data
+  );
   return response.data;
 };
 
 export const upcomingSchedulesByStudent = async (req_data: UpcomingSessionsRequest): Promise<UpcomingSessionResponse> => {
-  const response = await axiosInstance.post<UpcomingSessionResponse>("/api/schedules/upcoming-by-student", {
-    body: req_data
-  });
+  const response = await axiosInstance.post<UpcomingSessionResponse>("/api/schedules/upcoming-by-student", req_data);
   return response.data;
 };
 
@@ -427,6 +432,7 @@ export const api = {
     delete: deleteModule,
     search: searchModules,
     getAllPublic: getAllModulesPublic,
+    getRecommended: getRecommendedModules,
   },
   
   // Enrollment

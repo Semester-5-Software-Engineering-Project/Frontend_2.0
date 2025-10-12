@@ -1,15 +1,21 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import Image from 'next/image'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import { BookOpen, Calendar, Video, Clock, Star, TrendingUp, Loader2 } from 'lucide-react'
+import { BookOpen, Calendar, Video, Clock, Star, TrendingUp, Loader2, Eye } from 'lucide-react'
 import Link from 'next/link'
-import { getEnrollments, upcomingSchedulesByStudent } from '@/services/api'
+import { getEnrollments, upcomingSchedulesByStudent, api } from '@/services/api'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { UpcomingSessionResponse, UpcomingSessionsRequest } from '@/types/api'
+import { UpcomingSessionResponse, UpcomingSessionsRequest, Module as ModuleType } from '@/types/api'
+import { getCurrentDateTime } from '@/utils/dateUtils'
+import { useStudentProfile } from '@/contexts/StudentProfileContex'
+import { useAuth } from '@/contexts/AuthContext'
+import { TutorProfileApi } from '@/apis/TutorProfile'
+import { ModuleDescriptionApi } from '@/apis/ModuleDescriptionApi'
 
 
 interface ApiModule {
@@ -41,6 +47,24 @@ export default function StudentDashboard() {
   const [courses, setCourses] = useState<ApiModule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { profile } = useStudentProfile();
+  const { user } = useAuth();
+  const displayName = profile?.firstName?.trim() || user?.name || 'there';
+  const [tutorNames, setTutorNames] = useState<Record<string, string>>({});
+  const [recLoading, setRecLoading] = useState(false);
+  const [recError, setRecError] = useState<string | null>(null);
+  const [recommended, setRecommended] = useState<ModuleType[]>([]);
+  
+  // Description dialog state
+  const [descriptionDialog, setDescriptionDialog] = useState({
+    isOpen: false,
+    moduleId: '',
+    moduleName: '',
+    domain: '',
+    fee: 0,
+    description: '',
+    loading: false
+  });
   
   useEffect(() => {
     const fetchCourses = async () => {
@@ -69,15 +93,93 @@ export default function StudentDashboard() {
     }
     fetchCourses();
   }, [])
+
+  // Fetch recommended modules from a random enrolled domain
+  useEffect(() => {
+    const run = async () => {
+      if (!courses || courses.length === 0) {
+        console.log('[Recommendations] No enrollments found; skipping recommendation fetch.');
+        setRecommended([]);
+        return;
+      }
+      setRecLoading(true);
+      setRecError(null);
+      try {
+        const domains = Array.from(new Set(courses.map(c => c.domain).filter(Boolean)));
+        if (domains.length === 0) {
+          console.log('[Recommendations] No domains found in enrollments; skipping.');
+          setRecommended([]);
+          return;
+        }
+        const randomDomain = domains[Math.floor(Math.random() * domains.length)];
+        console.log('[Recommendations] Selected domain:', randomDomain, 'from', domains);
+        const rec = await api.modules.getRecommended(randomDomain);
+        console.log('[Recommendations] API result:', rec);
+        setRecommended(rec || []);
+      } catch (e) {
+        console.error('[Recommendations] Failed to load recommendations:', e);
+        setRecError('Failed to load recommendations.');
+        setRecommended([]);
+      } finally {
+        setRecLoading(false);
+      }
+    };
+    run();
+  }, [courses]);
+  
+  // Fetch tutor names for enrolled courses
+  useEffect(() => {
+    const fetchTutorNames = async () => {
+      const uniqueTutorIds = Array.from(new Set(courses.map(c => c.tutorId).filter(Boolean)));
+      if (uniqueTutorIds.length === 0) return;
+      try {
+        const entries = await Promise.all(uniqueTutorIds.map(async (id) => {
+          try {
+            const name = await TutorProfileApi.getTutorNameById(id);
+            return [id, name] as const;
+          } catch {
+            return [id, 'Unknown Tutor'] as const;
+          }
+        }));
+        setTutorNames(prev => ({ ...prev, ...Object.fromEntries(entries) }));
+      } catch {
+        // ignore batch error; individual fetches handled
+      }
+    };
+    fetchTutorNames();
+  }, [courses]);
+
+  // Fetch tutor names for recommended modules as well
+  useEffect(() => {
+    const fetchTutorNamesForRecommended = async () => {
+      const uniqueTutorIds = Array.from(new Set(recommended.map(c => c.tutorId).filter(Boolean))) as string[];
+      const missing = uniqueTutorIds.filter((id) => !(id in tutorNames));
+      if (missing.length === 0) return;
+      try {
+        const entries = await Promise.all(missing.map(async (id) => {
+          try {
+            const name = await TutorProfileApi.getTutorNameById(id);
+            return [id, name] as const;
+          } catch {
+            return [id, 'Unknown Tutor'] as const;
+          }
+        }));
+        setTutorNames(prev => ({ ...prev, ...Object.fromEntries(entries) }));
+      } catch {
+        // ignore batch error
+      }
+    };
+    fetchTutorNamesForRecommended();
+  }, [recommended, tutorNames]);
     useEffect(() => {
     const fetchUpcomingSessions = async () => {
       setSessionsLoading(true);
       setSessionsError(null);
       try {
-        const now = new Date();
+        const { date, time } = getCurrentDateTime();
         const req: UpcomingSessionsRequest = {
-          date: now.toISOString().slice(0, 10),
-          time: now.toTimeString().slice(0, 8),
+          date,
+          time,
         };
         const res = await upcomingSchedulesByStudent(req);
         setUpcomingSessions(Array.isArray(res) ? res : [res]);
@@ -119,55 +221,67 @@ export default function StudentDashboard() {
     }
   ]
 
-  const recommendedCourses = [
-    {
-      id: 4,
-      title: 'Computer Science Basics',
-      tutor: 'Dr. James Wilson',
-      price: 50,
-      rating: 4.9,
-      students: 156,
-      image: 'https://images.unsplash.com/photo-1517077304055-6e89abbf09b0?w=300&h=200&fit=crop'
-    },
-    {
-      id: 5,
-      title: 'English Literature',
-      tutor: 'Prof. Lisa Anderson',
-      price: 40,
-      rating: 4.8,
-      students: 89,
-      image: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=300&h=200&fit=crop'
+  // recommended modules will be displayed from `recommended`
+
+  const openDescription = async (moduleId: string, moduleName: string, domain: string, fee: number) => {
+    setDescriptionDialog({
+      isOpen: true,
+      moduleId,
+      moduleName,
+      domain,
+      fee,
+      description: '',
+      loading: true
+    });
+
+    try {
+      const descriptionData = await ModuleDescriptionApi.getByModuleId(moduleId);
+      const descriptionText = descriptionData?.descriptionPoints?.join('\n• ') || 'No description available for this module.';
+      setDescriptionDialog(prev => ({
+        ...prev,
+        description: descriptionData?.descriptionPoints?.length ? `• ${descriptionText}` : 'No description available for this module.',
+        loading: false
+      }));
+    } catch (error) {
+      console.error('Error fetching description:', error);
+      setDescriptionDialog(prev => ({
+        ...prev,
+        description: 'No description available for this module.',
+        loading: false
+      }));
     }
-  ]
-
-
+  };
 
   return (
     <div className="p-6 space-y-6">
       {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-primary to-primary/90 rounded-xl p-6 text-primary-foreground">
-        <h1 className="text-3xl font-bold mb-2">Welcome back!</h1>
-        <p className="text-primary-foreground/70">Continue your learning journey with personalized courses and expert tutors.</p>
+      <div className="bg-gray-800 rounded-2xl p-8 text-white shadow-lg">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">👋 Welcome back, {displayName}!</h1>
+            <p className="text-white/90 text-lg">Here&apos;s what&apos;s happening with your learning today.</p>
+          </div>
+        </div>
       </div>
 
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
+        <Card className="border-none shadow-md hover:shadow-lg transition-shadow">
           <CardContent className="p-6">
             <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <BookOpen className="w-6 h-6 text-blue-600" />
+              <div className="w-14 h-14 bg-blue-50 rounded-xl flex items-center justify-center">
+                <BookOpen className="w-7 h-7 text-blue-600" />
               </div>
               <div>
                 {isLoading ? (
                   <div className="animate-pulse">
-                    <div className="h-8 bg-gray-200 rounded w-8 mb-1"></div>
-                    <div className="h-4 bg-gray-200 rounded w-24"></div>
+                    <div className="h-8 bg-gray-200 rounded w-12 mb-1"></div>
+                    <div className="h-4 bg-gray-200 rounded w-32"></div>
                   </div>
                 ) : (
                   <>
-                    <p className="text-2xl font-bold">{courses.length}</p>
-                    <p className="text-sm text-muted-foreground">Enrolled Courses</p>
+                    <p className="text-3xl font-bold text-gray-900">{courses.length}</p>
+                    <p className="text-sm text-gray-500 font-medium">Enrolled Courses</p>
                   </>
                 )}
               </div>
@@ -175,22 +289,22 @@ export default function StudentDashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-none shadow-md hover:shadow-lg transition-shadow">
           <CardContent className="p-6">
             <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                <Video className="w-6 h-6 text-purple-600" />
+              <div className="w-14 h-14 bg-purple-50 rounded-xl flex items-center justify-center">
+                <Video className="w-7 h-7 text-purple-600" />
               </div>
               <div>
                 {isLoading ? (
                   <div className="animate-pulse">
-                    <div className="h-8 bg-gray-200 rounded w-8 mb-1"></div>
-                    <div className="h-4 bg-gray-200 rounded w-24"></div>
+                    <div className="h-8 bg-gray-200 rounded w-12 mb-1"></div>
+                    <div className="h-4 bg-gray-200 rounded w-32"></div>
                   </div>
                 ) : (
                   <>
-                    <p className="text-2xl font-bold">-</p>
-                    <p className="text-sm text-muted-foreground">Sessions Attended</p>
+                    <p className="text-3xl font-bold text-gray-900">-</p>
+                    <p className="text-sm text-gray-500 font-medium">Sessions Attended</p>
                   </>
                 )}
               </div>
@@ -198,27 +312,27 @@ export default function StudentDashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-none shadow-md hover:shadow-lg transition-shadow">
           <CardContent className="p-6">
             <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                <TrendingUp className="w-6 h-6 text-orange-600" />
+              <div className="w-14 h-14 bg-orange-50 rounded-xl flex items-center justify-center">
+                <TrendingUp className="w-7 h-7 text-orange-600" />
               </div>
               <div>
                 {isLoading ? (
                   <div className="animate-pulse">
-                    <div className="h-8 bg-gray-200 rounded w-8 mb-1"></div>
-                    <div className="h-4 bg-gray-200 rounded w-24"></div>
+                    <div className="h-8 bg-gray-200 rounded w-12 mb-1"></div>
+                    <div className="h-4 bg-gray-200 rounded w-32"></div>
                   </div>
                 ) : (
                   <>
-                    <p className="text-2xl font-bold">
+                    <p className="text-3xl font-bold text-gray-900">
                       {courses.length > 0 
                         ? Math.round(courses.reduce((total, course) => total + course.averageRatings, 0) / courses.length * 20) + '%'
                         : '-'
                       }
                     </p>
-                    <p className="text-sm text-muted-foreground">Avg. Rating</p>
+                    <p className="text-sm text-gray-500 font-medium">Avg. Rating</p>
                   </>
                 )}
               </div>
@@ -230,12 +344,12 @@ export default function StudentDashboard() {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Enrolled Courses */}
         <div className="xl:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>My Enrollments</CardTitle>
-              <CardDescription>Continue learning with your current courses</CardDescription>
+          <Card className="border-none shadow-md">
+            <CardHeader className="border-b bg-gray-50">
+              <CardTitle className="text-xl text-gray-900">My Enrollments</CardTitle>
+              <CardDescription className="text-gray-600">Continue learning with your current courses</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 p-6">
               {isLoading ? (
                 // Loading skeleton
                 <div className="space-y-4">
@@ -275,47 +389,42 @@ export default function StudentDashboard() {
                 </div>
               ) : courses.length === 0 ? (
                 // Empty state
-                <div className="text-center py-8">
-                  <BookOpen className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-600 mb-2">No Enrollments Yet</h3>
-                  <p className="text-gray-500 mb-4">Start your learning journey by enrolling in courses.</p>
+                <div className="text-center py-12">
+                  <div className="w-20 h-20 bg-yellow-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <BookOpen className="w-10 h-10 text-[#FBBF24]" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">No Enrollments Yet</h3>
+                  <p className="text-gray-500 mb-6">Start your learning journey by enrolling in courses.</p>
                   <Link href="/dashboard/courses">
-                    <Button>Browse Courses</Button>
+                    <Button className="bg-[#FBBF24] hover:bg-[#F59E0B] text-black font-semibold">Browse Courses</Button>
                   </Link>
                 </div>
               ) : (
                 // Actual courses
                 courses.map((course) => (
-                  <div key={course.moduleId} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                  <div key={course.moduleId} className="border border-gray-200 rounded-xl p-5 hover:shadow-lg hover:border-[#FBBF24] transition-all bg-white">
                     <div className="flex items-start space-x-4">
-                      <img 
-                        src={course.domain ? getDomainImage(course.domain) : 'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=300&h=200&fit=crop'} 
+                      <Image
+                        src={course.domain ? getDomainImage(course.domain) : 'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=300&h=200&fit=crop'}
                         alt={course.name}
-                        className="w-20 h-16 rounded-lg object-cover"
+                        width={150}
+                        height={120}
+                        className="w-48 h-36 rounded-lg object-cover shadow-sm"
                       />
                       <div className="flex-1">
                         <div className="flex items-start justify-between">
                           <div>
-                            <h3 className="font-semibold text-foreground">{course.name}</h3>
-                            <p className="text-sm text-muted-foreground">by {course.tutorId}</p>
-                            <div className="flex items-center space-x-2 mt-1">
-                              <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                              <span className="text-sm text-muted-foreground">{course.averageRatings}</span>
+                            <h3 className="font-bold text-gray-900 text-lg">{course.name}</h3>
+                            <p className="text-sm text-gray-500 mt-1">by {tutorNames[course.tutorId] || '...'}</p>
+                            <div className="flex items-center space-x-2 mt-2">
+                              <Star className="w-4 h-4 text-[#FBBF24] fill-current" />
+                              <span className="text-sm font-semibold text-gray-700">{course.averageRatings}</span>
                             </div>
                           </div>
-                          {/* <Badge variant="secondary" className="bg-primary/10 text-primary">
-                            {course.progress}% Complete
-                          </Badge> */}
                         </div>
-                        {/* <div className="mt-3">
-                          <Progress value={course.progress} className="h-2" />
-                        </div> */}
-                        <div className="flex items-center justify-between mt-3">
-                          {/* <p className="text-xs text-muted-foreground">
-                            Next session: {new Date(course.nextSession).toLocaleDateString()}
-                          </p> */}
+                        <div className="flex items-center justify-between mt-4">
                           <Link href={`/dashboard/courses/${course.moduleId}`}>
-                            <Button size="sm" className="bg-primary hover:bg-primary/90">
+                            <Button size="sm" className="bg-[#FBBF24] hover:bg-[#F59E0B] text-black font-semibold">
                               Continue Learning
                             </Button>
                           </Link>
@@ -332,11 +441,11 @@ export default function StudentDashboard() {
         {/* Sidebar Content */}
         <div className="space-y-6">
           {/* Upcoming Sessions */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Upcoming Sessions</CardTitle>
+          <Card className="border-none shadow-md">
+            <CardHeader className="border-b bg-gray-50">
+              <CardTitle className="text-lg text-gray-900">Upcoming Sessions</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-3 p-6">
               {sessionsLoading ? (
                 <div className="text-center py-4"><Loader2 className="animate-spin inline mr-2" />Loading...</div>
               ) : sessionsError ? (
@@ -345,20 +454,20 @@ export default function StudentDashboard() {
                 upcomingSessions
                   .filter((session) => session.active)
                   .map((session) => (
-                    <div key={session.schedule_id} className="border-l-4 border-green-500 pl-4 py-2">
-                      <h4 className="font-medium text-sm">{session.course}</h4>
-                      <p className="text-xs text-gray-500">{session.tutor}</p>
+                    <div key={session.schedule_id} className="border-l-4 border-[#FBBF24] pl-4 py-3 bg-yellow-50 rounded-r-lg">
+                      <h4 className="font-semibold text-sm text-gray-900">{session.course}</h4>
+                      <p className="text-xs text-gray-600 mt-1">{session.tutor}</p>
                       <div className="flex items-center justify-between mt-2">
-                        <p className="text-xs text-gray-600">
+                        <p className="text-xs text-gray-700 font-medium">
                           {session.Date} {session.time}
                         </p>
-                        <Badge variant="outline" className="text-xs">
+                        <Badge variant="outline" className="text-xs border-[#FBBF24] text-gray-700">
                           {session.duration}min
                         </Badge>
                       </div>
                       <Button
                         size="sm"
-                        className="w-full mt-2 bg-primary hover:bg-primary/90"
+                        className="w-full mt-3 bg-[#FBBF24] hover:bg-[#F59E0B] text-black font-semibold"
                         disabled={!session.active}
                         onClick={() => {
                           if (session.active && session.module_id) {
@@ -372,7 +481,7 @@ export default function StudentDashboard() {
                     </div>
                   ))
               )}
-              <Button variant="outline" size="sm" className="w-full" onClick={() => setShowAllSchedules(true)}>
+              <Button variant="outline" size="sm" className="w-full border-[#FBBF24] text-gray-700 hover:bg-yellow-50" onClick={() => setShowAllSchedules(true)}>
                 View All Sessions
               </Button>
 
@@ -421,38 +530,110 @@ export default function StudentDashboard() {
             </CardContent>
           </Card>
 
-          {/* Recommended Courses */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Recommended Courses</CardTitle>
+          {/* Recommended Courses (based on a random domain from your enrollments) */}
+          <Card className="border-none shadow-md">
+            <CardHeader className="border-b bg-gray-50">
+              <CardTitle className="text-lg text-gray-900">Recommended Courses</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {recommendedCourses.map((course) => (
-                <div key={course.id} className="border rounded-lg p-3 hover:shadow-md transition-shadow">
-                  <img 
-                    src={course.image} 
-                    alt={course.title}
-                    className="w-full h-24 rounded-lg object-cover mb-3"
-                  />
-                  <h4 className="font-medium text-sm">{course.title}</h4>
-                  <p className="text-xs text-muted-foreground">by {course.tutor}</p>
-                  <div className="flex items-center justify-between mt-2">
-                    <div className="flex items-center space-x-1">
-                      <Star className="w-3 h-3 text-yellow-400 fill-current" />
-                      <span className="text-xs">{course.rating}</span>
-                      <span className="text-xs text-gray-400">({course.students})</span>
+            <CardContent className="space-y-3 p-6">
+              {recLoading ? (
+                <div className="text-center py-4"><Loader2 className="animate-spin inline mr-2" />Loading...</div>
+              ) : recError ? (
+                <div className="text-red-500 text-center py-4">{recError}</div>
+              ) : recommended.length === 0 ? (
+                <div className="text-center py-4 text-gray-600">No recommendations yet.</div>
+              ) : (
+                recommended.filter((course) => !!course.moduleId).map((course) => (
+                  <div key={course.moduleId} className="border border-gray-200 rounded-xl p-4 hover:shadow-lg hover:border-[#FBBF24] transition-all bg-white">
+                    <div className="w-full h-28 relative mb-3">
+                      <Image
+                        src={getDomainImage(course.domain)}
+                        alt={course.name}
+                        fill
+                        className="rounded-lg object-cover shadow-sm"
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      />
                     </div>
-                    <span className="text-sm font-semibold text-primary">${course.price}</span>
+                    <h4 className="font-semibold text-sm text-gray-900">{course.name}</h4>
+                    <p className="text-xs text-gray-500 mt-1">by {(course.tutorId ? tutorNames[course.tutorId] : undefined) || '...'}</p>
+                    <div className="flex items-center justify-between mt-3">
+                      <div className="flex items-center space-x-1">
+                        <Star className="w-3 h-3 text-[#FBBF24] fill-current" />
+                        <span className="text-xs font-semibold text-gray-700">{course.averageRatings ?? '-'}</span>
+                      </div>
+                      <span className="text-sm font-bold text-[#FBBF24]">${course.fee}</span>
+                    </div>
+                    <div className="flex gap-2 mt-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 border-gray-300 hover:bg-yellow-50 text-xs"
+                        onClick={() => openDescription(course.moduleId, course.name, course.domain, course.fee)}
+                      >
+                        <Eye className="h-3 w-3 mr-1" />
+                        See Description
+                      </Button>
+                      <Link href={`/dashboard/courses/${course.moduleId}`} className="flex-1"> 
+                        <Button size="sm" className="w-full bg-[#FBBF24] hover:bg-[#F59E0B] text-black font-semibold text-xs">
+                          Enroll Now
+                        </Button>
+                      </Link>
+                    </div>
                   </div>
-                  <Button size="sm" className="w-full mt-2 bg-primary hover:bg-primary/90">
-                    Enroll Now
-                  </Button>
-                </div>
-              ))}
+                ))
+              )}
             </CardContent>
           </Card>
         </div>
       </div>
+
+      {/* Description Dialog */}
+      <Dialog open={descriptionDialog.isOpen} onOpenChange={(open) => setDescriptionDialog(prev => ({ ...prev, isOpen: open }))}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+          <DialogHeader className="space-y-4">
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-[#FBBF24] to-[#F59E0B] opacity-10 rounded-lg"></div>
+              <div className="relative p-6 bg-gradient-to-r from-[#FBBF24]/5 to-[#F59E0B]/5 rounded-lg border border-[#FBBF24]/20">
+                <DialogTitle className="text-2xl font-bold text-gray-900 mb-2">
+                  {descriptionDialog.moduleName}
+                </DialogTitle>
+                <div className="flex flex-wrap items-center gap-4 text-sm">
+                  <div className="flex items-center">
+                    <span className="font-semibold text-[#FBBF24] mr-2">Domain:</span>
+                    <span className="text-gray-700">{descriptionDialog.domain}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="font-semibold text-[#FBBF24] mr-2">Price:</span>
+                    <span className="text-gray-700 font-bold">${descriptionDialog.fee}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </DialogHeader>
+          
+          <div className="flex-1 overflow-y-auto px-1">
+            <div className="bg-white rounded-lg border border-gray-100 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <BookOpen className="h-5 w-5 mr-2 text-[#FBBF24]" />
+                Course Description
+              </h3>
+              
+              {descriptionDialog.loading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-[#FBBF24] mr-2" />
+                  <span className="text-gray-600">Loading description...</span>
+                </div>
+              ) : (
+                <div className="prose prose-gray max-w-none">
+                  <div className="whitespace-pre-line text-gray-700 leading-relaxed">
+                    {descriptionDialog.description}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -182,43 +182,45 @@ export default function ModuleCreation({
 
   return (
     <>
-      <Card className="w-full max-w-2xl mx-auto">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+      <Card className="w-full max-w-2xl mx-auto border-none shadow-2xl">
+      <CardHeader className="bg-gradient-to-r from-[#FBBF24] to-[#F59E0B] text-black rounded-t-xl">
+        <CardTitle className="flex items-center gap-3 text-2xl font-bold">
           {success ? (
-            <CheckCircle className="h-5 w-5 text-green-500" />
+            <div className="h-10 w-10 rounded-full bg-green-600 flex items-center justify-center">
+              <CheckCircle className="h-6 w-6 text-white" />
+            </div>
           ) : (
-            <div className="h-5 w-5 rounded-full bg-primary/20 flex items-center justify-center">
-              <div className="h-2 w-2 rounded-full bg-primary" />
+            <div className="h-10 w-10 rounded-full bg-black/20 flex items-center justify-center">
+              <div className="h-4 w-4 rounded-full bg-black" />
             </div>
           )}
           Create New Module
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-black/80 text-base">
           Add a new learning module to your course catalog. Fill in all required information below.
           {domainsLoading && (
-            <span className="block text-sm text-muted-foreground mt-1">
-              Loading available domains...
+            <span className="block text-sm font-semibold mt-2 text-black/70">
+              ⏳ Loading available domains...
             </span>
           )}
         </CardDescription>
       </CardHeader>
 
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-6 p-8">
         {error && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
+          <Alert variant="destructive" className="border-red-300 bg-red-50">
+            <AlertCircle className="h-5 w-5 text-red-600" />
+            <AlertDescription className="text-red-800 font-medium">{error}</AlertDescription>
           </Alert>
         )}
 
         {success && (
-          <Alert className="border-green-200 bg-green-50">
-            <CheckCircle className="h-4 w-4 text-green-600" />
+          <Alert className="border-green-300 bg-green-50 shadow-md">
+            <CheckCircle className="h-5 w-5 text-green-600" />
             <AlertDescription className="text-green-800">
-              <div className="space-y-1">
-                <div className="font-medium">Module created successfully! 🎉</div>
-                <div className="text-sm">
+              <div className="space-y-2">
+                <div className="font-bold text-lg">Module created successfully! 🎉</div>
+                <div className="text-sm font-medium">
                   Your module is now available in the catalog. You can create another module or close this form.
                 </div>
               </div>
@@ -234,15 +236,16 @@ export default function ModuleCreation({
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Module Name *</FormLabel>
+                  <FormLabel className="text-base font-bold text-gray-800">Module Name *</FormLabel>
                   <FormControl>
                     <Input
                       placeholder="e.g., Linear Algebra 101"
                       {...field}
                       disabled={isLoading}
+                      className="h-12 border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24] text-base"
                     />
                   </FormControl>
-                  <FormDescription>
+                  <FormDescription className="text-gray-600">
                     Enter a descriptive name for your module
                   </FormDescription>
                   <FormMessage />
@@ -256,14 +259,14 @@ export default function ModuleCreation({
               name="domain"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Domain *</FormLabel>
+                  <FormLabel className="text-base font-bold text-gray-800">Domain *</FormLabel>
                   <Select
                     onValueChange={field.onChange}
                     defaultValue={field.value}
                     disabled={isLoading || domainsLoading}
                   >
                     <FormControl>
-                      <SelectTrigger>
+                      <SelectTrigger className="h-12 border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24] text-base">
                         <SelectValue 
                           placeholder={domainsLoading ? "Loading domains..." : "Select a domain"} 
                         />
@@ -287,7 +290,7 @@ export default function ModuleCreation({
                       )}
                     </SelectContent>
                   </Select>
-                  <FormDescription>
+                  <FormDescription className="text-gray-600">
                     Choose the subject area for this module
                   </FormDescription>
                   <FormMessage />
@@ -296,14 +299,14 @@ export default function ModuleCreation({
             />
 
             {/* Fee and Duration Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Fee */}
               <FormField
                 control={form.control}
                 name="fee"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Fee (USD) *</FormLabel>
+                    <FormLabel className="text-base font-bold text-gray-800">Fee (USD) *</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -314,11 +317,12 @@ export default function ModuleCreation({
                         {...field}
                         onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                         disabled={isLoading}
+                        className="h-12 border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24] text-base"
                       />
                     </FormControl>
                     <FormDescription>
                       {field.value > 0 && (
-                        <span className="text-sm font-medium">
+                        <span className="text-sm font-bold text-[#FBBF24]">
                           {formatCurrency(field.value)}
                         </span>
                       )}
@@ -334,7 +338,7 @@ export default function ModuleCreation({
                 name="duration"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Duration (minutes) *</FormLabel>
+                    <FormLabel className="text-base font-bold text-gray-800">Duration (minutes) *</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <Input
@@ -346,20 +350,20 @@ export default function ModuleCreation({
                           {...field}
                           onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
                           disabled={isLoading}
-                          className="pr-20"
+                          className="h-12 pr-20 border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24] text-base"
                         />
                         <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                          <span className="text-sm text-muted-foreground">min</span>
+                          <span className="text-sm font-semibold text-gray-600">min</span>
                         </div>
                       </div>
                     </FormControl>
                     <FormDescription>
                       {field.value > 0 && (
-                        <span className="text-sm">
+                        <span className="text-sm font-bold text-blue-600">
                           Duration: {field.value} minutes ({Math.floor(field.value / 60)}h {field.value % 60}m)
                         </span>
                       )}
-                      <span className="block text-xs text-muted-foreground mt-1">
+                      <span className="block text-xs text-gray-500 mt-1">
                         Range: 15 minutes to 40 hours (2400 minutes)
                       </span>
                     </FormDescription>
@@ -375,39 +379,39 @@ export default function ModuleCreation({
               name="status"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Status *</FormLabel>
+                  <FormLabel className="text-base font-bold text-gray-800">Status *</FormLabel>
                   <Select
                     onValueChange={field.onChange}
                     defaultValue={field.value}
                     disabled={isLoading}
                   >
                     <FormControl>
-                      <SelectTrigger>
+                      <SelectTrigger className="h-12 border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24] text-base">
                         <SelectValue placeholder="Select status" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       <SelectItem value="Draft">
                         <div className="flex items-center gap-2">
-                          <div className="h-2 w-2 rounded-full bg-gray-400" />
-                          Draft
+                          <div className="h-3 w-3 rounded-full bg-gray-400" />
+                          <span className="font-medium">Draft</span>
                         </div>
                       </SelectItem>
                       <SelectItem value="Active">
                         <div className="flex items-center gap-2">
-                          <div className="h-2 w-2 rounded-full bg-green-500" />
-                          Active
+                          <div className="h-3 w-3 rounded-full bg-green-500" />
+                          <span className="font-medium">Active</span>
                         </div>
                       </SelectItem>
                       <SelectItem value="Inactive">
                         <div className="flex items-center gap-2">
-                          <div className="h-2 w-2 rounded-full bg-red-500" />
-                          Inactive
+                          <div className="h-3 w-3 rounded-full bg-red-500" />
+                          <span className="font-medium">Inactive</span>
                         </div>
                       </SelectItem>
                     </SelectContent>
                   </Select>
-                  <FormDescription>
+                  <FormDescription className="text-gray-600">
                     Set the availability status for this module
                   </FormDescription>
                   <FormMessage />
@@ -416,7 +420,7 @@ export default function ModuleCreation({
             />
 
             {/* Form Actions */}
-            <div className="flex gap-3 pt-6">
+            <div className="flex gap-4 pt-6">
               {success ? (
                 <Button
                   type="button"
@@ -431,25 +435,25 @@ export default function ModuleCreation({
                       status: 'Draft',
                     });
                   }}
-                  className="flex-1 bg-green-600 hover:bg-green-700"
+                  className="flex-1 h-12 bg-green-600 hover:bg-green-700 text-white font-bold text-base"
                 >
-                  <CheckCircle className="mr-2 h-4 w-4" />
+                  <CheckCircle className="mr-2 h-5 w-5" />
                   Create Another Module
                 </Button>
               ) : (
                 <Button
                   type="submit"
                   disabled={isLoading || domainsLoading}
-                  className="flex-1"
+                  className="flex-1 h-12 bg-[#FBBF24] hover:bg-[#F59E0B] text-black font-bold text-base"
                 >
                   {isLoading ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                       Creating Module...
                     </>
                   ) : domainsLoading ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                       Loading...
                     </>
                   ) : (
@@ -464,6 +468,7 @@ export default function ModuleCreation({
                   variant="outline"
                   onClick={onCancel}
                   disabled={isLoading || domainsLoading}
+                  className="h-12 font-semibold border-gray-300 hover:bg-gray-100"
                 >
                   {success ? 'Close' : 'Cancel'}
                 </Button>
@@ -474,18 +479,42 @@ export default function ModuleCreation({
 
         {/* Module Preview (when form is filled) */}
         {form.watch('name') && form.watch('domain') && (
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg border">
-            <h4 className="font-medium text-sm text-gray-700 mb-2">Preview:</h4>
-            <div className="text-sm space-y-1">
-              <p><span className="font-medium">Name:</span> {form.watch('name')}</p>
-              <p><span className="font-medium">Domain:</span> {form.watch('domain')}</p>
+          <div className="mt-6 p-6 bg-gradient-to-br from-yellow-50 to-orange-50 rounded-xl border-2 border-[#FBBF24] shadow-md">
+            <h4 className="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#FBBF24] animate-pulse"></span>
+              Preview:
+            </h4>
+            <div className="text-sm space-y-3">
+              <p className="flex justify-between">
+                <span className="font-bold text-gray-700">Name:</span> 
+                <span className="text-gray-900 font-semibold">{form.watch('name')}</span>
+              </p>
+              <p className="flex justify-between">
+                <span className="font-bold text-gray-700">Domain:</span> 
+                <span className="text-gray-900 font-semibold">{form.watch('domain')}</span>
+              </p>
               {form.watch('fee') > 0 && (
-                <p><span className="font-medium">Fee:</span> {formatCurrency(form.watch('fee'))}</p>
+                <p className="flex justify-between">
+                  <span className="font-bold text-gray-700">Fee:</span> 
+                  <span className="text-[#FBBF24] font-bold text-base">{formatCurrency(form.watch('fee'))}</span>
+                </p>
               )}
               {form.watch('duration') && (
-                <p><span className="font-medium">Duration:</span> {form.watch('duration')} minutes ({Math.floor(form.watch('duration') / 60)}h {form.watch('duration') % 60}m)</p>
+                <p className="flex justify-between">
+                  <span className="font-bold text-gray-700">Duration:</span> 
+                  <span className="text-blue-600 font-semibold">{form.watch('duration')} minutes ({Math.floor(form.watch('duration') / 60)}h {form.watch('duration') % 60}m)</span>
+                </p>
               )}
-              <p><span className="font-medium">Status:</span> {form.watch('status')}</p>
+              <p className="flex justify-between items-center">
+                <span className="font-bold text-gray-700">Status:</span> 
+                <span className={`font-bold px-3 py-1 rounded-full text-xs ${
+                  form.watch('status') === 'Active' ? 'bg-green-100 text-green-700' :
+                  form.watch('status') === 'Inactive' ? 'bg-red-100 text-red-700' :
+                  'bg-gray-100 text-gray-700'
+                }`}>
+                  {form.watch('status')}
+                </span>
+              </p>
             </div>
           </div>
         )}
@@ -496,54 +525,60 @@ export default function ModuleCreation({
     {showSuccessPopup && (
       <div className="fixed inset-0 z-50 flex items-center justify-center">
         {/* Background Overlay */}
-        <div className="fixed inset-0 bg-black bg-opacity-50"></div>
+        <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm"></div>
         
         {/* Modal Content */}
-        <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6 z-10">
+        <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-8 z-10 border-4 border-[#FBBF24]">
           {/* Success Icon */}
           <div className="text-center mb-6">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100 mb-4">
-              <CheckCircle className="h-10 w-10 text-green-600" />
+            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-green-400 to-green-600 mb-4 shadow-lg">
+              <CheckCircle className="h-12 w-12 text-white" />
             </div>
-            <h2 className="text-2xl font-bold text-green-900 mb-2">
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">
               🎉 Success!
             </h2>
-            <p className="text-lg text-green-700 font-medium">
+            <p className="text-xl text-green-600 font-bold">
               Module Created Successfully!
             </p>
           </div>
           
           {/* Module Details */}
           {createdModule && (
-            <div className="bg-green-50 p-4 rounded-lg border border-green-200 mb-6">
-              <h4 className="font-semibold text-green-900 mb-3 text-center">Module Details</h4>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="font-medium text-green-800">Name:</span>
-                  <span className="text-green-700">{createdModule.name}</span>
+            <div className="bg-gradient-to-br from-yellow-50 to-orange-50 p-6 rounded-xl border-2 border-[#FBBF24] mb-6 shadow-md">
+              <h4 className="font-bold text-gray-900 mb-4 text-center text-lg">Module Details</h4>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between items-center">
+                  <span className="font-bold text-gray-700">Name:</span>
+                  <span className="text-gray-900 font-semibold">{createdModule.name}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="font-medium text-green-800">Domain:</span>
-                  <span className="text-green-700">{createdModule.domain}</span>
+                <div className="flex justify-between items-center">
+                  <span className="font-bold text-gray-700">Domain:</span>
+                  <span className="text-gray-900 font-semibold">{createdModule.domain}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="font-medium text-green-800">Fee:</span>
-                  <span className="text-green-700">{formatCurrency(createdModule.fee)}</span>
+                <div className="flex justify-between items-center">
+                  <span className="font-bold text-gray-700">Fee:</span>
+                  <span className="text-[#FBBF24] font-bold text-base">{formatCurrency(createdModule.fee)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="font-medium text-green-800">Duration:</span>
-                  <span className="text-green-700">{createdModule.duration} min ({Math.floor(createdModule.duration / 60)}h {createdModule.duration % 60}m)</span>
+                <div className="flex justify-between items-center">
+                  <span className="font-bold text-gray-700">Duration:</span>
+                  <span className="text-blue-600 font-semibold">{createdModule.duration} min ({Math.floor(createdModule.duration / 60)}h {createdModule.duration % 60}m)</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="font-medium text-green-800">Status:</span>
-                  <span className="text-green-700">{createdModule.status}</span>
+                <div className="flex justify-between items-center">
+                  <span className="font-bold text-gray-700">Status:</span>
+                  <span className={`font-bold px-3 py-1 rounded-full text-xs ${
+                    createdModule.status === 'Active' ? 'bg-green-100 text-green-700' :
+                    createdModule.status === 'Inactive' ? 'bg-red-100 text-red-700' :
+                    'bg-gray-100 text-gray-700'
+                  }`}>
+                    {createdModule.status}
+                  </span>
                 </div>
               </div>
             </div>
           )}
           
           {/* Success Message */}
-          <div className="text-center text-gray-600 mb-6">
+          <div className="text-center text-gray-700 font-medium mb-6">
             Your module is now live and ready for students to enroll!
           </div>
           
@@ -563,7 +598,7 @@ export default function ModuleCreation({
                   status: 'Draft',
                 });
               }}
-              className="bg-green-600 hover:bg-green-700 text-white py-3 w-full"
+              className="bg-green-600 hover:bg-green-700 text-white py-3 w-full h-12 font-bold text-base shadow-lg"
               size="lg"
             >
               <CheckCircle className="mr-2 h-5 w-5" />
@@ -576,7 +611,7 @@ export default function ModuleCreation({
                 if (onCancel) onCancel();
               }}
               size="lg"
-              className="py-3 w-full"
+              className="py-3 w-full h-12 font-bold border-2 border-gray-300 hover:bg-gray-100"
             >
               Close & Exit
             </Button>

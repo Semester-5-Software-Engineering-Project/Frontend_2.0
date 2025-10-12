@@ -85,76 +85,79 @@ export default function Reviews() {
   return (
     <DashboardLayout>
       <div className="p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Reviews & Ratings</h1>
-            <p className="text-gray-600">
-              {user?.role === 'STUDENT' 
-                ? 'Rate your TUTORs and read course reviews'
-                : 'Manage your reviews and STUDENT feedback'
-              }
-            </p>
+        {/* Header */}
+        <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Reviews & Ratings</h1>
+              <p className="text-gray-600 mt-1">
+                {user?.role === 'STUDENT' 
+                  ? 'Rate your tutors and read course reviews'
+                  : 'Manage your reviews and student feedback'
+                }
+              </p>
+            </div>
+            <Button variant="outline" className="border-gray-300 hover:bg-gray-50 font-semibold">
+              <Filter className="w-4 h-4 mr-2" />
+              Filter Reviews
+            </Button>
           </div>
-          <Button variant="outline">
-            <Filter className="w-4 h-4 mr-2" />
-            Filter Reviews
-          </Button>
         </div>
 
         {user?.role === 'TUTOR' && (
           /* TUTOR Stats */
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <Card>
+            <Card className="border-none shadow-md hover:shadow-lg transition-shadow">
               <CardContent className="p-6">
                 <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                    <Star className="w-6 h-6 text-yellow-600" />
+                  <div className="w-14 h-14 bg-yellow-50 rounded-xl flex items-center justify-center">
+                    <Star className="w-7 h-7 text-yellow-600" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold">{stats.averageRating}</p>
-                    <p className="text-sm text-gray-500">Avg. Rating</p>
+                    <p className="text-3xl font-bold text-gray-900">{stats.averageRating}</p>
+                    <p className="text-sm text-gray-500 font-medium">Avg. Rating</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-none shadow-md hover:shadow-lg transition-shadow">
               <CardContent className="p-6">
                 <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <MessageCircle className="w-6 h-6 text-blue-600" />
+                  <div className="w-14 h-14 bg-blue-50 rounded-xl flex items-center justify-center">
+                    <MessageCircle className="w-7 h-7 text-blue-600" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold">{stats.totalReviews}</p>
-                    <p className="text-sm text-gray-500">Total Reviews</p>
+                    <p className="text-3xl font-bold text-gray-900">{stats.totalReviews}</p>
+                    <p className="text-sm text-gray-500 font-medium">Total Reviews</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-none shadow-md hover:shadow-lg transition-shadow">
               <CardContent className="p-6">
                 <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                    <TrendingUp className="w-6 h-6 text-green-600" />
+                  <div className="w-14 h-14 bg-green-50 rounded-xl flex items-center justify-center">
+                    <TrendingUp className="w-7 h-7 text-green-600" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold">{stats.fiveStarPercent}%</p>
-                    <p className="text-sm text-gray-500">5-Star Reviews</p>
+                    <p className="text-3xl font-bold text-gray-900">{stats.fiveStarPercent}%</p>
+                    <p className="text-sm text-gray-500 font-medium">5-Star Reviews</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-none shadow-md hover:shadow-lg transition-shadow">
               <CardContent className="p-6">
                 <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <Award className="w-6 h-6 text-purple-600" />
+                  <div className="w-14 h-14 bg-purple-50 rounded-xl flex items-center justify-center">
+                    <Award className="w-7 h-7 text-purple-600" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold">{stats.responseRate}%</p>
-                    <p className="text-sm text-gray-500">Response Rate</p>
+                    <p className="text-3xl font-bold text-gray-900">{stats.responseRate}%</p>
+                    <p className="text-sm text-gray-500 font-medium">Response Rate</p>
                   </div>
                 </div>
               </CardContent>
@@ -165,31 +168,33 @@ export default function Reviews() {
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           {/* Reviews List */}
           <div className="xl:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>
-                  {user?.role === 'STUDENT' ? 'Course Reviews' : 'STUDENT Reviews'}
+            <Card className="border-none shadow-md">
+              <CardHeader className="border-b border-gray-200 bg-gray-50">
+                <CardTitle className="text-xl font-bold text-gray-900">
+                  {user?.role === 'STUDENT' ? 'Course Reviews' : 'Student Reviews'}
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-gray-600">
                   {user?.role === 'STUDENT' 
-                    ? 'See what other STUDENTs say about courses'
-                    : 'Feedback from your STUDENTs'
+                    ? 'See what other students say about courses'
+                    : 'Feedback from your students'
                   }
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent className="space-y-6 pt-6">
                 {reviews.map((review) => (
-                  <div key={review.id} className="border-b last:border-b-0 pb-6 last:pb-0">
+                  <div key={review.id} className="border-b border-gray-200 last:border-b-0 pb-6 last:pb-0">
                     <div className="flex items-start space-x-4">
-                      <Avatar>
+                      <Avatar className="w-12 h-12">
                         <AvatarImage src={review.avatar} />
-                        <AvatarFallback>{review.STUDENT.charAt(0)}</AvatarFallback>
+                        <AvatarFallback className="bg-[#FBBF24] text-black font-semibold">
+                          {review.STUDENT.charAt(0)}
+                        </AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
                         <div className="flex items-center justify-between mb-2">
                           <div>
-                            <h4 className="font-medium">{review.STUDENT}</h4>
-                            <p className="text-sm text-gray-500">{review.course}</p>
+                            <h4 className="font-bold text-gray-900">{review.STUDENT}</h4>
+                            <p className="text-sm text-gray-600 font-medium">{review.course}</p>
                           </div>
                           <div className="text-right">
                             <div className="flex items-center space-x-1 mb-1">
@@ -204,19 +209,19 @@ export default function Reviews() {
                                 />
                               ))}
                             </div>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-gray-500 font-medium">
                               {new Date(review.date).toLocaleDateString()}
                             </p>
                           </div>
                         </div>
-                        <p className="text-gray-700 mb-3">{review.comment}</p>
+                        <p className="text-gray-700 mb-3 leading-relaxed">{review.comment}</p>
                         <div className="flex items-center space-x-4">
-                          <Button size="sm" variant="ghost" className="text-gray-500">
+                          <Button size="sm" variant="ghost" className="text-gray-600 hover:text-gray-900 hover:bg-gray-100">
                             <ThumbsUp className="w-4 h-4 mr-1" />
                             Helpful ({review.helpful})
                           </Button>
                           {user?.role === 'TUTOR' && (
-                            <Button size="sm" variant="ghost" className="text-green-600">
+                            <Button size="sm" variant="ghost" className="text-green-600 hover:text-green-700 hover:bg-green-50">
                               <MessageCircle className="w-4 h-4 mr-1" />
                               Reply
                             </Button>
@@ -234,23 +239,23 @@ export default function Reviews() {
           <div className="space-y-6">
             {user?.role === 'STUDENT' && (
               /* Leave a Review */
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Leave a Review</CardTitle>
-                  <CardDescription>Share your experience with other STUDENTs</CardDescription>
+              <Card className="border-none shadow-md">
+                <CardHeader className="border-b border-gray-200 bg-gray-50">
+                  <CardTitle className="text-lg font-bold text-gray-900">Leave a Review</CardTitle>
+                  <CardDescription className="text-gray-600">Share your experience with other students</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4 pt-6">
                   <div>
-                    <Label className="text-sm font-medium mb-2 block">Rating</Label>
+                    <label className="text-sm font-semibold text-gray-900 mb-2 block">Rating</label>
                     <div className="flex space-x-1">
                       {[1, 2, 3, 4, 5].map((star) => (
                         <button
                           key={star}
                           onClick={() => setSelectedRating(star)}
-                          className="p-1"
+                          className="p-1 hover:scale-110 transition-transform"
                         >
                           <Star 
-                            className={`w-6 h-6 transition-colors ${
+                            className={`w-7 h-7 transition-colors ${
                               selectedRating && star <= selectedRating
                                 ? 'text-yellow-400 fill-current'
                                 : 'text-gray-300 hover:text-yellow-300'
@@ -262,19 +267,20 @@ export default function Reviews() {
                   </div>
                   
                   <div>
-                    <label htmlFor="review" className="text-sm font-medium">Your Review</label>
+                    <label htmlFor="review" className="text-sm font-semibold text-gray-900 block mb-2">Your Review</label>
                     <Textarea 
                       id="review"
                       placeholder="Share your experience..."
                       value={reviewText}
                       onChange={(e) => setReviewText(e.target.value)}
                       rows={4}
+                      className="border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]"
                     />
                   </div>
                   
                   <Button 
                     onClick={handleSubmitReview}
-                    className="w-full bg-green-600 hover:bg-green-700"
+                    className="w-full bg-[#FBBF24] hover:bg-[#F59E0B] text-black font-semibold shadow-md"
                     disabled={!selectedRating || !reviewText.trim()}
                   >
                     Submit Review
@@ -285,26 +291,26 @@ export default function Reviews() {
 
             {/* Rating Distribution (for TUTORs) */}
             {user?.role === 'TUTOR' && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Rating Distribution</CardTitle>
+              <Card className="border-none shadow-md">
+                <CardHeader className="border-b border-gray-200 bg-gray-50">
+                  <CardTitle className="text-lg font-bold text-gray-900">Rating Distribution</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
+                <CardContent className="space-y-3 pt-6">
                   {[5, 4, 3, 2, 1].map((stars) => {
                     const percentage = stars === 5 ? 78 : stars === 4 ? 15 : stars === 3 ? 5 : 2
                     return (
                       <div key={stars} className="flex items-center space-x-3">
-                        <div className="flex items-center space-x-1 w-12">
-                          <span className="text-sm">{stars}</span>
+                        <div className="flex items-center space-x-1 w-14">
+                          <span className="text-sm font-semibold text-gray-900">{stars}</span>
                           <Star className="w-3 h-3 text-yellow-400 fill-current" />
                         </div>
-                        <div className="flex-1 bg-gray-200 rounded-full h-2">
+                        <div className="flex-1 bg-gray-200 rounded-full h-2.5">
                           <div 
-                            className="bg-green-600 h-2 rounded-full" 
+                            className="bg-[#FBBF24] h-2.5 rounded-full transition-all duration-300" 
                             style={{ width: `${percentage}%` }}
                           />
                         </div>
-                        <span className="text-sm text-gray-500 w-8">{percentage}%</span>
+                        <span className="text-sm text-gray-600 font-medium w-10 text-right">{percentage}%</span>
                       </div>
                     )
                   })}
@@ -313,23 +319,23 @@ export default function Reviews() {
             )}
 
             {/* Recent Activity */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Recent Activity</CardTitle>
+            <Card className="border-none shadow-md">
+              <CardHeader className="border-b border-gray-200 bg-gray-50">
+                <CardTitle className="text-lg font-bold text-gray-900">Recent Activity</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-6">
                 <div className="space-y-3 text-sm">
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
                     <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span>New 5-star review received</span>
+                    <span className="text-gray-700 font-medium">New 5-star review received</span>
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
                     <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <span>Course rating updated</span>
+                    <span className="text-gray-700 font-medium">Course rating updated</span>
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
                     <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                    <span>Achievement unlocked</span>
+                    <span className="text-gray-700 font-medium">Achievement unlocked</span>
                   </div>
                 </div>
               </CardContent>
