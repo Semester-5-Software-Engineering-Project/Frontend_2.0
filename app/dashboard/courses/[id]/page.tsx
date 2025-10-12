@@ -182,7 +182,7 @@ export default function CoursePage() {
     }
   }, [params.id])
 
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
   const [isJoiningMeeting, setIsJoiningMeeting] = useState(false)
   const [moduleDetails, setModuleDetails] = useState<LocalModule | null>(null)
   const [enrollment, setEnrollment] = useState<EnrollmentDetails | null>(null)

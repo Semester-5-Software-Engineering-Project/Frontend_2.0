@@ -475,7 +475,7 @@ export default function CoursesPage() {
                 <div>
                   <p className="text-3xl font-bold text-gray-900">
                     {loading ? '...' : user?.role === 'TUTOR' 
-                      ? `$${courses.reduce((sum, c) => sum + c.fee, 0).toFixed(0)}`
+                      ? `Rs.${courses.reduce((sum, c) => sum + c.fee, 0).toFixed(0)}`
                       : courses.length
                     }
                   </p>
@@ -607,7 +607,7 @@ export default function CoursesPage() {
                       <p className="text-sm text-gray-600 mt-2">
                         {isEnrolledCourse(course)
                           ? `by ${((course.tutorId && tutorNames[course.tutorId]) || course.tutor || '...')}`
-                          : `Fee: $${course.fee}`}
+                          : `Fee: Rs.${course.fee}`}
                       </p>
                     </div>
 
@@ -617,7 +617,7 @@ export default function CoursesPage() {
                         <span className="text-sm font-semibold text-gray-700">{course.rating || 'No rating'}</span>
                       </div>
                       <div className="flex items-center space-x-1">
-                        <span className="text-lg font-bold text-[#FBBF24]">${course.fee}</span>
+                        <span className="text-lg font-bold text-[#FBBF24]">Rs.{course.fee}</span>
                       </div>
                     </div>
 
@@ -688,7 +688,7 @@ export default function CoursesPage() {
                   </Badge>
                   <div className="flex items-center space-x-2">
                     <div className="w-2 h-2 bg-black/30 rounded-full"></div>
-                    <span className="text-lg font-bold">${descPrice}</span>
+                    <span className="text-lg font-bold">Rs.{descPrice}</span>
                   </div>
                   {descTutor && (
                     <>

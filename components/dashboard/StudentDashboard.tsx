@@ -561,14 +561,14 @@ export default function StudentDashboard() {
                         <Star className="w-3 h-3 text-[#FBBF24] fill-current" />
                         <span className="text-xs font-semibold text-gray-700">{course.averageRatings ?? '-'}</span>
                       </div>
-                      <span className="text-sm font-bold text-[#FBBF24]">${course.fee}</span>
+                      <span className="text-sm font-bold text-[#FBBF24]">Rs.{course.fee}</span>
                     </div>
                     <div className="flex gap-2 mt-3">
                       <Button
                         variant="outline"
                         size="sm"
                         className="flex-1 border-gray-300 hover:bg-yellow-50 text-xs"
-                        onClick={() => openDescription(course.moduleId, course.name, course.domain, course.fee)}
+                        onClick={() => openDescription(course.moduleId ?? '', course.name, course.domain, course.fee)}
                       >
                         <Eye className="h-3 w-3 mr-1" />
                         See Description
@@ -604,7 +604,7 @@ export default function StudentDashboard() {
                   </div>
                   <div className="flex items-center">
                     <span className="font-semibold text-[#FBBF24] mr-2">Price:</span>
-                    <span className="text-gray-700 font-bold">${descriptionDialog.fee}</span>
+                    <span className="text-gray-700 font-bold">Rs.{descriptionDialog.fee}</span>
                   </div>
                 </div>
               </div>
