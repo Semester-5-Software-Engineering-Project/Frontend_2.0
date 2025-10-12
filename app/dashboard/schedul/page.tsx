@@ -15,6 +15,7 @@ import { useAuth, userType } from '@/contexts/AuthContext'
 import { createSchedule } from '@/services/api'
 import { DateTimePicker, formatDateTimeForLegacyAPI } from '@/components/ui/datetime-picker'
 import { addDays } from 'date-fns'
+import { useToast } from '@/hooks/use-toast'
 
 interface ScheduleFormData {
   dateTime: Date | undefined
@@ -27,6 +28,7 @@ export default function Schedule() {
   const { user } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { toast } = useToast()
   const [moduleId, setModuleId] = useState<string | null>(null)
 
   const [formData, setFormData] = useState<ScheduleFormData>({
@@ -212,29 +214,75 @@ export default function Schedule() {
 
       // Make the API request
       const response = await createSchedule(payload as any)
+      
+      console.log('API Response:', response)
+      console.log('Response success:', response.success)
 
-      if (response.success) {
+      // Check for success - if we get a response without error, it means 201 status (success)
+      if (response && (response.success !== false)) {
+        const successMessage = 'Meeting scheduled successfully! Your schedule has been saved.'
         setSubmitStatus({
           type: 'success',
-          message: 'Meeting scheduled successfully!'
+          message: successMessage
         })
-        
         // Reset form
         setFormData({
           dateTime: undefined,
           duration: 60,
           recurrenceType: 'specific'
         })
-        
         // Clear localStorage after successful scheduling
         localStorage.removeItem('scheduleModuleId')
+      } else {
+        // If response exists but success is explicitly false
+        throw new Error((response as any)?.message || 'Failed to schedule meeting, Clashes with another schedule.')
       }
     } catch (error: any) {
       console.error('Error scheduling meeting:', error)
+      console.error('Error status:', error.response?.status)
+      console.error('Error data:', error.response?.data)
+      console.error('Error message:', error.message)
+      
+      // Get all possible error messages
+      const serverMessage = error.response?.data?.message || error.response?.data?.error || error.response?.data
+      const errorMessage = serverMessage || error.message || ''
+      const statusCode = error.response?.status
+      
+      console.log('Server message:', serverMessage)
+      console.log('Full error message for checking:', errorMessage)
+      console.log('Status code:', statusCode)
+      
+      let displayMessage = ''
+      
+      // Check for scheduling conflict in various ways
+      const messageStr = String(errorMessage).toLowerCase()
+      const isConflictError = 
+        messageStr.includes('conflict') || 
+        messageStr.includes('clash') ||
+        messageStr.includes('overlap') ||
+        messageStr.includes('already scheduled') ||
+        messageStr.includes('time slot') ||
+        messageStr.includes('duplicate') ||
+        statusCode === 409 ||
+        statusCode === 400 // Sometimes conflicts return 400
+      
+      if (isConflictError) {
+        displayMessage = 'Schedule is clash with other schedule. Please choose a different time slot.'
+      } else if (statusCode >= 400 && statusCode < 500) {
+        // For client errors (400-499), assume it's likely a scheduling conflict
+        displayMessage = 'Schedule is clash with other schedule. Please choose a different time slot.'
+      } else {
+        displayMessage = String(errorMessage) || 'Failed to schedule meeting. Please try again.'
+      }
+      
+      console.log('Final display message:', displayMessage)
+      
       setSubmitStatus({
         type: 'error',
-        message: error.response?.data?.message || error.message || 'Failed to schedule meeting. Please try again.'
+        message: displayMessage
       })
+      
+      // ...no toast, only alert
     } finally {
       setIsSubmitting(false)
     }

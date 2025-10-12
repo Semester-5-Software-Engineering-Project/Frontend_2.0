@@ -5,6 +5,7 @@ import { AuthProvider } from '@/contexts/AuthContext'
 import { StudentProfileProvider } from '@/contexts/StudentProfileContex'
 import { TutorProfileProvider } from '@/contexts/TutorProfileContex'
 import { Toaster } from 'sonner'
+import { Toaster as ShadcnToaster } from '@/components/ui/toaster'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -26,6 +27,7 @@ export default function RootLayout({
             <TutorProfileProvider>
               {children}
               <Toaster position="top-right" />
+              <ShadcnToaster />
             </TutorProfileProvider>
           </StudentProfileProvider>
         </AuthProvider>

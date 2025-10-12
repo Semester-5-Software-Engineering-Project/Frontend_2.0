@@ -9,6 +9,7 @@ import { createMeet } from "@/services/api";
 interface MeetingRoomProps {
   username: string;
   roomName: string;
+  courseName: string;
   role: 'student' | 'teacher';
   email?: string;
   password?: string;
@@ -22,7 +23,7 @@ declare global {
   }
 }
 
-export const MeetingRoom = ({ username, roomName, role, email, password, jwtToken, onLeave }: MeetingRoomProps) => {
+export const MeetingRoom = ({ username, roomName, courseName, role, email, password, jwtToken, onLeave }: MeetingRoomProps) => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,6 +34,7 @@ export const MeetingRoom = ({ username, roomName, role, email, password, jwtToke
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const recordingStartedInSession = useRef<boolean>(false);
   const isTeacher = role === 'teacher';
 
   // Function to get JWT token from API or use provided token
@@ -202,9 +204,9 @@ export const MeetingRoom = ({ username, roomName, role, email, password, jwtToke
         }
 
         const options = {
-          roomName: roomName,
+          roomName: courseName,
           width: '100%',
-          height: '600px',
+          height: '100%',
           parentNode: jitsiContainerRef.current,
           ...(jwt && { jwt: jwt }), // Only include JWT if available
           userInfo: {
@@ -213,7 +215,7 @@ export const MeetingRoom = ({ username, roomName, role, email, password, jwtToke
           },
           configOverwrite: {
             startWithAudioMuted: true,
-            startWithVideoMuted: false,
+            startWithVideoMuted: true,
             disableModeratorIndicator: false, // Show moderator indicator
             enableEmailInStats: false,
             enableWelcomePage: false,
@@ -300,15 +302,24 @@ export const MeetingRoom = ({ username, roomName, role, email, password, jwtToke
           },
           interfaceConfigOverwrite: {
             DISABLE_JOIN_LEAVE_NOTIFICATIONS: true,
+            DEFAULT_LOGO_URL: '/gfx/mylogo.svg',
             SHOW_JITSI_WATERMARK: false,
             SHOW_WATERMARK_FOR_GUESTS: false,
             SHOW_BRAND_WATERMARK: false,
+            JITSI_WATERMARK_LINK: '',
+            BRAND_WATERMARK_LINK: '',
+            SHOW_POWERED_BY: false,
+            HIDE_INVITE_MORE_HEADER: true,
+            HIDE_DEEP_LINKING_LOGO: true,
+            HIDE_LOGO: true,
+            DISABLE_DEEP_LINKING: true,
+            DISABLE_LOGO_CLICK: true,
             APP_NAME: "Virtual Classroom",
+            NATIVE_APP_NAME: "Virtual Classroom",
             DEFAULT_BACKGROUND: '#0F172A',
             DISABLE_DOMINANT_SPEAKER_INDICATOR: true,
             DISABLE_TRANSCRIPTION_SUBTITLES: true,
             DISABLE_RINGING: true,
-            HIDE_INVITE_MORE_HEADER: !isTeacher, // Only hide for students
             
             // Teacher (Moderator) gets full control
             TOOLBAR_BUTTONS: isTeacher ? [
@@ -335,7 +346,6 @@ export const MeetingRoom = ({ username, roomName, role, email, password, jwtToke
               DISABLE_KICK: true, // Students cannot kick others
               DISABLE_LOBBY: true, // Students cannot control lobby
               DISABLE_FOCUS_INDICATOR: true,
-              HIDE_DEEP_LINKING_LOGO: true,
               DISABLE_TRANSCRIPTION_SUBTITLES: true,
             }),
             
@@ -379,14 +389,42 @@ export const MeetingRoom = ({ username, roomName, role, email, password, jwtToke
         apiRef.current.addEventListener('ready', () => {
           if (!isMounted) return;
           
-          // Check if user is moderator
+          // Hide Jitsi logos with CSS injection
           setTimeout(() => {
             try {
               const iframe = apiRef.current.getIFrame();
+              if (iframe && iframe.contentDocument) {
+                const style = iframe.contentDocument.createElement('style');
+                style.innerHTML = `
+                  /* Hide all Jitsi logos and branding */
+                  .leftwatermark, .rightwatermark, 
+                  .watermark, .jitsi-watermark, 
+                  .brand-watermark, .poweredby,
+                  .jitsi-icon, .icon-jitsi,
+                  [class*="watermark"], [class*="logo"],
+                  .header-logo, .brand-logo,
+                  .jitsi-meet-logo, .welcome-page-logo,
+                  .toolbox-button[aria-label*="Jitsi"],
+                  a[href*="jitsi.org"], a[href*="jitsi.com"] {
+                    display: none !important;
+                    visibility: hidden !important;
+                    opacity: 0 !important;
+                    width: 0 !important;
+                    height: 0 !important;
+                    pointer-events: none !important;
+                  }
+                  
+                  /* Prevent clicking on any remaining logos */
+                  .header a, .watermark a {
+                    pointer-events: none !important;
+                  }
+                `;
+                iframe.contentDocument.head.appendChild(style);
+              }
             } catch (e) {
-              // Ignore iframe access errors
+              // Ignore iframe access errors due to CORS
             }
-          }, 1000);
+          }, 2000);
           
           setIsLoading(false);
           toast({
@@ -456,11 +494,12 @@ export const MeetingRoom = ({ username, roomName, role, email, password, jwtToke
         apiRef.current.addEventListener('recordingStatusChanged', (event: any) => {
           if (!isMounted) return;
           if (event.on && isTeacher) {
+            recordingStartedInSession.current = true;
             toast({
               title: "Recording Started",
               description: "Meeting recording has begun",
             });
-          } else if (!event.on && isTeacher) {
+          } else if (!event.on && isTeacher && recordingStartedInSession.current) {
             toast({
               title: "Recording Stopped",
               description: "Meeting recording has ended",
@@ -548,7 +587,7 @@ export const MeetingRoom = ({ username, roomName, role, email, password, jwtToke
       
       setIsInitialized(false);
     };
-  }, [username, roomName]); // Reduced dependencies to prevent frequent re-runs
+  }, [username, courseName, roomName]); // Reduced dependencies to prevent frequent re-runs
 
   // Recording functions (local screen recording)
   const startRecording = async () => {
@@ -582,7 +621,7 @@ export const MeetingRoom = ({ username, roomName, role, email, password, jwtToke
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${roomName}-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.webm`;
+        a.download = `${courseName}-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.webm`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -648,10 +687,10 @@ export const MeetingRoom = ({ username, roomName, role, email, password, jwtToke
   };
 
   return (
-    <div className="min-h-screen bg-meeting flex flex-col items-center justify-center p-4">
-      <div className="bg-card border-b border-border p-4 w-full max-w-5xl flex items-center justify-between rounded-t-xl">
+    <div className="h-screen w-screen bg-meeting flex flex-col">
+      <div className="bg-card border-b border-border p-4 w-full flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <h1 className="text-xl font-semibold">Room: {roomName}</h1>
+          <h1 className="text-xl font-semibold">Room: {courseName}</h1>
           <span className={`px-3 py-1 rounded-full text-xs font-medium ${
             isTeacher 
               ? 'bg-green-100 text-green-700' 
@@ -699,7 +738,7 @@ export const MeetingRoom = ({ username, roomName, role, email, password, jwtToke
         </div>
       </div>
       
-      <div className="flex-1 w-full max-w-5xl mx-auto bg-card rounded-b-xl shadow-lg" style={{ minHeight: 600 }}>
+      <div className="flex-1 w-full bg-card" style={{ height: '100%' }}>
         {error ? (
           <div className="flex items-center justify-center h-full p-8">
             <div className="text-center">
@@ -711,7 +750,8 @@ export const MeetingRoom = ({ username, roomName, role, email, password, jwtToke
                 </Button>
                 <div className="text-xs text-muted-foreground mt-4">
                   <p>Debug Info:</p>
-                  <p>Room: {roomName}</p>
+                  <p>Course: {courseName}</p>
+                  <p>Room ID: {roomName}</p>
                   <p>User: {username}</p>
                   <p>Role: {role}</p>
                   <p>Check console for more details</p>
@@ -727,17 +767,17 @@ export const MeetingRoom = ({ username, roomName, role, email, password, jwtToke
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
                   <p>Loading meeting...</p>
                   <p className="text-xs text-muted-foreground mt-2">
-                    Connecting to {roomName}...
+                    Connecting to {courseName}...
                   </p>
                 </div>
               </div>
             )}
             <div 
               ref={jitsiContainerRef} 
-              className="w-full h-full rounded-b-xl"
+              className="w-full h-full"
               style={{ 
-                minHeight: 600,
-                maxHeight: 600,
+                width: '100%',
+                height: '100%',
                 overflow: 'hidden',
                 position: 'relative',
                 backgroundColor: '#000'
