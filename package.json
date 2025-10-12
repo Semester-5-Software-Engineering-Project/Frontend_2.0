@@ -6,7 +6,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "cypress:open": "cypress open",
+    "cypress:run": "cypress run",
+    "cypress:run:chrome": "cypress run --browser chrome",
+    "cypress:run:firefox": "cypress run --browser firefox",
+    "test:e2e": "cypress run",
+    "test:e2e:headed": "cypress run --headed",
+    "test:e2e:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:3000 && cypress open\"",
+    "test:e2e:ci": "start-server-and-test dev http://localhost:3000 cypress:run"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.883.0",
@@ -81,6 +89,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@types/js-cookie": "^3.0.6"
+    "@types/js-cookie": "^3.0.6",
+    "cypress": "^15.4.0"
   }
 }

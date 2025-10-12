@@ -98,15 +98,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [])
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50" data-cy="dashboard-layout">
       {/* Top Header */}
-      <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-30 shadow-sm">
+      <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-30 shadow-sm" data-cy="top-header">
         <div className="flex items-center space-x-4">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="hover:bg-yellow-50 lg:hidden"
+            data-cy="mobile-menu-toggle"
           >
             {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </Button>
@@ -117,11 +118,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             onClick={() => setDesktopSidebarCollapsed(!desktopSidebarCollapsed)}
             className="hover:bg-yellow-50 hidden lg:flex"
             title={desktopSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            data-cy="desktop-sidebar-toggle"
           >
             <Menu className="w-5 h-5" />
           </Button>
           
-          <Link href="/dashboard" className="flex items-center space-x-2">
+          <Link href="/dashboard" className="flex items-center space-x-2" data-cy="logo-link">
             <div className="w-10 h-10 bg-[#FBBF24] rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-lg">TV</span>
             </div>
@@ -129,17 +131,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </Link>
         </div>
 
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-4" data-cy="user-menu">
           <div className="flex items-center space-x-3 bg-gray-50 rounded-lg px-3 py-2">
-            <Avatar className="w-9 h-9 ring-2 ring-[#FBBF24]">
+            <Avatar className="w-9 h-9 ring-2 ring-[#FBBF24]" data-cy="user-avatar">
               <AvatarImage src={profileImageUrl || user?.avatar || undefined} />
               <AvatarFallback className="bg-[#FBBF24] text-white font-semibold">
                 {user?.name?.charAt(0).toUpperCase() || 'U'}
               </AvatarFallback>
             </Avatar>
             <div className="hidden md:block">
-              <p className="text-sm font-semibold text-gray-900">{user?.name}</p>
-              <p className="text-xs text-gray-500 uppercase tracking-wide">{user?.role}</p>
+              <p className="text-sm font-semibold text-gray-900" data-cy="user-name">{user?.name}</p>
+              <p className="text-xs text-gray-500 uppercase tracking-wide" data-cy="user-role">{user?.role}</p>
             </div>
           </div>
           
@@ -148,6 +150,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             size="sm" 
             onClick={logout}
             className="hover:bg-red-50 hover:text-red-600"
+            data-cy="logout-button"
           >
             <LogOut className="w-4 h-4" />
           </Button>
@@ -162,9 +165,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           lg:translate-x-0
           fixed inset-y-0 left-0 top-[73px] z-40 w-64 bg-white border-r border-gray-200 
           transition-all duration-300 ease-in-out shadow-lg lg:shadow-none
-        `}>
+        `} data-cy="sidebar">
           <div className="p-6 h-full overflow-y-auto flex flex-col">
-            <nav className="space-y-1 flex-1">
+            <nav className="space-y-1 flex-1" data-cy="navigation">
               {navItems.map((item) => {
                 const isActive = pathname === item.href
                 return (
@@ -180,6 +183,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     `}
                     onClick={() => setSidebarOpen(false)}
                     title={desktopSidebarCollapsed ? item.name : ''}
+                    data-cy={`nav-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
                   >
                     <item.icon className={`w-5 h-5 ${isActive ? 'text-black' : 'text-gray-500'} ${desktopSidebarCollapsed ? '' : 'flex-shrink-0'}`} />
                     <span className={`${desktopSidebarCollapsed ? 'lg:hidden' : ''}`}>{item.name}</span>

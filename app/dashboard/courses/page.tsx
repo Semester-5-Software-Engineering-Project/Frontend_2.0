@@ -376,13 +376,13 @@ export default function CoursesPage() {
     <DashboardLayout>
       <div className="p-6 space-y-6">
         {/* Header */}
-        <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
+        <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200" data-cy="courses-header">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">
+              <h1 className="text-3xl font-bold text-gray-900" data-cy="courses-title">
                 {user?.role === 'STUDENT' ? 'My Modules' : 'Teaching Modules'}
               </h1>
-              <p className="text-gray-600 mt-1">
+              <p className="text-gray-600 mt-1" data-cy="courses-description">
                 {user?.role === 'STUDENT' 
                   ? 'Track your learning progress and manage your enrollments'
                   : 'Manage your modules, materials, and student progress'
@@ -392,12 +392,15 @@ export default function CoursesPage() {
             {user?.role === 'TUTOR' && (
               <Dialog open={isModuleCreationOpen} onOpenChange={setIsModuleCreationOpen}>
                 <DialogTrigger asChild>
-                  <Button className="bg-[#FBBF24] hover:bg-[#F59E0B] text-black font-semibold">
+                  <Button 
+                    className="bg-[#FBBF24] hover:bg-[#F59E0B] text-black font-semibold"
+                    data-cy="create-module-button"
+                  >
                     <Plus className="w-4 h-4 mr-2" />
                     Create New Module
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" data-cy="module-creation-dialog">
                   <DialogHeader>
                     <DialogTitle className="text-xl font-bold">Create New Course Module</DialogTitle>
                   </DialogHeader>
@@ -499,6 +502,7 @@ export default function CoursesPage() {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24]"
+                  data-cy="search-courses-input"
                 />
               </div>
               <div className="flex gap-2 flex-wrap">
@@ -575,9 +579,14 @@ export default function CoursesPage() {
 
         {/* Courses Grid */}
         {!loading && !error && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" data-cy="courses-grid">
             {filteredCourses.map((course) => (
-              <Card key={course.id} className="border-none shadow-md hover:shadow-xl hover:border-[#FBBF24] transition-all overflow-hidden group">
+              <Card 
+                key={course.id} 
+                className="border-none shadow-md hover:shadow-xl hover:border-[#FBBF24] transition-all overflow-hidden group"
+                data-cy="course-card"
+                data-course-id={course.id}
+              >
                 <div className="relative overflow-hidden">
                   <div className="relative h-48">
                     <Image
@@ -587,11 +596,13 @@ export default function CoursesPage() {
                       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                       className="object-cover group-hover:scale-105 transition-transform duration-300"
                       priority={false}
+                      data-cy="course-image"
                     />
                   </div>
                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
                   <Badge 
                     className={`absolute top-4 right-4 ${getStatusColor(course.status)} shadow-md`}
+                    data-cy="course-status-badge"
                   >
                     {course.status}
                   </Badge>
@@ -600,11 +611,11 @@ export default function CoursesPage() {
                 <CardContent className="p-6">
                   <div className="space-y-4">
                     <div>
-                      <h3 className="font-bold text-lg mb-2 text-gray-900 line-clamp-1">{course.title}</h3>
-                      <Badge variant="outline" className="text-xs mb-2 border-blue-300 text-blue-700 bg-blue-50">
+                      <h3 className="font-bold text-lg mb-2 text-gray-900 line-clamp-1" data-cy="course-title">{course.title}</h3>
+                      <Badge variant="outline" className="text-xs mb-2 border-blue-300 text-blue-700 bg-blue-50" data-cy="course-domain">
                         {course.domain}
                       </Badge>
-                      <p className="text-sm text-gray-600 mt-2">
+                      <p className="text-sm text-gray-600 mt-2" data-cy="course-meta">
                         {isEnrolledCourse(course)
                           ? `by ${((course.tutorId && tutorNames[course.tutorId]) || course.tutor || '...')}`
                           : `Fee: $${course.fee}`}
@@ -612,18 +623,21 @@ export default function CoursesPage() {
                     </div>
 
                     <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                      <div className="flex items-center space-x-1">
+                      <div className="flex items-center space-x-1" data-cy="course-rating">
                         <Star className="w-4 h-4 text-[#FBBF24] fill-current" />
                         <span className="text-sm font-semibold text-gray-700">{course.rating || 'No rating'}</span>
                       </div>
                       <div className="flex items-center space-x-1">
-                        <span className="text-lg font-bold text-[#FBBF24]">${course.fee}</span>
+                        <span className="text-lg font-bold text-[#FBBF24]" data-cy="course-fee">${course.fee}</span>
                       </div>
                     </div>
 
-                    <div className="flex gap-2 pt-2">
+                    <div className="flex gap-2 pt-2" data-cy="course-actions">
                       <Link href={`/dashboard/courses/${course.id}`} className="flex-1">
-                        <Button className="w-full bg-[#FBBF24] hover:bg-[#F59E0B] text-black font-semibold">
+                        <Button 
+                          className="w-full bg-[#FBBF24] hover:bg-[#F59E0B] text-black font-semibold"
+                          data-cy="course-manage-button"
+                        >
                           {user?.role === 'STUDENT' ? 'Continue Learning' : 'Manage Module'}
                         </Button>
                       </Link>
@@ -631,11 +645,17 @@ export default function CoursesPage() {
                         variant="outline"
                         className="border-gray-300 hover:bg-yellow-50"
                         onClick={() => openDescription(course.id, course.title, course.domain, course.fee)}
+                        data-cy="course-description-button"
                       >
                         <Eye className="w-4 h-4 mr-2" /> See Description
                       </Button>
                       {user?.role === 'TUTOR' && (
-                        <Button variant="outline" size="sm" className="border-gray-300 hover:bg-gray-50">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="border-gray-300 hover:bg-gray-50"
+                          data-cy="course-more-actions"
+                        >
                           <MoreHorizontal className="w-4 h-4" />
                         </Button>
                       )}
