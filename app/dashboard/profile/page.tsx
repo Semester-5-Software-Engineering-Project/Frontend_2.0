@@ -656,7 +656,7 @@ export default function Profile() {
                 <>
                   <div className="space-y-2">
                     <Label htmlFor="hourlyRate">Hourly Rate (local)</Label>
-                    <Input id="hourlyRate" placeholder="$0" value={profileData.hourlyRate} disabled={!isEditing} onChange={e => setProfileData(p => ({...p, hourlyRate: e.target.value}))} />
+                    <Input id="hourlyRate" placeholder="Rs. 0" value={profileData.hourlyRate} disabled={!isEditing} onChange={e => setProfileData(p => ({...p, hourlyRate: e.target.value}))} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="education">Education (local)</Label>

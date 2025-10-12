@@ -317,7 +317,7 @@ export default function WalletPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-6">
-              <div className="text-4xl font-bold text-[#FBBF24]" data-cy="available-balance">${availableBalance.toFixed(2)}</div>
+              <div className="text-4xl font-bold text-[#FBBF24]" data-cy="available-balance">Rs. {availableBalance.toFixed(2)}</div>
               <p className="text-sm text-gray-600 mt-2 font-medium">Funds you can withdraw now</p>
             </CardContent>
           </Card>
@@ -379,7 +379,7 @@ export default function WalletPage() {
                         </div>
                         <div className="text-right">
                           <div className="font-bold text-xl text-[#FBBF24]" data-cy="withdrawal-amount">
-                            ${withdrawal.amount.toFixed(2)}
+                            Rs. {withdrawal.amount.toFixed(2)}
                           </div>
                         </div>
                       </div>
@@ -406,7 +406,7 @@ export default function WalletPage() {
                         
                         <div className="flex items-center space-x-1">
                           {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                            let pageNum;
+                            let pageNum: number;
                             if (totalPages <= 5) {
                               pageNum = i + 1;
                             } else if (currentPage <= 3) {
@@ -477,7 +477,7 @@ export default function WalletPage() {
                     <Wallet className="w-5 h-5 text-[#FBBF24]" />
                     <span className="text-sm font-bold text-gray-900">Available Balance</span>
                   </div>
-                  <div className="text-3xl font-bold text-[#FBBF24]" data-cy="dialog-available-balance">${availableBalance.toFixed(2)}</div>
+                  <div className="text-3xl font-bold text-[#FBBF24]" data-cy="dialog-available-balance">Rs. {availableBalance.toFixed(2)}</div>
                   <p className="text-xs text-gray-600 mt-1 font-medium">Ready for withdrawal</p>
                 </div>
 
@@ -500,7 +500,7 @@ export default function WalletPage() {
                     />
                   </div>
                   <p className="text-xs text-gray-600 font-medium">
-                    Maximum: ${availableBalance.toFixed(2)}
+                    Maximum: Rs. {availableBalance.toFixed(2)}
                   </p>
                 </div>
 

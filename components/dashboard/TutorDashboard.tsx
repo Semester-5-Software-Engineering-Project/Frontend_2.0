@@ -191,7 +191,7 @@ export default function TutorDashboard() {
                 ) : (
                   <>
                     <p className="text-3xl font-bold text-gray-900" data-cy="total-revenue">
-                      ${totalRevenue}
+                      Rs. {totalRevenue}
                     </p>
                     <p className="text-sm text-gray-500 font-medium">Total Earnings</p>
                   </>
@@ -330,7 +330,7 @@ export default function TutorDashboard() {
                         </div>
                         <div className="flex items-center justify-between mt-4">
                           <span className="text-sm font-bold text-[#FBBF24]">
-                            ${module.fee} fee
+                            Rs. {module.fee} fee
                           </span>
                           <Link href={`/dashboard/courses/${module.moduleId}`}>
                             <Button size="sm" variant="outline" className="border-gray-300 hover:bg-gray-50">
