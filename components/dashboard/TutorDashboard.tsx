@@ -19,9 +19,10 @@ import {
   Loader2
 } from 'lucide-react'
 import Link from 'next/link'
-import { getModulesForTutor, upcomingSchedulesByTutor } from '@/services/api'
+import { getModulesForTutor, getTotalRevenueForTutor, upcomingSchedulesByTutor } from '@/services/api'
 import { UpcomingSessionResponse, UpcomingSessionsRequest } from '@/types/api'
 import { getCurrentDateTime } from '@/utils/dateUtils'
+import axiosInstance from '@/app/utils/axiosInstance'
 
 interface ApiModule {
   moduleId: string
@@ -52,6 +53,8 @@ export default function TutorDashboard() {
   const [upcomingSessions, setUpcomingSessions] = useState<UpcomingSessionResponse[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [sessionsError, setSessionsError] = useState<string | null>(null);
+  const [totalRevenue, setTotalRevenue] = useState<number>(0);
+  const [revenueLoading, setRevenueLoading] = useState(true);
 
   const [showAllSchedules, setShowAllSchedules] = useState(false);
   useEffect(() => {
@@ -95,6 +98,24 @@ export default function TutorDashboard() {
       }
     };
     fetchUpcomingSessions();
+  }, []);
+
+  // Fetch total revenue
+  useEffect(() => {
+    const fetchTotalRevenue = async () => {
+      try {
+        setRevenueLoading(true);
+        const response = await getTotalRevenueForTutor();
+        setTotalRevenue(Number(response) || 0);
+        console.log('Total revenue fetched:', response);
+      } catch (error) {
+        console.error('Error fetching total revenue:', error);
+        setTotalRevenue(0);
+      } finally {
+        setRevenueLoading(false);
+      }
+    };
+    fetchTotalRevenue();
   }, []);
 
   // upcomingSessions now comes from API
@@ -162,7 +183,7 @@ export default function TutorDashboard() {
                 <DollarSign className="w-7 h-7 text-purple-600" />
               </div>
               <div>
-                {isLoading ? (
+                {revenueLoading ? (
                   <div className="animate-pulse">
                     <div className="h-8 bg-gray-200 rounded w-16 mb-1"></div>
                     <div className="h-4 bg-gray-200 rounded w-32"></div>
@@ -170,9 +191,9 @@ export default function TutorDashboard() {
                 ) : (
                   <>
                     <p className="text-3xl font-bold text-gray-900">
-                      ${modules.reduce((total, module) => total + module.fee, 0)}
+                      ${totalRevenue}
                     </p>
-                    <p className="text-sm text-gray-500 font-medium">Total Revenue</p>
+                    <p className="text-sm text-gray-500 font-medium">Total Earnings</p>
                   </>
                 )}
               </div>

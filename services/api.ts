@@ -154,6 +154,11 @@ export const getModulesForTutor = async (): Promise<Module[]> => {
   return response.data;
 };
 
+export const getTotalRevenueForTutor = async (): Promise<number> => {
+  const response = await axiosInstance.get<number>("/api/payments/totalEarningsForTutor");
+  return response.data;
+};
+
 export const getModulesByTutorId = async (): Promise<Module[]> => {
   const response = await axiosInstance.get<Module[]>("/api/modules/tutor");
   return response.data;
