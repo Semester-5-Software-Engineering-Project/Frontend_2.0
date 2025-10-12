@@ -46,8 +46,8 @@ const moduleSchema = z.object({
     .min(1, 'Domain is required'),
   fee: z.number()
     .positive('Fee must be a positive number')
-    .min(0.01, 'Fee must be at least $0.01')
-    .max(99999.99, 'Fee must be less than $100,000'),
+    .min(0.01, 'Fee must be at least Rs. 0.01')
+    .max(99999.99, 'Fee must be less than Rs. 100,000'),
   duration: z.number()
     .positive('Duration must be a positive number')
     .min(15, 'Duration must be at least 15 minutes')
@@ -174,9 +174,9 @@ export default function ModuleCreation({
   };
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-LK', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'LKR',
     }).format(value);
   };
 
@@ -306,7 +306,7 @@ export default function ModuleCreation({
                 name="fee"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-base font-bold text-gray-800">Fee (USD) *</FormLabel>
+                    <FormLabel className="text-base font-bold text-gray-800">Fee (LKR) *</FormLabel>
                     <FormControl>
                       <Input
                         type="number"

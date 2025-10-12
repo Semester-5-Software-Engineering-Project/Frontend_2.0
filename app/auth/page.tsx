@@ -191,24 +191,26 @@ export default function AuthPage() {
           </div>
 
           {/* Auth Tabs */}
-          <Tabs defaultValue="login" className="w-full">
+          <Tabs defaultValue="login" className="w-full" data-cy="auth-tabs">
             <TabsList className="grid w-full grid-cols-2 mb-4 h-10 bg-gray-100">
               <TabsTrigger 
                 value="login" 
                 className="text-sm data-[state=active]:bg-yellow-400 data-[state=active]:text-black font-semibold"
+                data-cy="login-tab"
               >
                 Log In
               </TabsTrigger>
               <TabsTrigger 
                 value="register" 
                 className="text-sm data-[state=active]:bg-yellow-400 data-[state=active]:text-black font-semibold"
+                data-cy="register-tab"
               >
                 Sign Up
               </TabsTrigger>
             </TabsList>
             
             <TabsContent value="login">
-              <Card className="border-0 shadow-none">
+              <Card className="border-0 shadow-none" data-cy="login-form">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg font-bold text-foreground text-center">Log In</CardTitle>
                 </CardHeader>
@@ -225,6 +227,7 @@ export default function AuthPage() {
                           placeholder="superadmin@example.com"
                           onChange={(e) => handleInputChange('email', e.target.value)}
                           className="pl-12 h-12 bg-blue-50/50 border-blue-100 focus:border-primary focus:bg-blue-50 text-base"
+                          data-cy="login-email"
                         />
                       </div>
                     </div>
@@ -240,6 +243,7 @@ export default function AuthPage() {
                           placeholder="••••••••••"
                           onChange={(e) => handleInputChange('password', e.target.value)}
                           className="pl-12 h-12 bg-blue-50/50 border-blue-100 focus:border-primary focus:bg-blue-50 text-base"
+                          data-cy="login-password"
                         />
                       </div>
                     </div>
@@ -270,6 +274,7 @@ export default function AuthPage() {
                       onClick={() => handleSubmit('login')} 
                       className="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-semibold h-12 text-base rounded-lg group"
                       disabled={isLoading}
+                      data-cy="login-submit"
                     >
                       {isLoading ? 'Signing in...' : (
                         <>
@@ -312,7 +317,7 @@ export default function AuthPage() {
             </TabsContent>
             
             <TabsContent value="register">
-              <Card className="border-0 shadow-none">
+              <Card className="border-0 shadow-none" data-cy="register-form">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg font-bold text-foreground text-center">Create Account</CardTitle>
                 </CardHeader>
@@ -326,6 +331,7 @@ export default function AuthPage() {
                         value={formData.name}
                         onChange={(e) => setFormData({...formData, name: e.target.value})}
                         className="h-12 bg-blue-50/50 border-blue-100 focus:border-primary focus:bg-blue-50 text-base"
+                        data-cy="register-name"
                       />
                     </div>
                     
@@ -340,6 +346,7 @@ export default function AuthPage() {
                           value={formData.email}
                           onChange={(e) => setFormData({...formData, email: e.target.value})}
                           className="pl-12 h-12 bg-blue-50/50 border-blue-100 focus:border-primary focus:bg-blue-50 text-base"
+                          data-cy="register-email"
                         />
                       </div>
                     </div>
@@ -355,6 +362,7 @@ export default function AuthPage() {
                           value={formData.password}
                           onChange={(e) => setFormData({...formData, password: e.target.value})}
                           className="pl-12 h-12 bg-blue-50/50 border-blue-100 focus:border-primary focus:bg-blue-50 text-base"
+                          data-cy="register-password"
                         />
                       </div>
                     </div>
@@ -371,6 +379,7 @@ export default function AuthPage() {
                                 ? 'bg-primary text-primary-foreground shadow-lg transform scale-105' 
                                 : 'text-gray-600 hover:text-gray-800'
                             }`}
+                            data-cy="role-student"
                           >
                             Learn
                           </button>
@@ -382,6 +391,7 @@ export default function AuthPage() {
                                 ? 'bg-primary text-primary-foreground shadow-lg transform scale-105' 
                                 : 'text-gray-600 hover:text-gray-800'
                             }`}
+                            data-cy="role-tutor"
                           >
                             Teach
                           </button>
@@ -393,6 +403,7 @@ export default function AuthPage() {
                       onClick={() => handleSubmit('register')} 
                       className="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-semibold h-12 text-base rounded-lg group"
                       disabled={isLoading}
+                      data-cy="register-submit"
                     >
                       {isLoading ? 'Creating account...' : (
                         <>

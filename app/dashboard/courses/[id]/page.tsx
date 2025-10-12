@@ -182,7 +182,7 @@ export default function CoursePage() {
     }
   }, [params.id])
 
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
   const [isJoiningMeeting, setIsJoiningMeeting] = useState(false)
   const [moduleDetails, setModuleDetails] = useState<LocalModule | null>(null)
   const [enrollment, setEnrollment] = useState<EnrollmentDetails | null>(null)
@@ -1251,7 +1251,7 @@ export default function CoursePage() {
                       <h3 className="font-bold text-lg text-gray-900">{course.title}</h3>
                       <p className="text-sm text-gray-600 mt-1">{course.domain}</p>
                       <p className="text-3xl font-bold text-[#FBBF24] mt-4">
-                        ${course.fee} <span className="text-sm text-gray-500">USD</span>
+                        Rs. {course.fee} <span className="text-sm text-gray-500">LKR</span>
                       </p>
                     </div>
                     <Button 
@@ -1343,6 +1343,14 @@ export default function CoursePage() {
                       <Calendar className="w-4 h-4" />
                       <span>Schedule Meeting</span>
                     </Button>
+                    <Button 
+                      onClick={handleOpenDescriptionDialog}
+                      variant="outline"
+                      className="flex items-center space-x-2 border-gray-300 hover:bg-yellow-50"
+                    >
+                      <FileText className="w-4 h-4" />
+                      <span>{descriptionExists ? 'Edit Description' : 'Add Description'}</span>
+                    </Button>
                   </>
                 )}
                 
@@ -1394,12 +1402,8 @@ export default function CoursePage() {
                           {course.domain}
                         </Badge>
                       </div>
-                      <div className="flex items-center space-x-2 bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full">
-                        <Clock className="w-5 h-5" />
-                        <span>{course.duration}</span>
-                      </div>
                       <div className="flex items-center space-x-2 bg-[#FBBF24]/90 backdrop-blur-sm px-4 py-1 rounded-full">
-                        <span className="text-lg font-bold text-black">${course.fee}</span>
+                        <span className="text-lg font-bold text-black">Rs. {course.fee}</span>
                       </div>
                     </div>
                   </div>
@@ -1441,10 +1445,7 @@ export default function CoursePage() {
                       <h4 className="font-semibold text-sm text-gray-500 uppercase tracking-wide">Domain</h4>
                       <p className="font-bold text-gray-900">{course.domain}</p>
                     </div>
-                    <div className="space-y-2">
-                      <h4 className="font-semibold text-sm text-gray-500 uppercase tracking-wide">Duration</h4>
-                      <p className="font-bold text-gray-900">{course.duration}</p>
-                    </div>
+                    
                   </div>
                 </CardContent>
               </Card>
@@ -1782,9 +1783,9 @@ export default function CoursePage() {
           <div className="mt-auto pt-4 border-t border-black/20">
             <p className="text-xs text-black/70 mb-1 uppercase tracking-wide">Total Amount</p>
             <p className="text-4xl font-bold text-black">
-              ${course?.fee}
+              Rs. {course?.fee}
             </p>
-            <p className="text-sm text-black/70 mt-1">USD</p>
+            <p className="text-sm text-black/70 mt-1">LKR</p>
           </div>
         </div>
       </div>

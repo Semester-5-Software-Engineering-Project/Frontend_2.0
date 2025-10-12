@@ -19,9 +19,10 @@ import {
   Loader2
 } from 'lucide-react'
 import Link from 'next/link'
-import { getModulesForTutor, upcomingSchedulesByTutor } from '@/services/api'
+import { getModulesForTutor, getTotalRevenueForTutor, upcomingSchedulesByTutor } from '@/services/api'
 import { UpcomingSessionResponse, UpcomingSessionsRequest } from '@/types/api'
 import { getCurrentDateTime } from '@/utils/dateUtils'
+import axiosInstance from '@/app/utils/axiosInstance'
 
 interface ApiModule {
   moduleId: string
@@ -52,6 +53,8 @@ export default function TutorDashboard() {
   const [upcomingSessions, setUpcomingSessions] = useState<UpcomingSessionResponse[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [sessionsError, setSessionsError] = useState<string | null>(null);
+  const [totalRevenue, setTotalRevenue] = useState<number>(0);
+  const [revenueLoading, setRevenueLoading] = useState(true);
 
   const [showAllSchedules, setShowAllSchedules] = useState(false);
   useEffect(() => {
@@ -97,6 +100,24 @@ export default function TutorDashboard() {
     fetchUpcomingSessions();
   }, []);
 
+  // Fetch total revenue
+  useEffect(() => {
+    const fetchTotalRevenue = async () => {
+      try {
+        setRevenueLoading(true);
+        const response = await getTotalRevenueForTutor();
+        setTotalRevenue(Number(response) || 0);
+        console.log('Total revenue fetched:', response);
+      } catch (error) {
+        console.error('Error fetching total revenue:', error);
+        setTotalRevenue(0);
+      } finally {
+        setRevenueLoading(false);
+      }
+    };
+    fetchTotalRevenue();
+  }, []);
+
   // upcomingSessions now comes from API
   
   const recentReviews = [
@@ -119,20 +140,20 @@ export default function TutorDashboard() {
   ]
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6" data-cy="tutor-dashboard">
       {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-[#1F2937] to-[#111827] rounded-2xl p-8 text-white shadow-lg">
+      <div className="bg-gradient-to-r from-[#1F2937] to-[#111827] rounded-2xl p-8 text-white shadow-lg" data-cy="welcome-section">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold mb-2">👨‍🏫 Tutor Dashboard</h1>
-            <p className="text-gray-300 text-lg">Manage your courses, students, and teaching schedule.</p>
+            <h1 className="text-3xl font-bold mb-2" data-cy="dashboard-title">👨‍🏫 Tutor Dashboard</h1>
+            <p className="text-gray-300 text-lg" data-cy="dashboard-description">Manage your courses, students, and teaching schedule.</p>
           </div>
         </div>
       </div>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="border-none shadow-md hover:shadow-lg transition-shadow">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6" data-cy="stats-overview">
+        <Card className="border-none shadow-md hover:shadow-lg transition-shadow" data-cy="active-modules-card">
           <CardContent className="p-6">
             <div className="flex items-center space-x-4">
               <div className="w-14 h-14 bg-blue-50 rounded-xl flex items-center justify-center">
@@ -146,7 +167,7 @@ export default function TutorDashboard() {
                   </div>
                 ) : (
                   <>
-                    <p className="text-3xl font-bold text-gray-900">{modules.length}</p>
+                    <p className="text-3xl font-bold text-gray-900" data-cy="modules-count">{modules.length}</p>
                     <p className="text-sm text-gray-500 font-medium">Active Modules</p>
                   </>
                 )}
@@ -155,24 +176,24 @@ export default function TutorDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-md hover:shadow-lg transition-shadow">
+        <Card className="border-none shadow-md hover:shadow-lg transition-shadow" data-cy="total-earnings-card">
           <CardContent className="p-6">
             <div className="flex items-center space-x-4">
               <div className="w-14 h-14 bg-purple-50 rounded-xl flex items-center justify-center">
                 <DollarSign className="w-7 h-7 text-purple-600" />
               </div>
               <div>
-                {isLoading ? (
+                {revenueLoading ? (
                   <div className="animate-pulse">
                     <div className="h-8 bg-gray-200 rounded w-16 mb-1"></div>
                     <div className="h-4 bg-gray-200 rounded w-32"></div>
                   </div>
                 ) : (
                   <>
-                    <p className="text-3xl font-bold text-gray-900">
-                      ${modules.reduce((total, module) => total + module.fee, 0)}
+                    <p className="text-3xl font-bold text-gray-900" data-cy="total-revenue">
+                      Rs. {totalRevenue}
                     </p>
-                    <p className="text-sm text-gray-500 font-medium">Total Revenue</p>
+                    <p className="text-sm text-gray-500 font-medium">Total Earnings</p>
                   </>
                 )}
               </div>
@@ -180,7 +201,7 @@ export default function TutorDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-md hover:shadow-lg transition-shadow">
+        <Card className="border-none shadow-md hover:shadow-lg transition-shadow" data-cy="avg-rating-card">
           <CardContent className="p-6">
             <div className="flex items-center space-x-4">
               <div className="w-14 h-14 bg-orange-50 rounded-xl flex items-center justify-center">
@@ -194,7 +215,7 @@ export default function TutorDashboard() {
                   </div>
                 ) : (
                   <>
-                    <p className="text-3xl font-bold text-gray-900">
+                    <p className="text-3xl font-bold text-gray-900" data-cy="average-rating">
                       {modules.length > 0 
                         ? (modules.reduce((total, module) => total + module.averageRatings, 0) / modules.length).toFixed(1)
                         : '-'
@@ -212,20 +233,20 @@ export default function TutorDashboard() {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* My Modules */}
         <div className="xl:col-span-2">
-          <Card className="border-none shadow-md">
+          <Card className="border-none shadow-md" data-cy="my-modules-card">
             <CardHeader className="flex flex-row items-center justify-between border-b bg-gray-50">
               <div>
                 <CardTitle className="text-xl text-gray-900">My Modules</CardTitle>
                 <CardDescription className="text-gray-600">Manage your teaching content and materials</CardDescription>
               </div>
               <Link href="/dashboard/upload">
-                <Button size="sm" className="bg-[#FBBF24] hover:bg-[#F59E0B] text-black font-semibold">
+                <Button size="sm" className="bg-[#FBBF24] hover:bg-[#F59E0B] text-black font-semibold" data-cy="upload-materials-btn">
                   <Upload className="w-4 h-4 mr-2" />
                   Upload Materials
                 </Button>
               </Link>
             </CardHeader>
-            <CardContent className="space-y-4 p-6">
+            <CardContent className="space-y-4 p-6" data-cy="modules-content">
               {isLoading ? (
                 // Loading skeleton
                 <div className="space-y-4">
@@ -309,7 +330,7 @@ export default function TutorDashboard() {
                         </div>
                         <div className="flex items-center justify-between mt-4">
                           <span className="text-sm font-bold text-[#FBBF24]">
-                            ${module.fee} fee
+                            Rs. {module.fee} fee
                           </span>
                           <Link href={`/dashboard/courses/${module.moduleId}`}>
                             <Button size="sm" variant="outline" className="border-gray-300 hover:bg-gray-50">
