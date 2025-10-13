@@ -22,9 +22,11 @@ import {
   Wallet
 } from 'lucide-react'
 import Link from 'next/link'
+
 import { usePathname } from 'next/navigation'
 import StudentProfileApi from '@/apis/StudentProfileApi'
 import { TutorProfileApi } from '@/apis/TutorProfile'
+import { studentCommunityNavItem } from '../StudentCommunity/communityNavItem'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth()
@@ -37,7 +39,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { name: 'Dashboard', href: '/dashboard', icon: Home },
     { name: 'My Courses', href: '/dashboard/courses', icon: BookOpen },
     { name: 'Find New', href: '/dashboard/findnew', icon: Search },
-    // Students can see module/courses but not create or manage schedules
+    studentCommunityNavItem,
     { name: 'Video Sessions', href: '/dashboard/sessions', icon: Video },
     { name: 'Payments', href: '/dashboard/payments', icon: CreditCard },
     { name: 'Ask AI', href: '/dashboard/ask-ai', icon: Bot },
