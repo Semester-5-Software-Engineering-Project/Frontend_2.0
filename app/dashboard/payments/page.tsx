@@ -130,7 +130,7 @@ export default function Payments() {
                   <DollarSign className="w-7 h-7 text-[#FBBF24]" />
                 </div>
                 <div>
-                  <p className="text-3xl font-bold text-gray-900">${totalSpent}</p>
+                  <p className="text-3xl font-bold text-gray-900">Rs. {totalSpent}</p>
                   <p className="text-sm text-gray-500 font-medium">
                     {user?.role === 'STUDENT' ? 'Total Spent' : 'Total Earned'}
                   </p>
@@ -146,7 +146,7 @@ export default function Payments() {
                   <Calendar className="w-7 h-7 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-3xl font-bold text-gray-900">${user?.role === 'STUDENT' ? '180' : '450'}</p>
+                  <p className="text-3xl font-bold text-gray-900">Rs. {user?.role === 'STUDENT' ? '180' : '450'}</p>
                   <p className="text-sm text-gray-500 font-medium">This Month</p>
                 </div>
               </div>
@@ -234,7 +234,7 @@ export default function Payments() {
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-lg font-bold text-gray-900">${transaction.amount}</p>
+                          <p className="text-lg font-bold text-gray-900">Rs. {transaction.amount}</p>
                           <Button 
                             size="sm" 
                             className="mt-2 bg-[#FBBF24] hover:bg-[#F59E0B] text-black font-semibold shadow-md"
@@ -313,18 +313,18 @@ export default function Payments() {
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-600 font-medium">Completed Payments</span>
                   <span className="font-bold text-[#FBBF24]">
-                    ${transactions.filter(t => t.status === 'completed').reduce((sum, t) => sum + t.amount, 0)}
+                    Rs. {transactions.filter(t => t.status === 'completed').reduce((sum, t) => sum + t.amount, 0)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-600 font-medium">Pending Payments</span>
                   <span className="font-bold text-yellow-600">
-                    ${transactions.filter(t => t.status === 'pending').reduce((sum, t) => sum + t.amount, 0)}
+                    Rs. {transactions.filter(t => t.status === 'pending').reduce((sum, t) => sum + t.amount, 0)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-sm pt-2 border-t border-gray-200">
                   <span className="font-semibold text-gray-900">Total</span>
-                  <span className="font-bold text-gray-900">${transactions.reduce((sum, t) => sum + t.amount, 0)}</span>
+                  <span className="font-bold text-gray-900">Rs. {transactions.reduce((sum, t) => sum + t.amount, 0)}</span>
                 </div>
               </CardContent>
             </Card>
