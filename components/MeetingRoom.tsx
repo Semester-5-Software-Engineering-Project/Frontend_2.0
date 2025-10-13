@@ -121,7 +121,7 @@ export const MeetingRoom = ({ username, roomName, courseName, role, email, passw
         };
 
         // Try custom domain first
-        tryLoadScript('https://jitsi.shancloudservice.com/external_api.js', 'jitsi.shancloudservice.com')
+        tryLoadScript('https://jit.shancloudservice.com/external_api.js', 'jit.shancloudservice.com')
           .then(resolve)
           .catch((error) => {
             toast({
@@ -149,7 +149,7 @@ export const MeetingRoom = ({ username, roomName, courseName, role, email, passw
         setError(null);
         
         // Try to load Jitsi script
-        let jitsiDomain = 'jitsi.shancloudservice.com'; // default
+        let jitsiDomain = 'jit.shancloudservice.com'; // default
         try {
           const scriptResult = await loadJitsiScript() as any;
           if (scriptResult && scriptResult.domain) {
@@ -178,7 +178,7 @@ export const MeetingRoom = ({ username, roomName, courseName, role, email, passw
 
         // Get JWT token from API (only required for custom domain)
         let jwt: string | undefined;
-        if (jitsiDomain === 'jitsi.shancloudservice.com') {
+        if (jitsiDomain === 'jit.shancloudservice.com') {
           try {
             jwt = await getJWTToken();
             
