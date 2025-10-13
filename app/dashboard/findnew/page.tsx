@@ -149,7 +149,7 @@ export default function FindNewModulesPage() {
 
   // Format fee to currency
   const formatFee = (fee: number) => {
-    return `$${fee.toFixed(2)}`
+    return `Rs. ${fee.toFixed(2)}`
   }
 
   // Handle view course
@@ -385,7 +385,7 @@ export default function FindNewModulesPage() {
                       <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
                       <span className="text-sm text-gray-700">{module.averageRatings?.toFixed(1) ?? 'N/A'}</span>
                     </div>
-                    <span className="text-lg font-bold text-[#FBBF24]">${module.fee}</span>
+                    <span className="text-lg font-bold text-[#FBBF24]">Rs. {module.fee}</span>
                   </div>
 
                   <div className="flex items-center text-gray-500 mb-4">
@@ -508,7 +508,7 @@ export default function FindNewModulesPage() {
                                 <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
                                 <span className="text-xs text-gray-700">{module.averageRatings?.toFixed(1) ?? 'N/A'}</span>
                               </div>
-                              <span className="text-sm font-bold text-[#FBBF24]">${module.fee}</span>
+                              <span className="text-sm font-bold text-[#FBBF24]">Rs. {module.fee}</span>
                             </div>
                             <div className="flex gap-1 w-full">
                               <Button
@@ -561,7 +561,7 @@ export default function FindNewModulesPage() {
                   </Badge>
                   <div className="flex items-center space-x-2">
                     <div className="w-2 h-2 bg-black/30 rounded-full"></div>
-                    <span className="text-lg font-bold">${descPrice}</span>
+                    <span className="text-lg font-bold">Rs. {descPrice}</span>
                   </div>
                   {descTutor && (
                     <>

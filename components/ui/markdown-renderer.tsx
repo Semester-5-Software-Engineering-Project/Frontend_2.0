@@ -89,7 +89,8 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
           ),
           
           // Code blocks
-          code: ({ node, inline, className, children, ...props }) => {
+          code: ({ node, className, children, ...props }: any) => {
+            const inline = !(props as any)?.inline
             const match = /language-(\w+)/.exec(className || '')
             return !inline && match ? (
               <pre className="bg-muted rounded-lg p-4 overflow-x-auto mb-3 border border-border">
