@@ -204,7 +204,7 @@ export const MeetingRoom = ({ username, roomName, courseName, role, email, passw
         }
 
         const options = {
-          roomName: courseName,
+          roomName: roomName,
           width: '100%',
           height: '100%',
           parentNode: jitsiContainerRef.current,
