@@ -735,11 +735,11 @@ export const MeetingRoom = ({ username, roomName, courseName, role, email, passw
         });
       });
 
-      mediaRecorder.addEventListener('error', (event) => {
-        console.error('MediaRecorder error:', event.error);
+      mediaRecorder.addEventListener('error', (event: any) => {
+        console.error('MediaRecorder error:', event?.error ?? event);
         toast({
           title: "Recording Error",
-          description: `Recording failed: ${event.error?.message || 'Unknown error'}`,
+          description: `Recording failed: ${event?.error?.message || event?.message || 'Unknown error'}`,
           variant: "destructive",
         });
         setIsRecording(false);
