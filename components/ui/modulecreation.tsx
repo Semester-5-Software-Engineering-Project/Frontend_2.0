@@ -239,7 +239,7 @@ export default function ModuleCreation({
                   <FormLabel className="text-base font-bold text-gray-800">Module Name *</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="e.g., Linear Algebra 101"
+                      placeholder="e.g., Linear Algebra"
                       {...field}
                       disabled={isLoading}
                       className="h-12 border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24] text-base"
@@ -299,7 +299,7 @@ export default function ModuleCreation({
             />
 
             {/* Fee and Duration Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
               {/* Fee */}
               <FormField
                 control={form.control}
@@ -310,12 +310,12 @@ export default function ModuleCreation({
                     <FormControl>
                       <Input
                         type="number"
-                        step="0.01"
-                        min="0.01"
-                        max="99999.99"
-                        placeholder="0.00"
+                        step="1"
+                        min="0"
+                        max="1000000"
+                        placeholder="Enter module fee"
                         {...field}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value) || null)}
                         disabled={isLoading}
                         className="h-12 border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24] text-base"
                       />
@@ -332,7 +332,7 @@ export default function ModuleCreation({
                 )}
               />
 
-              {/* Duration */}
+              {/* Duration
               <FormField
                 control={form.control}
                 name="duration"
@@ -370,7 +370,7 @@ export default function ModuleCreation({
                     <FormMessage />
                   </FormItem>
                 )}
-              />
+              /> */}
             </div>
 
             {/* Status */}
