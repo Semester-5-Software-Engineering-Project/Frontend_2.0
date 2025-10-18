@@ -2260,10 +2260,12 @@ export default function CoursePage() {
             </Button>
             <Button
               onClick={async () => {
-                if (!reportReason.trim() || !params.id) {
+                // Validate UUID format for moduleId
+                const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+                if (!reportReason.trim() || !params.id || !uuidRegex.test(String(params.id))) {
                   toast({
                     title: 'Error',
-                    description: 'Please provide a reason for your report.',
+                    description: 'Please provide a valid reason and valid module ID (UUID).',
                     variant: 'destructive',
                   });
                   return;

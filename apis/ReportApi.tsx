@@ -1,9 +1,9 @@
 import axiosInstance from "../app/utils/axiosInstance";
 
+
 export interface CreateReportDto {
   moduleId: string;
   reason: string;
-  reportedBy?: string; // Will be set by backend from token/session
 }
 
 export interface GetReportDto {
@@ -15,7 +15,12 @@ export interface GetReportDto {
   status: string;
 }
 
+
 export async function createReport(dto: CreateReportDto): Promise<GetReportDto> {
-  const response = await axiosInstance.post<GetReportDto>("/api/reports", dto);
+  // Only send moduleId and reason, backend sets reportedBy
+  const response = await axiosInstance.post<GetReportDto>("/api/reports", {
+    moduleId: dto.moduleId,
+    reason: dto.reason,
+  });
   return response.data;
 }
