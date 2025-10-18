@@ -170,20 +170,17 @@ export default function AuthPage() {
           {/* Logo */}
           <div className="text-center mb-8">
             <div className="flex items-center justify-center space-x-3 mb-3">
-              <div className="relative">
-                <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl flex items-center justify-center shadow-xl transform rotate-6">
-                  <BookOpen className="w-7 h-7 text-black transform -rotate-6" strokeWidth={2.5} />
-                </div>
-                <div className="absolute -top-1 -right-1 w-3 h-3 bg-black rounded-full"></div>
+              <div className="flex items-center justify-center mx-auto">
+                <img src="/logo.png" alt="TutorVerse Logo" className="object-contain" loading="lazy" />
               </div>
-              <div>
+              {/* <div>
                 <span className="text-3xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 bg-clip-text text-transparent">
                   Tutor
                 </span>
                 <span className="text-3xl font-bold text-black">
                   Verse
                 </span>
-              </div>
+              </div> */}
             </div>
             <p className="text-sm text-gray-600 font-medium">
               Your gateway to personalized learning
