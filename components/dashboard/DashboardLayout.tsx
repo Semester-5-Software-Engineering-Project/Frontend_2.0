@@ -37,8 +37,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { name: 'Dashboard', href: '/dashboard', icon: Home },
     { name: 'My Courses', href: '/dashboard/courses', icon: BookOpen },
     { name: 'Find New', href: '/dashboard/findnew', icon: Search },
-    // Students can see module/courses but not create or manage schedules
-    // { name: 'Payments', href: '/dashboard/payments', icon: CreditCard },
     { name: 'Ask AI', href: '/dashboard/ask-ai', icon: Bot },
     { name: 'Profile', href: '/dashboard/profile', icon: User },
   ]
