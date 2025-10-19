@@ -103,7 +103,7 @@ export default function CoursePage() {
         console.log("Schedules for module", params.id, ":", res);
         setSchedules(Array.isArray(res) ? res : [res]);
       } catch (err) {
-        setSchedulesError('Failed to load schedules.' + (err instanceof Error ? ` ${err.message}` : ''));
+        setSchedulesError('Failed to load schedules' + (err instanceof Error ? ` ${err.message}` : ''));
       } finally {
         setSchedulesLoading(false);
       }

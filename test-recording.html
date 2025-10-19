@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Screen Recording Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        #status {
+            margin: 20px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .success { background-color: #d4edda; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; border: 1px solid #f5c6cb; }
+        .info { background-color: #d1ecf1; border: 1px solid #bee5eb; }
+        video {
+            width: 100%;
+            max-width: 640px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Screen Recording Test</h1>
+    
+    <div>
+        <button id="startBtn">Start Recording</button>
+        <button id="stopBtn" disabled>Stop Recording</button>
+        <button id="testBtn">Test Browser Support</button>
+    </div>
+    
+    <div id="status"></div>
+    
+    <video id="preview" controls style="display: none;"></video>
+    
+    <div id="logs"></div>
+
+    <script>
+        let mediaRecorder;
+        let recordedChunks = [];
+        let stream;
+
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const testBtn = document.getElementById('testBtn');
+        const status = document.getElementById('status');
+        const preview = document.getElementById('preview');
+        const logs = document.getElementById('logs');
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logDiv = document.createElement('div');
+            logDiv.innerHTML = `[${timestamp}] ${message}`;
+            logDiv.style.margin = '5px 0';
+            logDiv.style.padding = '5px';
+            logDiv.style.backgroundColor = type === 'error' ? '#ffebee' : '#f5f5f5';
+            logs.appendChild(logDiv);
+            console.log(message);
+        }
+
+        function updateStatus(message, type = 'info') {
+            status.textContent = message;
+            status.className = type;
+            log(message, type);
+        }
+
+        testBtn.addEventListener('click', () => {
+            log('Testing browser support...');
+            
+            // Check basic support
+            if (!navigator.mediaDevices) {
+                updateStatus('MediaDevices API not supported', 'error');
+                return;
+            }
+            
+            if (!navigator.mediaDevices.getDisplayMedia) {
+                updateStatus('getDisplayMedia not supported', 'error');
+                return;
+            }
+            
+            if (!window.MediaRecorder) {
+                updateStatus('MediaRecorder not supported', 'error');
+                return;
+            }
+            
+            // Check MIME type support
+            const mimeTypes = [
+                'video/webm;codecs=vp9,opus',
+                'video/webm;codecs=vp8,opus',
+                'video/webm;codecs=h264,opus',
+                'video/webm',
+                'video/mp4;codecs=h264,aac',
+                'video/mp4'
+            ];
+            
+            const supportedTypes = mimeTypes.filter(type => MediaRecorder.isTypeSupported(type));
+            
+            if (supportedTypes.length > 0) {
+                updateStatus(`Browser support OK. Supported formats: ${supportedTypes.join(', ')}`, 'success');
+            } else {
+                updateStatus('No supported MIME types found', 'error');
+            }
+            
+            // Check if HTTPS
+            if (location.protocol === 'https:' || location.hostname === 'localhost') {
+                log('Secure context: OK');
+            } else {
+                log('Warning: Not in secure context (HTTPS/localhost)', 'error');
+            }
+        });
+
+        startBtn.addEventListener('click', async () => {
+            try {
+                log('Requesting screen capture...');
+                
+                // Simple request first
+                stream = await navigator.mediaDevices.getDisplayMedia({
+                    video: true,
+                    audio: true
+                });
+                
+                log('Screen capture granted');
+                
+                recordedChunks = [];
+                
+                // Find best supported MIME type
+                const mimeTypes = [
+                    'video/webm;codecs=vp9,opus',
+                    'video/webm;codecs=vp8,opus',
+                    'video/webm',
+                    'video/mp4'
+                ];
+                
+                let mimeType = '';
+                for (const type of mimeTypes) {
+                    if (MediaRecorder.isTypeSupported(type)) {
+                        mimeType = type;
+                        break;
+                    }
+                }
+                
+                log(`Using MIME type: ${mimeType}`);
+                
+                mediaRecorder = new MediaRecorder(stream, { mimeType });
+                
+                mediaRecorder.ondataavailable = (event) => {
+                    log(`Data available: ${event.data.size} bytes`);
+                    if (event.data.size > 0) {
+                        recordedChunks.push(event.data);
+                    }
+                };
+                
+                mediaRecorder.onstop = () => {
+                    log(`Recording stopped. Total chunks: ${recordedChunks.length}`);
+                    
+                    if (recordedChunks.length > 0) {
+                        const blob = new Blob(recordedChunks, { type: mimeType });
+                        log(`Created blob: ${blob.size} bytes`);
+                        
+                        const url = URL.createObjectURL(blob);
+                        preview.src = url;
+                        preview.style.display = 'block';
+                        
+                        // Also create download link
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `test-recording-${Date.now()}.webm`;
+                        a.textContent = 'Download Recording';
+                        a.style.display = 'block';
+                        a.style.margin = '10px 0';
+                        logs.appendChild(a);
+                        
+                        updateStatus('Recording completed successfully!', 'success');
+                    } else {
+                        updateStatus('No data recorded', 'error');
+                    }
+                };
+                
+                mediaRecorder.onerror = (event) => {
+                    log(`MediaRecorder error: ${event.error}`, 'error');
+                    updateStatus(`Recording error: ${event.error}`, 'error');
+                };
+                
+                mediaRecorder.start(100); // Collect data every 100ms
+                
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                
+                updateStatus('Recording started...', 'success');
+                
+                // Handle stream ending
+                stream.getVideoTracks()[0].onended = () => {
+                    log('Video track ended');
+                    stopRecording();
+                };
+                
+            } catch (error) {
+                log(`Error starting recording: ${error.name} - ${error.message}`, 'error');
+                updateStatus(`Failed to start recording: ${error.message}`, 'error');
+            }
+        });
+
+        stopBtn.addEventListener('click', stopRecording);
+
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                log('Stopping MediaRecorder...');
+                mediaRecorder.stop();
+            }
+            
+            if (stream) {
+                log('Stopping stream tracks...');
+                stream.getTracks().forEach(track => track.stop());
+            }
+            
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            
+            updateStatus('Recording stopped', 'info');
+        }
+
+        // Initialize
+        updateStatus('Ready to test screen recording');
+        log('Screen Recording Test initialized');
+    </script>
+</body>
+</html>

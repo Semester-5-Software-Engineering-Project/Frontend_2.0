@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { useAuth, userType } from '@/contexts/AuthContext'
 import { MeetingRoom } from '../../components/MeetingRoom'
 import { getCurrentDateTime } from '@/utils/dateUtils'
+import { set } from 'date-fns'
 
 export default function MeetingPage() {
   const { user } = useAuth()
@@ -17,6 +18,7 @@ export default function MeetingPage() {
   const [activeRoom, setActiveRoom] = useState<string | null>(null)
   const [showMeetingRoom, setShowMeetingRoom] = useState(false)
   const [meetingData, setMeetingData] = useState<{roomId: string, token: string, moduleId: string} | null>(null)
+  const [courseName, setCourseName] = useState<string | null>(null)
 
   useEffect(() => {
     // If moduleId is present in query, call joinMeeting API
@@ -37,6 +39,7 @@ export default function MeetingPage() {
             setMeetingData({ roomId: response.roomId, token: response.token, moduleId });
             setActiveRoom(response.roomId);
             setShowMeetingRoom(true);
+            setCourseName(response.courseName || null);
           } else {
             alert('Failed to join meeting: ' + (response.message || 'Unknown error'));
           }
@@ -90,6 +93,7 @@ export default function MeetingPage() {
         email={user.email || undefined}
         jwtToken={meetingData?.token}
         onLeave={handleLeave}
+        courseName={courseName || ''}
       />
     )
   }

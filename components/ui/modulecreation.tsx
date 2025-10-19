@@ -48,10 +48,6 @@ const moduleSchema = z.object({
     .positive('Fee must be a positive number')
     .min(0.01, 'Fee must be at least Rs. 0.01')
     .max(99999.99, 'Fee must be less than Rs. 100,000'),
-  duration: z.number()
-    .positive('Duration must be a positive number')
-    .min(15, 'Duration must be at least 15 minutes')
-    .max(2400, 'Duration must be less than 40 hours (2400 minutes)'),
   status: z.enum(['Active', 'Inactive', 'Draft'], {
     required_error: 'Status is required',
   }),
@@ -107,7 +103,6 @@ export default function ModuleCreation({
       name: initialData?.name || '',
       domain: initialData?.domain || '',
       fee: initialData?.fee || 0,
-      duration: initialData?.duration || 60,
       status: initialData?.status || 'Active',
     },
   });
@@ -125,7 +120,7 @@ export default function ModuleCreation({
         name: data.name,
         domain: data.domain, // This will be the domain name
         fee: data.fee,
-        duration: data.duration, // Send numeric value (minutes)
+        duration: 60, // Send numeric value (minutes)
         status: data.status,
       };
 
@@ -142,7 +137,6 @@ export default function ModuleCreation({
       toast({
         title: '🎉 Success!',
         description: `Module "${data.name}" has been created successfully.`,
-        duration: 5000,
       });
 
       // Call onSuccess callback if provided
@@ -239,7 +233,7 @@ export default function ModuleCreation({
                   <FormLabel className="text-base font-bold text-gray-800">Module Name *</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="e.g., Linear Algebra 101"
+                      placeholder="e.g., Linear Algebra"
                       {...field}
                       disabled={isLoading}
                       className="h-12 border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24] text-base"
@@ -299,7 +293,7 @@ export default function ModuleCreation({
             />
 
             {/* Fee and Duration Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
               {/* Fee */}
               <FormField
                 control={form.control}
@@ -310,12 +304,12 @@ export default function ModuleCreation({
                     <FormControl>
                       <Input
                         type="number"
-                        step="0.01"
-                        min="0.01"
-                        max="99999.99"
-                        placeholder="0.00"
+                        step="1"
+                        min="0"
+                        max="1000000"
+                        placeholder="Enter module fee"
                         {...field}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value) || null)}
                         disabled={isLoading}
                         className="h-12 border-gray-300 focus:border-[#FBBF24] focus:ring-[#FBBF24] text-base"
                       />
@@ -332,7 +326,7 @@ export default function ModuleCreation({
                 )}
               />
 
-              {/* Duration */}
+              {/* Duration
               <FormField
                 control={form.control}
                 name="duration"
@@ -370,7 +364,7 @@ export default function ModuleCreation({
                     <FormMessage />
                   </FormItem>
                 )}
-              />
+              /> */}
             </div>
 
             {/* Status */}
@@ -431,7 +425,6 @@ export default function ModuleCreation({
                       name: '',
                       domain: '',
                       fee: 0,
-                      duration: 60,
                       status: 'Draft',
                     });
                   }}
@@ -499,12 +492,12 @@ export default function ModuleCreation({
                   <span className="text-[#FBBF24] font-bold text-base">{formatCurrency(form.watch('fee'))}</span>
                 </p>
               )}
-              {form.watch('duration') && (
+              {/* {form.watch('duration') && (
                 <p className="flex justify-between">
                   <span className="font-bold text-gray-700">Duration:</span> 
                   <span className="text-blue-600 font-semibold">{form.watch('duration')} minutes ({Math.floor(form.watch('duration') / 60)}h {form.watch('duration') % 60}m)</span>
                 </p>
-              )}
+              )} */}
               <p className="flex justify-between items-center">
                 <span className="font-bold text-gray-700">Status:</span> 
                 <span className={`font-bold px-3 py-1 rounded-full text-xs ${
@@ -559,10 +552,10 @@ export default function ModuleCreation({
                   <span className="font-bold text-gray-700">Fee:</span>
                   <span className="text-[#FBBF24] font-bold text-base">{formatCurrency(createdModule.fee)}</span>
                 </div>
-                <div className="flex justify-between items-center">
+                {/* <div className="flex justify-between items-center">
                   <span className="font-bold text-gray-700">Duration:</span>
                   <span className="text-blue-600 font-semibold">{createdModule.duration} min ({Math.floor(createdModule.duration / 60)}h {createdModule.duration % 60}m)</span>
-                </div>
+                </div> */}
                 <div className="flex justify-between items-center">
                   <span className="font-bold text-gray-700">Status:</span>
                   <span className={`font-bold px-3 py-1 rounded-full text-xs ${
@@ -594,7 +587,6 @@ export default function ModuleCreation({
                   name: '',
                   domain: '',
                   fee: 0,
-                  duration: 60,
                   status: 'Draft',
                 });
               }}
