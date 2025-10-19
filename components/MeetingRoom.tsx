@@ -120,8 +120,12 @@ export const MeetingRoom = ({ username, roomName, courseName, role, email, passw
           });
         };
 
+        // Get domains from environment variables
+        const customDomain = process.env.NEXT_PUBLIC_JITSI_DOMAIN || 'jit.shancloudservice.com';
+        const fallbackDomain = process.env.NEXT_PUBLIC_JITSI_FALLBACK_DOMAIN || 'meet.jit.si';
+        
         // Try custom domain first
-        tryLoadScript('https://jit.shancloudservice.com/external_api.js', 'jit.shancloudservice.com')
+        tryLoadScript(`https://${customDomain}/external_api.js`, customDomain)
           .then(resolve)
           .catch((error) => {
             toast({
@@ -131,7 +135,7 @@ export const MeetingRoom = ({ username, roomName, courseName, role, email, passw
             });
             
             // Fallback to public Jitsi
-            tryLoadScript('https://meet.jit.si/external_api.js', 'meet.jit.si')
+            tryLoadScript(`https://${fallbackDomain}/external_api.js`, fallbackDomain)
               .then(resolve)
               .catch(reject);
           });
@@ -148,8 +152,11 @@ export const MeetingRoom = ({ username, roomName, courseName, role, email, passw
         setIsLoading(true);
         setError(null);
         
+        // Get default domain from environment variable
+        const customDomain = process.env.NEXT_PUBLIC_JITSI_DOMAIN || 'jit.shancloudservice.com';
+        
         // Try to load Jitsi script
-        let jitsiDomain = 'jit.shancloudservice.com'; // default
+        let jitsiDomain = customDomain; // default
         try {
           const scriptResult = await loadJitsiScript() as any;
           if (scriptResult && scriptResult.domain) {
@@ -177,8 +184,9 @@ export const MeetingRoom = ({ username, roomName, courseName, role, email, passw
         }
 
         // Get JWT token from API (only required for custom domain)
+        const fallbackDomain = process.env.NEXT_PUBLIC_JITSI_FALLBACK_DOMAIN || 'meet.jit.si';
         let jwt: string | undefined;
-        if (jitsiDomain === 'jit.shancloudservice.com') {
+        if (jitsiDomain === customDomain) {
           try {
             jwt = await getJWTToken();
             
@@ -188,7 +196,7 @@ export const MeetingRoom = ({ username, roomName, courseName, role, email, passw
             });
           } catch (jwtError: any) {
             // If JWT fails for custom domain, fall back to public Jitsi
-            jitsiDomain = 'meet.jit.si';
+            jitsiDomain = fallbackDomain;
             
             toast({
               title: "Using Public Server",
