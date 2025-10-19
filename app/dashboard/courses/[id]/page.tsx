@@ -49,6 +49,8 @@ import RatingApi, { RatingGetDto } from '@/apis/RatingApi'
 import axiosInstance from '@/app/utils/axiosInstance'
 import ModuleDescriptionApi, { ModuleDescriptionDto } from '@/apis/ModuleDescriptionApi'
 
+import { createReport } from '@/apis/ReportApi'
+
 // TypeScript interfaces for module data
 interface LocalModule extends ApiModule {
   moduleId: string; // Make it required
@@ -197,6 +199,10 @@ export default function CoursePage() {
   const [showPaymentDialog, setShowPaymentDialog] = useState(false)
   const [isProcessingPayment, setIsProcessingPayment] = useState(false)
   const [editableProfile, setEditableProfile] = useState<UserProfile | null>(null)
+  // Report Module state
+  const [showReportDialog, setShowReportDialog] = useState(false)
+  const [reportReason, setReportReason] = useState('')
+  const [isReporting, setIsReporting] = useState(false)
   
   // Module Description state
   const [showDescriptionDialog, setShowDescriptionDialog] = useState(false)
@@ -1355,14 +1361,24 @@ export default function CoursePage() {
                 )}
                 
                 {user?.role === 'STUDENT' && (
-                  <Button 
-                    onClick={() => setIsRatingModalOpen(true)}
-                    variant="outline"
-                    className="flex items-center space-x-2 border-[#FBBF24] text-gray-700 hover:bg-yellow-50"
-                  >
-                    <Star className="w-4 h-4 text-[#FBBF24]" />
-                    <span>Rate Module</span>
-                  </Button>
+                  <>
+                    <Button 
+                      onClick={() => setIsRatingModalOpen(true)}
+                      variant="outline"
+                      className="flex items-center space-x-2 border-[#FBBF24] text-gray-700 hover:bg-yellow-50"
+                    >
+                      <Star className="w-4 h-4 text-[#FBBF24]" />
+                      <span>Rate Module</span>
+                    </Button>
+                    <Button
+                      onClick={() => setShowReportDialog(true)}
+                      variant="outline"
+                      className="flex items-center space-x-2 border-red-300 text-red-600 hover:bg-red-50"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span>Report Module</span>
+                    </Button>
+                  </>
                 )}
                 
                 <Button 
@@ -2212,6 +2228,79 @@ export default function CoursePage() {
         moduleTitle={moduleDetails?.name || 'Module'}
         onSubmitRating={handleRatingSubmission}
       />
+
+      {/* Report Module Dialog */}
+      <Dialog open={showReportDialog} onOpenChange={setShowReportDialog}>
+        <DialogContent className="sm:max-w-lg border-none shadow-2xl">
+          <DialogHeader className="pb-4">
+            <DialogTitle className="text-2xl font-bold text-gray-900">Report Module</DialogTitle>
+            <DialogDescription className="text-gray-600">
+              Please describe the reason for reporting this module. Your report will be reviewed by our team.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Label htmlFor="report-reason" className="text-sm font-semibold text-gray-700">Reason *</Label>
+            <Textarea
+              id="report-reason"
+              value={reportReason}
+              onChange={e => setReportReason(e.target.value)}
+              placeholder="Describe the issue with this module..."
+              className="min-h-[100px] border-gray-300 focus:border-red-400 focus:ring-red-400"
+              rows={4}
+            />
+          </div>
+          <div className="flex gap-4 pt-4 border-t border-gray-200">
+            <Button
+              onClick={() => setShowReportDialog(false)}
+              variant="outline"
+              disabled={isReporting}
+              className="flex-1 h-12 font-semibold border-gray-300 hover:bg-gray-100"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                // Validate UUID format for moduleId
+                const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+                if (!reportReason.trim() || !params.id || !uuidRegex.test(String(params.id))) {
+                  toast({
+                    title: 'Error',
+                    description: 'Please provide a valid reason and valid module ID (UUID).',
+                    variant: 'destructive',
+                  });
+                  return;
+                }
+                setIsReporting(true);
+                try {
+                  await createReport({
+                    moduleId: String(params.id),
+                    reason: reportReason.trim(),
+                  });
+                  toast({
+                    title: 'Report Submitted',
+                    description: 'Thank you for reporting. We will review your report shortly.',
+                    variant: 'default',
+                  });
+                  setShowReportDialog(false);
+                  setReportReason('');
+                } catch (error: any) {
+                  toast({
+                    title: 'Error',
+                    description: error?.message || 'Failed to submit report. Please try again.',
+                    variant: 'destructive',
+                  });
+                } finally {
+                  setIsReporting(false);
+                }
+              }}
+              disabled={isReporting || !reportReason.trim()}
+              className="flex-1 h-12 bg-red-500 hover:bg-red-600 text-white font-bold text-base"
+            >
+              {isReporting ? 'Reporting...' : 'Submit Report'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   )
 }
