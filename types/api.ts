@@ -442,6 +442,7 @@ export interface JoinMeetingResponse {
   message: string;
   meetingUrl?: string;
   meeting?: Meeting;
+  courseName?: string;
 }
 
 export interface CreateMeetingRequest {
