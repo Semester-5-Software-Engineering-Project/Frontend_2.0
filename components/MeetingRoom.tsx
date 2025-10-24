@@ -120,8 +120,12 @@ export const MeetingRoom = ({ username, roomName, courseName, role, email, passw
           });
         };
 
+        // Get domains from environment variables
+        const customDomain = process.env.NEXT_PUBLIC_JITSI_DOMAIN || 'jit.shancloudservice.com';
+        const fallbackDomain = process.env.NEXT_PUBLIC_JITSI_FALLBACK_DOMAIN || 'meet.jit.si';
+        
         // Try custom domain first
-        tryLoadScript('https://jit.shancloudservice.com/external_api.js', 'jit.shancloudservice.com')
+        tryLoadScript(`https://${customDomain}/external_api.js`, customDomain)
           .then(resolve)
           .catch((error) => {
             toast({
@@ -131,7 +135,7 @@ export const MeetingRoom = ({ username, roomName, courseName, role, email, passw
             });
             
             // Fallback to public Jitsi
-            tryLoadScript('https://meet.jit.si/external_api.js', 'meet.jit.si')
+            tryLoadScript(`https://${fallbackDomain}/external_api.js`, fallbackDomain)
               .then(resolve)
               .catch(reject);
           });
@@ -148,8 +152,11 @@ export const MeetingRoom = ({ username, roomName, courseName, role, email, passw
         setIsLoading(true);
         setError(null);
         
+        // Get default domain from environment variable
+        const customDomain = process.env.NEXT_PUBLIC_JITSI_DOMAIN || 'jit.shancloudservice.com';
+        
         // Try to load Jitsi script
-        let jitsiDomain = 'jit.shancloudservice.com'; // default
+        let jitsiDomain = customDomain; // default
         try {
           const scriptResult = await loadJitsiScript() as any;
           if (scriptResult && scriptResult.domain) {
@@ -177,8 +184,9 @@ export const MeetingRoom = ({ username, roomName, courseName, role, email, passw
         }
 
         // Get JWT token from API (only required for custom domain)
+        const fallbackDomain = process.env.NEXT_PUBLIC_JITSI_FALLBACK_DOMAIN || 'meet.jit.si';
         let jwt: string | undefined;
-        if (jitsiDomain === 'jit.shancloudservice.com') {
+        if (jitsiDomain === customDomain) {
           try {
             jwt = await getJWTToken();
             
@@ -188,7 +196,7 @@ export const MeetingRoom = ({ username, roomName, courseName, role, email, passw
             });
           } catch (jwtError: any) {
             // If JWT fails for custom domain, fall back to public Jitsi
-            jitsiDomain = 'meet.jit.si';
+            jitsiDomain = fallbackDomain;
             
             toast({
               title: "Using Public Server",
@@ -204,7 +212,7 @@ export const MeetingRoom = ({ username, roomName, courseName, role, email, passw
         }
 
         const options = {
-          roomName: courseName,
+          roomName: roomName,
           width: '100%',
           height: '100%',
           parentNode: jitsiContainerRef.current,
@@ -592,48 +600,170 @@ export const MeetingRoom = ({ username, roomName, courseName, role, email, passw
   // Recording functions (local screen recording)
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: true,
-        audio: true,
-      });
+      // Check if browser supports screen recording
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+        toast({
+          title: "Recording Not Supported",
+          description: "Your browser doesn't support screen recording",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Check if we're on HTTPS (required for screen capture)
+      if (window.location.protocol !== 'https:' && 
+          window.location.hostname !== 'localhost' && 
+          window.location.hostname !== '127.0.0.1') {
+        toast({
+          title: "HTTPS Required",
+          description: "Screen recording requires HTTPS or localhost",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Get display media stream with fallback options
+      let stream;
+      try {
+        // Try with audio first (simplest approach)
+        stream = await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+          audio: true
+        });
+      } catch (audioError) {
+        console.warn('Failed to get audio, trying video only:', audioError);
+        try {
+          // Fallback to video only if audio fails
+          stream = await navigator.mediaDevices.getDisplayMedia({
+            video: true,
+            audio: false
+          });
+          
+          toast({
+            title: "Recording Started (Video Only)",
+            description: "Audio recording failed, capturing video only",
+            variant: "default",
+          });
+        } catch (videoError) {
+          console.error('Failed to get video stream:', videoError);
+          // Try with more detailed constraints as last resort
+          stream = await navigator.mediaDevices.getDisplayMedia({
+            video: {
+              width: { ideal: 1920 },
+              height: { ideal: 1080 },
+              frameRate: { ideal: 30 }
+            },
+            audio: false
+          });
+        }
+      }
 
       // Reset recorded chunks
       recordedChunksRef.current = [];
 
+      // Try different MIME types for better browser compatibility
+      let mimeType = '';
+      const supportedTypes = [
+        'video/webm;codecs=vp9,opus',
+        'video/webm;codecs=vp8,opus',
+        'video/webm;codecs=h264,opus',
+        'video/webm',
+        'video/mp4;codecs=h264,aac',
+        'video/mp4'
+      ];
+
+      for (const type of supportedTypes) {
+        if (MediaRecorder.isTypeSupported(type)) {
+          mimeType = type;
+          break;
+        }
+      }
+
+      if (!mimeType) {
+        throw new Error('No supported recording format found');
+      }
+
+      console.log('Using MIME type:', mimeType);
+
       const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'video/webm;codecs=vp9,opus',
+        mimeType: mimeType,
+        videoBitsPerSecond: 2500000, // 2.5 Mbps for good quality
+        audioBitsPerSecond: 128000   // 128 kbps for audio
       });
 
       mediaRecorderRef.current = mediaRecorder;
 
       mediaRecorder.addEventListener('dataavailable', (event) => {
+        console.log('Data available:', event.data.size, 'bytes');
         if (event.data.size > 0) {
           recordedChunksRef.current.push(event.data);
         }
       });
 
       mediaRecorder.addEventListener('stop', () => {
+        console.log('Recording stopped, total chunks:', recordedChunksRef.current.length);
+        
+        if (recordedChunksRef.current.length === 0) {
+          toast({
+            title: "Recording Error",
+            description: "No data was recorded",
+            variant: "destructive",
+          });
+          return;
+        }
+
         const blob = new Blob(recordedChunksRef.current, {
-          type: 'video/webm',
+          type: mimeType
         });
 
-        // Create download link
+        console.log('Created blob:', blob.size, 'bytes, type:', blob.type);
+
+        // Create download link with better filename
         const url = URL.createObjectURL(blob);
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+        const extension = mimeType.includes('mp4') ? 'mp4' : 'webm';
+        const filename = `${courseName.replace(/[^a-zA-Z0-9]/g, '_')}-${timestamp}.${extension}`;
+        
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${courseName}-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.webm`;
+        a.download = filename;
+        a.style.display = 'none';
         document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        
+        // Add a small delay to ensure the link is ready
+        setTimeout(() => {
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }, 100);
 
         toast({
           title: "Recording Saved",
-          description: "Meeting recording has been downloaded to your computer",
+          description: `Recording downloaded as ${filename}`,
         });
       });
 
-      mediaRecorder.start(1000); // Collect data every second
+      mediaRecorder.addEventListener('error', (event: any) => {
+        console.error('MediaRecorder error:', event?.error ?? event);
+        toast({
+          title: "Recording Error",
+          description: `Recording failed: ${event?.error?.message || event?.message || 'Unknown error'}`,
+          variant: "destructive",
+        });
+        setIsRecording(false);
+        setRecordingTime(0);
+      });
+
+      mediaRecorder.addEventListener('start', () => {
+        console.log('Recording started');
+        toast({
+          title: "Recording Started",
+          description: "Screen recording has begun",
+        });
+      });
+
+      // Start recording with shorter intervals for more frequent data collection
+      mediaRecorder.start(100); // Collect data every 100ms for smoother recording
       setIsRecording(true);
       setRecordingTime(0);
 
@@ -642,42 +772,106 @@ export const MeetingRoom = ({ username, roomName, courseName, role, email, passw
         setRecordingTime((prev) => prev + 1);
       }, 1000);
 
-      toast({
-        title: "Recording Started",
-        description: "Meeting recording has begun",
+      // Handle all stream tracks ending (user stops screen sharing)
+      stream.getTracks().forEach(track => {
+        track.addEventListener('ended', () => {
+          console.log(`${track.kind} track ended`);
+          // Only stop recording if video track ends (audio ending is less critical)
+          if (track.kind === 'video') {
+            stopRecording();
+          }
+        });
       });
 
-      // Handle stream end (user stops screen sharing)
-      stream.getVideoTracks()[0].addEventListener('ended', () => {
-        stopRecording();
-      });
+    } catch (error: any) {
+      console.error('Recording start error:', error);
+      
+      let errorMessage = "Failed to start recording. Please try again.";
+      
+      if (error.name === 'NotAllowedError') {
+        errorMessage = "Permission denied. Please allow screen sharing.";
+      } else if (error.name === 'NotSupportedError') {
+        errorMessage = "Screen recording not supported in this browser.";
+      } else if (error.name === 'NotFoundError') {
+        errorMessage = "No screen source available for recording.";
+      } else if (error.name === 'AbortError') {
+        errorMessage = "Recording was cancelled by user.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
 
-    } catch (error) {
       toast({
         title: "Recording Error",
-        description: "Failed to start recording. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
+      
+      setIsRecording(false);
+      setRecordingTime(0);
     }
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
-    }
-    
-    if (recordingIntervalRef.current) {
-      clearInterval(recordingIntervalRef.current);
-      recordingIntervalRef.current = null;
-    }
+    try {
+      console.log('Stopping recording...');
+      
+      // Stop the MediaRecorder
+      if (mediaRecorderRef.current) {
+        const state = mediaRecorderRef.current.state;
+        console.log('MediaRecorder state:', state);
+        
+        if (state === 'recording') {
+          mediaRecorderRef.current.stop();
+        } else if (state === 'paused') {
+          mediaRecorderRef.current.resume();
+          setTimeout(() => {
+            if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+              mediaRecorderRef.current.stop();
+            }
+          }, 100);
+        }
+        
+        // Stop all tracks to release the screen capture
+        if (mediaRecorderRef.current.stream) {
+          mediaRecorderRef.current.stream.getTracks().forEach(track => {
+            track.stop();
+          });
+        }
+      }
+      
+      // Clear the timer
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+        recordingIntervalRef.current = null;
+      }
 
-    setIsRecording(false);
-    setRecordingTime(0);
+      // Update UI state
+      setIsRecording(false);
+      setRecordingTime(0);
 
-    toast({
-      title: "Recording Stopped",
-      description: "Recording has been stopped and will be downloaded shortly",
-    });
+      toast({
+        title: "Recording Stopped",
+        description: "Recording has been stopped and will be downloaded shortly",
+      });
+      
+    } catch (error: any) {
+      console.error('Error stopping recording:', error);
+      
+      // Force cleanup even if there's an error
+      setIsRecording(false);
+      setRecordingTime(0);
+      
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+        recordingIntervalRef.current = null;
+      }
+      
+      toast({
+        title: "Recording Stopped",
+        description: "Recording stopped with errors. Check browser console.",
+        variant: "destructive",
+      });
+    }
   };
 
   const formatTime = (seconds: number) => {

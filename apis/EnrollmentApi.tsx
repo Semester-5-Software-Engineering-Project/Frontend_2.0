@@ -42,12 +42,10 @@ const parseError = (err: any): Error => {
 // --- API surface ---------------------------------------------------------
 export const EnrollmentApi = {
 	/** Get enrollment ID by module ID (requires authentication) */
-	async getEnrollmentId(moduleId: string, token?: string): Promise<string> {
-		const t = token || discoverToken();
+	async getEnrollmentId(moduleId: string): Promise<string> {
 		try {
 			const res = await axiosInstance.get('/api/enrollment/getenrollmentid', {
 				params: { Module_Id: moduleId },
-				headers: authHeader(t)
 			});
 			return res.data; // Returns the enrollment ID as string
 		} catch (e) {
