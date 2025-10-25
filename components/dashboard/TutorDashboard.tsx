@@ -118,26 +118,6 @@ export default function TutorDashboard() {
     fetchTotalRevenue();
   }, []);
 
-  // upcomingSessions now comes from API
-  
-  const recentReviews = [
-    {
-      id: 1,
-      student: 'Alex Smith',
-      course: 'Advanced Mathematics',
-      rating: 5,
-      comment: 'Excellent explanation of complex topics. Very patient and knowledgeable.',
-      date: '2024-01-10'
-    },
-    {
-      id: 2,
-      student: 'Emma Wilson',
-      course: 'Calculus Fundamentals',
-      rating: 5,
-      comment: 'Great teaching style and very helpful materials.',
-      date: '2024-01-08'
-    }
-  ]
 
   return (
     <div className="p-6 space-y-6" data-cy="tutor-dashboard">
@@ -436,37 +416,6 @@ export default function TutorDashboard() {
                   )}
                 </DialogContent>
               </Dialog>
-            </CardContent>
-          </Card>
-
-          {/* Recent Reviews */}
-          <Card className="border-none shadow-md">
-            <CardHeader className="border-b bg-gray-50">
-              <CardTitle className="text-lg text-gray-900">Recent Reviews</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 p-6">
-              {recentReviews.map((review) => (
-                <div key={review.id} className="border border-gray-200 rounded-xl p-4 bg-white hover:shadow-md transition-shadow">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="font-semibold text-sm text-gray-900">{review.student}</p>
-                    <div className="flex items-center space-x-1">
-                      {[...Array(5)].map((_, i) => (
-                        <Star 
-                          key={i} 
-                          className={`w-3 h-3 ${i < review.rating ? 'text-[#FBBF24] fill-current' : 'text-gray-300'}`} 
-                        />
-                      ))}
-                    </div>
-                  </div>
-                  <p className="text-xs text-gray-600 mb-2 leading-relaxed">{review.comment}</p>
-                  <p className="text-xs text-gray-400 font-medium">{review.course}</p>
-                </div>
-              ))}
-              <Link href="/dashboard/reviews">
-                <Button variant="outline" size="sm" className="w-full border-[#FBBF24] text-gray-700 hover:bg-yellow-50">
-                  View All Reviews
-                </Button>
-              </Link>
             </CardContent>
           </Card>
         </div>
