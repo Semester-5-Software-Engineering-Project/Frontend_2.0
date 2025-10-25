@@ -12,6 +12,10 @@ const inter = Inter({ subsets: ['latin'] })
 export const metadata: Metadata = {
   title: 'TutorVerse - Online Tutoring Platform',
   description: 'Connect with expert tutors for personalized online learning',
+  icons: {
+    icon: '/logo.png',
+    apple: '/logo.png',
+  },
 }
 
 export default function RootLayout({
